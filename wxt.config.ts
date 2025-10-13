@@ -4,7 +4,11 @@ import react from '@vitejs/plugin-react';
 // See https://wxt.dev/api/config.html
 export default defineConfig({
     manifest: {
-        permissions: ["activeTab", "scripting", "sidePanel", "storage", "tabs"],
+        permissions: ["storage", "tabs", "contextMenus", "bookmarks"],
+        host_permissions: [
+            "https://*/*",
+            "http://*/*"
+        ],
         action: {},
         name: '__MSG_extName__',
         description: '__MSG_extDescription__',

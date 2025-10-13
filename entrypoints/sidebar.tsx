@@ -3,9 +3,11 @@ import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/compon
 import {IoMdCloseCircle} from "react-icons/io";
 import {IoIosSettings} from "react-icons/io";
 import {RiDashboardFill} from "react-icons/ri";
+import {Sparkles} from "lucide-react";
 
 export enum SidebarType {
     'home' = 'home',
+    'batchRename' = 'batchRename',
     'settings' = 'settings'
 }
 
@@ -17,7 +19,7 @@ const Sidebar = (
     const [sidebarType, setSidebarType] = useState<SidebarType>(SidebarType.home);
     return (
         <aside
-            className="absolute inset-y-0 right-0 z-10 flex w-14 flex-col border-r bg-background border-l-[1px]">
+            className="absolute inset-y-0 left-0 z-10 flex w-14 flex-col border-r bg-background">
             {closeContent && <a
                 className="hover:cursor-pointer flex h-9 w-9 items-center justify-center  text-muted-foreground transition-colors hover:text-foreground ml-auto mr-auto"
                 href="#" onClick={() => {
@@ -46,6 +48,25 @@ const Sidebar = (
                             </a>
                         </TooltipTrigger>
                         <TooltipContent side="right">home</TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <a
+                                className={`hover:cursor-pointer flex h-9 w-9 items-center justify-center  text-muted-foreground transition-colors ${sidebarType == SidebarType.batchRename ? "rounded-full bg-primary text-lg font-semibold text-primary-foreground" : ""}`}
+                                href="#" onClick={() => {
+                                setSidebarType(SidebarType.batchRename)
+                                sideNav(SidebarType.batchRename)
+                            }}
+                            >
+                                <Sparkles
+                                    className={`h-4 w-4 transition-all group-hover:scale-110`}/>
+                                <span className="sr-only">Batch Rename</span>
+                            </a>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Batch Rename</TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
             </nav>

@@ -1,14 +1,13 @@
 export enum MessageType {
-    clickExtIcon = "clickExtIcon",
     changeTheme = "changeTheme",
-    changeLocale = "changeLocale"
+    changeLocale = "changeLocale",
+    changeAccentColor = "changeAccentColor"
 }
 
 export enum MessageFrom {
-    contentScript = "contentScript",
     background = "background",
     popUp = "popUp",
-    sidePanel = "sidePanel",
+    newTab = "newTab",
 }
 
 class ExtMessage {

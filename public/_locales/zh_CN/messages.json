@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "wxt-react-shadcn-tailwindcss-chrome-extension"
+    "message": "AI书签管家"
   },
   "extDescription": {
-    "message": "这是一个chrome 浏览器扩展的模板，使用 Wxt、React、Tailwind css 、 Shadcn ui、Typescript 构建。\n支持暗黑模式和本地化"
+    "message": "基于WXT、React、Tailwind CSS、shadcn/ui构建的AI书签管理扩展：支持AI批量重命名（审查与编辑）、进度条两种模式、书签根目录选择、外观设置（主题/强调色/语言）、AI配置与提示词设置。"
   }
 }

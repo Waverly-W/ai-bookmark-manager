@@ -77,7 +77,7 @@ Note: You can't use this message in a manifest file.
     /**
      * No message description.
      *
-     * "wxt-react-shadcn-tailwindcss-chrome-extension"
+     * "AI Bookmark Manager"
      */
     getMessage(
       messageName: "extName",
@@ -87,8 +87,7 @@ Note: You can't use this message in a manifest file.
     /**
      * No message description.
      *
-     * "This is a boilerplate and starter for chrome browser extension, built with Wxt、 React、 Tailwind css 、Shadcn ui and Typescript.
-Support dark mode and localization "
+     * "Manage and rename bookmarks with AI. Features: AI batch rename with review, dual progress modes, root folder selection, appearance (theme, accent color, language), AI config & prompt settings. Built with WXT, React, Tailwind CSS and shadcn/ui."
      */
     getMessage(
       messageName: "extDescription",

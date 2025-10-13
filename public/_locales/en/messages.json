@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "wxt-react-shadcn-tailwindcss-chrome-extension"
+    "message": "AI Bookmark Manager"
   },
   "extDescription": {
-    "message": "This is a boilerplate and starter for chrome browser extension, built with Wxt、 React、 Tailwind css 、Shadcn ui and Typescript.\nSupport dark mode and localization "
+    "message": "Manage and rename bookmarks with AI. Features: AI batch rename with review, dual progress modes, root folder selection, appearance (theme, accent color, language), AI config & prompt settings. Built with WXT, React, Tailwind CSS and shadcn/ui."
   }
 }

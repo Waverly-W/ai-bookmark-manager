@@ -1,128 +1,125 @@
-<p align="center">
-   <video src="demo/demo.mp4"></video>
-  <img src="demo/demo.png" height="300" alt="AgentGPT Logo"/>
-</p>
-<p align="center">
-  <em>This is a boilerplate and starter for Chrome browser extension, built with Wxt、 React、 Tailwind css 、Shadcn ui and Typescript.
-Support dark mode and localization </em>
-</p>
-<p align="center">
-    <img alt="Node version" src="https://img.shields.io/static/v1?label=node&message=%20%3E=18&logo=node.js&color=2334D058" />
-      <a href="#"><img src="https://img.shields.io/badge/lang-English-blue.svg" alt="English"></a>
-  <a href="#"><img src="https://img.shields.io/badge/lang-简体中文-red.svg" alt="简体中文"></a>
-</p>
+# AI 书签管家（AI Bookmark Manager）
 
-<p align="center">
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://twitter.com/imtigerchew" target="_blank">🐦 X About me</a>
-</p>
+> 基于 WXT + React + Tailwind CSS + shadcn/ui 的 Chrome 扩展。支持 AI 批量重命名书签、可审查与编辑的结果列表、两种进度模式、书签根目录选择、外观设置（主题/强调色/语言）以及 AI 配置与提示词设置。
+
+- 运行环境：Node >= 18
+- 语言：简体中文 / English
 
 ---
 
-## 🔐 Prerequisites :point_up:
+## ✨ 功能特性
 
-Before you get started, please make sure you have the following installed:
+- AI 批量重命名书签
+  - 选择文件夹，一键调用 AI 生成新标题
+  - 审查页面单行紧凑布局，原/新标题对比清晰
+  - 建议标题与输入框合并，所见即所得，可随时修改/重置
+  - 成功/失败状态标识与提示
+- 进度条两种模式（可在设置中切换）：
+  - 批量模式：一次性请求，进度条平滑模拟（0→90%→100%）
+  - 逐个模式：逐条请求，显示真实进度（current/total）
+- 书签设置
+  - 级联文件夹选择器，支持树结构
+  - 指定主页展示的书签根目录
+- 外观设置（与 Tab 同宽，水平平铺）
+  - 主题设置：明亮 / 暗黑
+  - 强调色设置：多种主题色一键切换
+  - 界面语言：中文 / 英文
+- AI 设置
+  - API 地址 / Key / 模型 ID 配置
+  - 一键连通性测试
+  - 提示词管理（自定义 / 恢复默认）
+- 国际化
+  - 使用 react-i18next，按需加载命名空间
 
-- An editor of your choice. For example, webstorm,[Visual Studio Code (VS Code)](https://code.visualstudio.com/download)
-- [Node.js](https://nodejs.org/en/download)
-- [Git](https://git-scm.com/downloads)
+---
 
-## 🗂️ Getting Started :rocket:
-1. **Open your editor**
+## 📦 技术栈
+- WXT（浏览器扩展开发框架）
+- React + TypeScript
+- Tailwind CSS + shadcn/ui
+- i18next（国际化）
 
-2. **Open the Terminal** 
-   - Typically, you can do this from a 'Terminal' tab or by using a shortcut
-     (e.g., `Ctrl + ~` for Windows or `Control + ~` for Mac in VS Code).
+---
 
-3. **Clone the Repository and Navigate into the Directory** 
-   - Once your terminal is open, you can clone the repository and move into the directory by running the commands below.
-
-   - **For Mac/Linux users** :apple: :penguin:
-   ```bash
-   git clone git@github.com:imtiger/wxt-react-shadcn-tailwindcss-chrome-extension.git
-   cd wxt-react-shadcn-tailwindcss-chrome-extension
-   npm install
-   npm run dev
-   ```
-   - **For Windows users** :windows:
-   ```bash
-   git clone git@github.com:imtiger/wxt-react-shadcn-tailwindcss-chrome-extension.git
-   cd wxt-react-shadcn-tailwindcss-chrome-extension
-   npm install
-   npm run dev
-   ```
-4. **The browser will be auto opened**
-   - you will see the content-script panel and side panel
-
-
-## ❇️ Tech Stack
-
-- ✅ **Wxt**: [Wxt](https://wxt.dev)
-- ✅ **React**: [React](https://react.dev/)
-- ✅ **Tailwind css**: [Tailwind css](https://tailwindcss.com)
-- ✅ **Shadcn UI**: [Shadcn UI](https://ui.shadcn.com)
-
-## 🚀 Localization and i18n 
-
-The locales file in the locales folder ,and you can edit it.
-- [locales](locales)
-- [i18nConfig.ts](components/i18nConfig.ts)
-- [i18n.ts](components/i18n.ts)
-- you can call initTranslation method in the [i18n.ts](components/i18n.ts) with different namespaces ,and only load the namespace json file.
-```typescript
-initTranslations(i18nConfig.defaultLocale, ["common", "content"])
-```
-
-## 👀 Considerations
-- Chrome extension tailwind css rem not working shadow dom.
-
-Because Tailwind CSS uses rem by default, and rem is computed based on the font-size of the html element on the page, even if a content-script uses shadow dom, the internal elements' rem are also calculated based on the root html element's font-size of the host page. Therefore, to prevent style differences in the plugin due to varying font-sizes set by different websites, we can modify the default configuration of Tailwind CSS, allowing it to calculate directly in pixels.
+## 🚀 快速开始
 
 ```bash
-npm install @thedutchcoder/postcss-rem-to-px
-   ```
-```typescript
-//postcss.config.js
-export default {
-   plugins: {
-      tailwindcss: {},
-      '@thedutchcoder/postcss-rem-to-px': {}, // you can add option like the base font size
-      autoprefixer: {},
-   },    
-};
-```
-- Add new component
-```bash
-npx shadcn-ui@latest add
-```
-- Not trigger the click event listener.
+# 克隆并进入项目
+git clone https://github.com/Waverly-W/ai-bookmark-manager.git
+cd ai-bookmark-manager
 
-  When a popup or side panel is defined, and set
-```typescript
-browser.sidePanel.setPanelBehavior({openPanelOnActionClick: true}).catch((error: any) => console.error(error));
-```
-clicking on the browser extension icon won't trigger the listening event,and just open the side panel.
-```typescript
-//monitor the event from extension icon click
-browser.action.onClicked.addListener((tab) => {
-   // 发送消息给content-script.js
-   console.log("click icon")
-   console.log(tab)
-   browser.tabs.sendMessage(tab.id!, {messageType: MessageType.clickExtIcon});
-});
+# 安装依赖
+npm install
+
+# 开发模式
+npm run dev
+
+# 生产构建
+npm run build
 ```
 
-## 👨‍🚀About Me
+### 在浏览器中加载扩展
+1. 运行 `npm run build`
+2. 打开 `chrome://extensions/`
+3. 开启「开发者模式」
+4. 点击「加载已解压的扩展程序」
+5. 选择 `.output/chrome-mv3` 目录
 
-- Full-Stack Engineer
+---
 
-- Once worked at Tencent and Alibaba
+## ⚙️ 配置说明
 
-[Github](https://github.com/imtigerchew)  
-[Twitter/X](https://twitter.com/imtigerchew)  
+### AI 配置
+- 设置位置：新标签页 → 设置 → AI 设置
+- 需填写：API Base URL、API Key、Model ID
+- 支持连通性测试；提示词可自定义并恢复默认
 
-If this project is helpful to you, star the repo and buy be a coffee, thank you guys.
+### 外观设置
+- 与上方 Tab 等宽，采用水平三列布局（移动端自动改为一列）
+- 包含主题、强调色、界面语言三项
 
-<a href="https://www.buymeacoffee.com/imtigerchew" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;" ></a>
+### 书签设置
+- 使用级联选择器选择书签根目录（树结构）
 
-<img src="./public/zsm.jpg" alt="赞赏作者" style="height: 200px; width: 200px">
+---
+
+## 🧩 目录结构（节选）
+
+```
+├── entrypoints/newtab/          # 新标签页
+│   ├── App.tsx
+│   └── settings.tsx             # 设置页（Tab 布局）
+├── components/settings/         # 各类设置组件
+│   ├── ai-config-settings.tsx
+│   ├── ai-prompt-settings.tsx
+│   ├── bookmark-settings.tsx
+│   ├── theme-settings.tsx
+│   └── accent-color-settings.tsx
+├── lib/                         # 业务逻辑
+│   ├── aiService.ts             # 批量/逐个处理 + 进度回调
+│   └── accentColorUtils.ts
+├── locales/                     # 文案与i18n资源
+└── public/_locales/             # 扩展名称与描述（manifest 本地化）
+```
+
+---
+
+## 🧠 常见问题
+- 进度条为何从 0 直接跳到 100%？
+  - 批量模式下为单次请求，显示模拟进度；可切换为逐个模式查看真实进度
+- 样式在部分网站不一致？
+  - 已使用 postcss-rem-to-px 解决 shadow DOM 下 rem 计算差异问题
+
+---
+
+## 📝 许可
+本项目作为学习与示例用途提供。请在遵守本仓库 License 的前提下使用。
+
+---
+
+## 🙌 致谢
+- [WXT](https://wxt.dev)
+- [shadcn/ui](https://ui.shadcn.com)
+- [Tailwind CSS](https://tailwindcss.com)
+
+如果本项目对你有帮助，欢迎 Star 支持！

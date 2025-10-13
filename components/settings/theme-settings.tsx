@@ -1,6 +1,5 @@
 import {Label} from "@/components/ui/label"
 import {RadioGroup, RadioGroupItem} from "@/components/ui/radio-group"
-import {Card} from "@/components/ui/card.tsx";
 import {browser} from "wxt/browser";
 import {MessageType} from "@/entrypoints/types.ts";
 import {useTheme} from "@/components/theme-provider.tsx";
@@ -11,11 +10,12 @@ export function ThemeSettings() {
     const themes = ["light", "dark"]
     const {t} = useTranslation();
     return (
-        <Card>
-            <div className="space-y-1.5 p-6 pb-3">
-                <h3 className="font-semibold text-left text-base">{t('themeSettings')}</h3>
+        <div className="space-y-3">
+            <div className="space-y-1">
+                <h4 className="font-medium text-sm">{t('themeSettings')}</h4>
+                <p className="text-xs text-muted-foreground">{t('themeSettingsDescription')}</p>
             </div>
-            <RadioGroup defaultValue={theme} value={theme} className="p-6 pt-2">
+            <RadioGroup defaultValue={theme} value={theme} className="space-y-2">
                 {
                     themes && themes.map((theme, index, array) => {
                         return (
@@ -28,14 +28,14 @@ export function ThemeSettings() {
                                      });
                                      await browser.storage.local.set({theme: theme});
                                  }}>
-                                <Label htmlFor={`r${index}`}>{theme}</Label>
+                                <Label htmlFor={`r${index}`} className="text-sm">{t(theme)}</Label>
                                 <RadioGroupItem value={theme} id={`r${index}`}/>
                             </div>
                         );
                     })
                 }
             </RadioGroup>
-        </Card>
+        </div>
 
     )
 }
