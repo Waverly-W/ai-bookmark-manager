@@ -121,14 +121,14 @@ export function AIPromptSettings() {
     return (
         <div className="space-y-6">
                 {/* 标题和描述 */}
-                <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-left text-base">{t('aiPromptSettings')}</h3>
-                        <span className="text-xs text-muted-foreground">
+                <div className="space-y-2 pb-4 border-b border-border/50">
+                    <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-semibold text-left text-lg">{t('aiPromptSettings')}</h3>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {isCustom ? t('usingCustomTemplate') : t('usingDefaultTemplate')}
                         </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{t('aiPromptDescription')}</p>
+                    <p className="text-sm text-muted-foreground max-w-prose">{t('aiPromptDescription')}</p>
                 </div>
                 
                 {/* Prompt模板输入 */}

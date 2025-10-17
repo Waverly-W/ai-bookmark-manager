@@ -145,9 +145,9 @@ export function AIConfigSettings() {
     return (
         <div className="space-y-6">
             {/* 标题和描述 */}
-            <div className="space-y-1.5">
-                <h3 className="font-semibold text-left text-base">{t('aiConfig')}</h3>
-                <p className="text-sm text-muted-foreground">{t('aiConfigDescription')}</p>
+            <div className="space-y-2 pb-4 border-b border-border/50">
+                <h3 className="font-semibold text-left text-lg">{t('aiConfig')}</h3>
+                <p className="text-sm text-muted-foreground max-w-prose">{t('aiConfigDescription')}</p>
             </div>
                 
                 {/* API URL */}

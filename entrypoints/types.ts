@@ -1,7 +1,8 @@
 export enum MessageType {
     changeTheme = "changeTheme",
     changeLocale = "changeLocale",
-    changeAccentColor = "changeAccentColor"
+    changeAccentColor = "changeAccentColor",
+    clickExtIcon = "clickExtIcon",
 }
 
 export enum MessageFrom {

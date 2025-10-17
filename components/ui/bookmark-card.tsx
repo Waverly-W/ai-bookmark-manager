@@ -116,7 +116,9 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                         <h3 className={cn(
                             "font-medium text-sm truncate",
                             "group-hover:text-primary transition-colors"
-                        )}>
+                        )}
+                            title={item.title}
+                        >
                             {item.title}
                         </h3>
                     </div>

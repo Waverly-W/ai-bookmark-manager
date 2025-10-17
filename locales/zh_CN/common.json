@@ -119,6 +119,7 @@
   "confirmApplyMessage": "确定要应用选中的 {count} 个修改吗？",
   "batchRenameSuccess": "已成功重命名 {count} 个书签",
   "batchRenameFailed": "批量重命名失败",
+  "operationCancelled": "操作已取消",
   "noBookmarksSelected": "未选择任何书签",
   "styleConsistencyCheck": "风格一致性检查",
   "regenerateWithConsistency": "重新生成（保持一致性）",

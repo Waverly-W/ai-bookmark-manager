@@ -119,6 +119,7 @@
   "confirmApplyMessage": "Are you sure you want to apply {count} selected changes?",
   "batchRenameSuccess": "Successfully renamed {count} bookmarks",
   "batchRenameFailed": "Batch rename failed",
+  "operationCancelled": "Operation cancelled",
   "noBookmarksSelected": "No bookmarks selected",
   "styleConsistencyCheck": "Style Consistency Check",
   "regenerateWithConsistency": "Regenerate (Keep Consistency)",

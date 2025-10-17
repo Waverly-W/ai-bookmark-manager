@@ -742,27 +742,39 @@ export const Bookmarks: React.FC = () => {
     }
 
     return (
-        <div className="space-y-4">
-            {/* 搜索框 */}
-            <div className="flex justify-center">
-                <div className="relative max-w-md w-full">
-                    <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder={t('searchBookmarks')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                    />
+        <div className="space-y-6">
+            {/* 页面标题区域 */}
+            <div className="space-y-4 pb-4 border-b border-border/50">
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight">{t('bookmarks')}</h1>
+                    <p className="text-muted-foreground text-sm">
+                        {t('bookmarksTotal')}: {allBookmarks.length}
+                    </p>
+                </div>
+
+                {/* 搜索框 */}
+                <div className="flex justify-start">
+                    <div className="relative max-w-md w-full">
+                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder={t('searchBookmarks')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
                 </div>
             </div>
 
             {/* 面包屑导航 */}
             {!isSearching && (
-                <Breadcrumb
-                    items={breadcrumbItems}
-                    onNavigate={handleBreadcrumbNavigate}
-                    onBack={handleBack}
-                />
+                <div className="py-2">
+                    <Breadcrumb
+                        items={breadcrumbItems}
+                        onNavigate={handleBreadcrumbNavigate}
+                        onBack={handleBack}
+                    />
+                </div>
             )}
 
             {/* 书签卡片网格 */}

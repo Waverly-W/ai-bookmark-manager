@@ -5,7 +5,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {useTranslation} from "react-i18next";
 import {browser} from "wxt/browser";
 import ExtMessage, {MessageType} from "@/entrypoints/types.ts";
-import {sendMessageToContentScript} from "@/lib/messageUtils.ts";
+import {sendMessageToBackground} from "@/lib/messageUtils.ts";
 import {MdOpenInNew} from "react-icons/md";
 import {BiCodeBlock} from "react-icons/bi";
 
@@ -43,7 +43,7 @@ export function Home() {
 
             // 发送消息到Content Script
             const message = new ExtMessage(MessageType.clickExtIcon);
-            await sendMessageToContentScript(currentTab.id, message);
+            await sendMessageToBackground(message);
             setMessage(t("contentScriptOpened"));
 
         } catch (error) {

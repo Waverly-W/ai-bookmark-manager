@@ -12,9 +12,15 @@ export function SettingsPage() {
     const { t } = useTranslation();
 
     return (
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full max-w-4xl mx-auto space-y-6">
+            {/* 页面标题区域 */}
+            <div className="space-y-2 pb-4 border-b border-border/50">
+                <h1 className="text-3xl font-bold tracking-tight">{t('settings')}</h1>
+                <p className="text-muted-foreground text-sm">{t('settingsDescription')}</p>
+            </div>
+
             <Tabs defaultValue="bookmarks" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2">
                     <TabsTrigger value="bookmarks">{t('bookmarkSettingsTab')}</TabsTrigger>
                     <TabsTrigger value="appearance">{t('appearanceSettingsTab')}</TabsTrigger>
                     <TabsTrigger value="ai">{t('aiSettingsTab')}</TabsTrigger>
@@ -29,9 +35,9 @@ export function SettingsPage() {
                 <TabsContent value="appearance" className="mt-6">
                     <div className="max-w-2xl space-y-6">
                         {/* 外观设置标题 */}
-                        <div className="space-y-1.5">
-                            <h2 className="text-lg font-semibold">{t('appearanceSettings')}</h2>
-                            <p className="text-sm text-muted-foreground">
+                        <div className="space-y-2 pb-4 border-b border-border/50">
+                            <h2 className="text-xl font-semibold">{t('appearanceSettings')}</h2>
+                            <p className="text-sm text-muted-foreground max-w-prose">
                                 {t('appearanceSettingsDescription')}
                             </p>
                         </div>

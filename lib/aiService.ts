@@ -11,6 +11,94 @@ interface AIResponse {
         };
     }>;
 }
+// 请求可选参数（供超时、重试、取消等）
+export interface AIRequestOptions {
+  timeoutMs?: number;
+  retries?: number;
+  backoffMs?: number;
+  signal?: AbortSignal;
+  maxConcurrency?: number; // 最大并发数（仅用于逐个模式）
+}
+
+
+// 通用异步工具：延迟
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// 统一 API 端点构造（处理尾斜杠）
+const buildEndpoint = (apiUrl: string, path: string = 'chat/completions'): string => {
+  const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+  return `${baseUrl}/${path}`;
+};
+
+// 简单的并发控制器
+class ConcurrencyController {
+  private running = 0;
+  private queue: Array<() => Promise<any>> = [];
+
+  constructor(private maxConcurrency: number = 1) {}
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    while (this.running >= this.maxConcurrency) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    this.running++;
+    try {
+      return await fn();
+    } finally {
+      this.running--;
+    }
+  }
+}
+
+// 带超时与指数退避重试的 fetch 封装（默认超时 30s，重试 2 次，基础退避 800ms）
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  opts?: { timeoutMs?: number; retries?: number; backoffMs?: number; signal?: AbortSignal }
+): Promise<Response> {
+  const timeoutMs = opts?.timeoutMs ?? 30000;
+  const retries = opts?.retries ?? 2;
+  const backoffMs = opts?.backoffMs ?? 800;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    // 合并外部信号到我们的 controller
+    const externalSignal = init.signal ?? opts?.signal;
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
+
+    try {
+      const response = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok && attempt < retries && (response.status === 429 || response.status >= 500)) {
+        await sleep(backoffMs * Math.pow(2, attempt));
+        continue;
+      }
+
+      return response;
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      lastError = e;
+      const aborted = e?.name === 'AbortError';
+      if (aborted || attempt >= retries) {
+        throw e;
+      }
+      await sleep(backoffMs * Math.pow(2, attempt));
+    }
+  }
+
+  // 理论上不会到达这里
+  throw lastError instanceof Error ? lastError : new Error('fetchWithRetry failed');
+}
 
 /**
  * 测试连接结果接口
@@ -40,17 +128,19 @@ export interface AIRenameResult {
 const callAIAPI = async (
     config: AIConfig,
     prompt: string,
-    maxTokens: number = 100
+    maxTokens: number = 100,
+    options?: AIRequestOptions
 ): Promise<string> => {
     const { apiUrl, apiKey, modelId } = config;
-    
+
     // 构建完整的API URL
-    const endpoint = apiUrl.endsWith('/') 
-        ? `${apiUrl}chat/completions` 
+    const endpoint = apiUrl.endsWith('/')
+        ? `${apiUrl}chat/completions`
         : `${apiUrl}/chat/completions`;
-    
+
     try {
-        const response = await fetch(endpoint, {
+        const endpoint = buildEndpoint(apiUrl);
+        const response = await fetchWithRetry(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -67,19 +157,19 @@ const callAIAPI = async (
                 temperature: 0.7,
                 max_tokens: maxTokens
             })
-        });
-        
+        }, options);
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`API request failed: ${response.status} ${response.statusText}. ${errorText}`);
         }
-        
+
         const data: AIResponse = await response.json();
-        
+
         if (!data.choices || data.choices.length === 0) {
             throw new Error('No response from AI');
         }
-        
+
         return data.choices[0].message.content.trim();
     } catch (error) {
         console.error('AI API call failed:', error);
@@ -97,7 +187,7 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
         // 发送一个简单的测试请求
         const testPrompt = 'Say "Hello" if you can read this.';
         const response = await callAIAPI(config, testPrompt, 10);
-        
+
         // 检查响应是否有效
         if (response && response.length > 0) {
             return {
@@ -141,16 +231,16 @@ export const renameBookmarkWithAI = async (
 
         // 格式化Prompt（替换占位符）
         const prompt = formatPrompt(promptTemplate, bookmarkUrl, currentTitle);
-        
+
         // 调用AI API
         const newTitle = await callAIAPI(config, prompt, 50);
-        
+
         // 清理返回的标题（移除可能的引号、换行等）
         const cleanedTitle = newTitle
             .replace(/^["']|["']$/g, '')  // 移除首尾引号
             .replace(/\n/g, ' ')           // 替换换行为空格
             .trim();
-        
+
         // 验证标题长度
         if (cleanedTitle.length === 0) {
             return {
@@ -158,7 +248,7 @@ export const renameBookmarkWithAI = async (
                 error: 'AI returned an empty title'
             };
         }
-        
+
         if (cleanedTitle.length > 100) {
             // 如果标题过长，截断
             return {
@@ -166,7 +256,7 @@ export const renameBookmarkWithAI = async (
                 newTitle: cleanedTitle.substring(0, 100)
             };
         }
-        
+
         return {
             success: true,
             newTitle: cleanedTitle
@@ -192,7 +282,9 @@ export const batchRenameBookmarks = async (
     config: AIConfig,
     bookmarks: Array<{ id: string; url: string; title: string }>,
     locale?: string,
-    onProgress?: (current: number, total: number) => void
+    onProgress?: (current: number, total: number) => void,
+    signal?: AbortSignal,
+    maxConcurrency: number = 1
 ): Promise<Array<{
     id: string;
     originalTitle: string;
@@ -200,40 +292,56 @@ export const batchRenameBookmarks = async (
     success: boolean;
     error?: string;
 }>> => {
-    const results = [];
+    const results: Array<{ index: number; result: any }> = [];
     const total = bookmarks.length;
-    
-    for (let i = 0; i < bookmarks.length; i++) {
-        const bookmark = bookmarks[i];
-        
-        // 调用进度回调
-        if (onProgress) {
-            onProgress(i + 1, total);
-        }
-        
-        // 调用AI重命名
-        const result = await renameBookmarkWithAI(
-            config,
-            bookmark.url,
-            bookmark.title,
-            locale
-        );
-        
-        results.push({
-            id: bookmark.id,
-            originalTitle: bookmark.title,
-            newTitle: result.newTitle,
-            success: result.success,
-            error: result.error
-        });
-        
-        // 添加延迟以避免API速率限制（每次请求间隔500ms）
-        if (i < bookmarks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-    }
-    
-    return results;
+    const controller = new ConcurrencyController(maxConcurrency);
+
+    // 创建所有任务
+    const tasks = bookmarks.map((bookmark, index) =>
+        controller.run(async () => {
+            // 检查是否被中止
+            if (signal?.aborted) {
+                throw new Error('Batch rename cancelled');
+            }
+
+            // 调用AI重命名
+            const result = await renameBookmarkWithAI(
+                config,
+                bookmark.url,
+                bookmark.title,
+                locale
+            );
+
+            results.push({
+                index,
+                result: {
+                    id: bookmark.id,
+                    originalTitle: bookmark.title,
+                    newTitle: result.newTitle,
+                    success: result.success,
+                    error: result.error
+                }
+            });
+
+            // 调用进度回调
+            if (onProgress) {
+                onProgress(results.length, total);
+            }
+
+            // 添加延迟以避免API速率限制（每次请求间隔500ms）
+            if (results.length < total) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        })
+    );
+
+    // 等待所有任务完成
+    await Promise.all(tasks);
+
+    // 按原始顺序返回结果
+    return results
+        .sort((a, b) => a.index - b.index)
+        .map(r => r.result);
 };
 
 /**
@@ -250,7 +358,8 @@ export const batchRenameBookmarksWithConsistency = async (
     bookmarks: Array<{ id: string; url: string; title: string }>,
     locale?: string,
     onProgress?: (current: number, total: number) => void,
-    useIndividualRequests: boolean = false
+    useIndividualRequests: boolean = false,
+    options?: AIRequestOptions
 ): Promise<Array<{
     id: string;
     originalTitle: string;
@@ -260,10 +369,22 @@ export const batchRenameBookmarksWithConsistency = async (
 }>> => {
     // 如果选择逐个请求模式，使用原有的逐个处理逻辑
     if (useIndividualRequests) {
-        return await batchRenameBookmarks(config, bookmarks, locale, onProgress);
+        return await batchRenameBookmarks(
+            config,
+            bookmarks,
+            locale,
+            onProgress,
+            options?.signal,
+            options?.maxConcurrency ?? 1
+        );
     }
 
     try {
+        // 检查是否已被中止
+        if (options?.signal?.aborted) {
+            throw new Error('Batch rename cancelled');
+        }
+
         // 获取用户配置的Prompt模板
         const userPrompt = await getCurrentPrompt(locale);
 
@@ -276,6 +397,8 @@ export const batchRenameBookmarksWithConsistency = async (
             bookmarks.map(b => ({ url: b.url, title: b.title })),
             locale
         );
+
+        let parsedResults: Array<{ index: number; newTitle?: string }> = [];
 
         // 调用进度回调（开始处理）
         if (onProgress) {
@@ -293,11 +416,12 @@ export const batchRenameBookmarksWithConsistency = async (
 
         try {
             // 调用AI API进行批量处理
-            const response = await fetch(`${config.apiUrl}/chat/completions`, {
+            const endpoint = buildEndpoint(config.apiUrl);
+            const response = await fetchWithRetry(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${decodeApiKey(config.apiKey)}`
+                    'Authorization': `Bearer ${config.apiKey}`
                 },
                 body: JSON.stringify({
                     model: config.modelId,
@@ -310,7 +434,7 @@ export const batchRenameBookmarksWithConsistency = async (
                     temperature: 0.3, // 降低温度以提高一致性
                     max_tokens: Math.min(4000, bookmarks.length * 50) // 根据书签数量动态调整
                 })
-            });
+            }, options);
 
             // 清除进度模拟
             clearInterval(progressInterval);
@@ -327,7 +451,7 @@ export const batchRenameBookmarksWithConsistency = async (
             }
 
             // 解析AI返回的批量结果
-            const parsedResults = parseBatchRenameResponse(aiResponse);
+            parsedResults = parseBatchRenameResponse(aiResponse);
 
             // 调用进度回调（处理完成）
             if (onProgress) {

@@ -16,7 +16,6 @@ declare module "wxt/browser" {
     | "/sidebar.js"
     | "/types.js"
     | "/wxt.svg"
-    | "/zsm.jpg"
   type HtmlPublicPath = Extract<PublicPath, `${string}.html`>
   export interface WxtRuntime extends Runtime.Static {
     getURL(path: PublicPath): string;

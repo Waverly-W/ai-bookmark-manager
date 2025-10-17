@@ -39,7 +39,7 @@
         --secondary: 215 27.9% 16.9%;
         --secondary-foreground: 210 20% 98%;
         --muted: 215 27.9% 16.9%;
-        --muted-foreground: 217.9 10.6% 64.9%;
+        --muted-foreground: 217.9 10.6% 72%;
         --accent: 215 27.9% 16.9%;
         --accent-foreground: 210 20% 98%;
         --destructive: 0 62.8% 30.6%;
@@ -58,5 +58,132 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/* 过渡动画 */
+@layer utilities {
+    /* 淡入动画 */
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* 从上方滑入 */
+    @keyframes slide-in-from-top {
+        from {
+            transform: translateY(-10px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* 从下方滑入 */
+    @keyframes slide-in-from-bottom {
+        from {
+            transform: translateY(10px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* 从左方滑入 */
+    @keyframes slide-in-from-left {
+        from {
+            transform: translateX(-10px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* 从右方滑入 */
+    @keyframes slide-in-from-right {
+        from {
+            transform: translateX(10px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* 缩放进入 */
+    @keyframes scale-in {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* 旋转进入 */
+    @keyframes rotate-in {
+        from {
+            transform: rotate(-5deg);
+            opacity: 0;
+        }
+        to {
+            transform: rotate(0);
+            opacity: 1;
+        }
+    }
+
+    /* 动画类 */
+    .animate-fade-in {
+        animation: fade-in 0.3s ease-in-out;
+    }
+
+    .animate-slide-in-from-top {
+        animation: slide-in-from-top 0.3s ease-out;
+    }
+
+    .animate-slide-in-from-bottom {
+        animation: slide-in-from-bottom 0.3s ease-out;
+    }
+
+    .animate-slide-in-from-left {
+        animation: slide-in-from-left 0.3s ease-out;
+    }
+
+    .animate-slide-in-from-right {
+        animation: slide-in-from-right 0.3s ease-out;
+    }
+
+    .animate-scale-in {
+        animation: scale-in 0.3s ease-out;
+    }
+
+    .animate-rotate-in {
+        animation: rotate-in 0.3s ease-out;
+    }
+
+    /* 平滑过渡 */
+    .transition-smooth {
+        @apply transition-all duration-300 ease-in-out;
+    }
+
+    .transition-fast {
+        @apply transition-all duration-150 ease-in-out;
+    }
+
+    .transition-slow {
+        @apply transition-all duration-500 ease-in-out;
     }
 }

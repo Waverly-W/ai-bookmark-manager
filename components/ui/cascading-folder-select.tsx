@@ -261,7 +261,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                                 {panel.folders.map((folder) => {
                                     const isSelected = folder.id === selectedId;
                                     const isHovered = hoveredPath[panel.level] === folder.id;
-                                    const hasChildren = folder.children && folder.children.length > 0;
+                                    const hasChildren = (folder.children?.length ?? 0) > 0;
 
                                     return (
                                         <FolderItem

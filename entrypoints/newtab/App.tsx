@@ -50,7 +50,8 @@ export default () => {
                 <Sidebar sideNav={(sidebarType: SidebarType) => {
                     setSidebarType(sidebarType);
                 }}/>
-                <main className="ml-14 grid gap-4 p-4 md:gap-8 md:p-8">
+                {/* 主内容区域 - 桌面端左边距，移动端底部间距 */}
+                <main className="md:ml-14 mb-16 md:mb-0 grid gap-4 p-4 md:gap-8 md:p-8">
                     {sidebarType === SidebarType.home && <Home/>}
                     {sidebarType === SidebarType.batchRename && <BatchRenamePage/>}
                     {sidebarType === SidebarType.settings && <SettingsPage/>}
