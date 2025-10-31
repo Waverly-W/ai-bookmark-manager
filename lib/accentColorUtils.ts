@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { configSyncManager } from "./configSyncManager";
 
 // 强调色配置接口
 export interface AccentColor {
@@ -87,8 +88,8 @@ export const getAccentColorById = (colorId: string): AccentColor | null => {
  */
 export const getCurrentAccentColorId = async (): Promise<string> => {
     try {
-        const result = await browser.storage.local.get('accentColor');
-        return result.accentColor || 'purple';
+        const colorId = await configSyncManager.getConfig('accentColor');
+        return colorId || 'purple';
     } catch (error) {
         console.error('Failed to get accent color from storage:', error);
         return 'purple';
@@ -96,12 +97,12 @@ export const getCurrentAccentColorId = async (): Promise<string> => {
 };
 
 /**
- * 保存强调色设置到本地存储
+ * 保存强调色设置到本地存储（自动同步到其他设备）
  * @param colorId 强调色ID
  */
 export const saveAccentColorId = async (colorId: string): Promise<void> => {
     try {
-        await browser.storage.local.set({ accentColor: colorId });
+        await configSyncManager.saveConfig('accentColor', colorId);
     } catch (error) {
         console.error('Failed to save accent color to storage:', error);
         throw error;

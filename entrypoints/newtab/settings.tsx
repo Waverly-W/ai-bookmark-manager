@@ -6,6 +6,7 @@ import { BookmarkSettings } from "@/components/settings/bookmark-settings.tsx";
 import { AccentColorSettings } from "@/components/settings/accent-color-settings.tsx";
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
+import { SyncStatusSettings } from "@/components/settings/sync-status-settings.tsx";
 import { useTranslation } from "react-i18next";
 
 export function SettingsPage() {
@@ -59,6 +60,7 @@ export function SettingsPage() {
 
                 <TabsContent value="ai" className="mt-6">
                     <div className="max-w-2xl space-y-6">
+                        <SyncStatusSettings />
                         <AIConfigSettings />
                         <AIPromptSettings />
                     </div>

@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { configSyncManager } from "./configSyncManager";
 
 /**
  * AI配置接口
@@ -43,7 +44,7 @@ export const decodeApiKey = (encodedKey: string): string => {
 };
 
 /**
- * 保存AI配置到本地存储
+ * 保存AI配置到本地存储（自动同步到其他设备）
  * @param config AI配置对象
  */
 export const saveAIConfig = async (config: AIConfig): Promise<void> => {
@@ -53,10 +54,9 @@ export const saveAIConfig = async (config: AIConfig): Promise<void> => {
             ...config,
             apiKey: encodeApiKey(config.apiKey)
         };
-        
-        await browser.storage.local.set({
-            [STORAGE_KEYS.AI_CONFIG]: configToSave
-        });
+
+        // 使用同步管理器保存配置
+        await configSyncManager.saveConfig(STORAGE_KEYS.AI_CONFIG, configToSave);
     } catch (error) {
         console.error('Failed to save AI config:', error);
         throw new Error('Failed to save AI configuration');
@@ -69,9 +69,9 @@ export const saveAIConfig = async (config: AIConfig): Promise<void> => {
  */
 export const getAIConfig = async (): Promise<AIConfig> => {
     try {
-        const result = await browser.storage.local.get(STORAGE_KEYS.AI_CONFIG);
-        const savedConfig = result[STORAGE_KEYS.AI_CONFIG];
-        
+        // 使用同步管理器读取配置
+        const savedConfig = await configSyncManager.getConfig(STORAGE_KEYS.AI_CONFIG);
+
         if (savedConfig) {
             // 解密API Key
             return {
@@ -79,7 +79,7 @@ export const getAIConfig = async (): Promise<AIConfig> => {
                 apiKey: decodeApiKey(savedConfig.apiKey)
             };
         }
-        
+
         // 返回默认配置
         return {
             apiUrl: 'https://api.openai.com/v1',
@@ -140,7 +140,10 @@ export const validateAIConfig = (config: AIConfig): {
  */
 export const clearAIConfig = async (): Promise<void> => {
     try {
+        // 清除本地存储
         await browser.storage.local.remove(STORAGE_KEYS.AI_CONFIG);
+        // 清除同步存储
+        await browser.storage.sync.remove([STORAGE_KEYS.AI_CONFIG, `${STORAGE_KEYS.AI_CONFIG}__metadata`]);
     } catch (error) {
         console.error('Failed to clear AI config:', error);
         throw new Error('Failed to clear AI configuration');

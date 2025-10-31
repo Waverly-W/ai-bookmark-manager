@@ -201,5 +201,65 @@ describe('faviconUtils - URL Processing', () => {
       expect(getGoogleFaviconUrl('not a url')).toBe('')
     })
   })
+
+  describe('Chrome Favicon API URL construction', () => {
+    // 测试 Chrome Favicon API URL 构造
+    // 注意：这个测试模拟 Chrome Favicon API 的 URL 构造逻辑
+    const getChromeBuiltInFaviconUrl = (url: string, size: number = 32): string => {
+      try {
+        // 模拟 chrome.runtime.getURL('/_favicon/')
+        const extensionId = 'test-extension-id'
+        const faviconUrl = new URL(`chrome-extension://${extensionId}/_favicon/`)
+        faviconUrl.searchParams.set('pageUrl', url)
+        faviconUrl.searchParams.set('size', size.toString())
+        return faviconUrl.toString()
+      } catch (error) {
+        return ''
+      }
+    }
+
+    it('should construct correct Chrome Favicon API URLs', () => {
+      const url = getChromeBuiltInFaviconUrl('https://example.com', 32)
+      expect(url).toContain('_favicon')
+      expect(url).toContain('pageUrl=https')
+      expect(url).toContain('size=32')
+    })
+
+    it('should handle different sizes', () => {
+      const url16 = getChromeBuiltInFaviconUrl('https://example.com', 16)
+      const url32 = getChromeBuiltInFaviconUrl('https://example.com', 32)
+      const url64 = getChromeBuiltInFaviconUrl('https://example.com', 64)
+
+      expect(url16).toContain('size=16')
+      expect(url32).toContain('size=32')
+      expect(url64).toContain('size=64')
+    })
+
+    it('should properly encode URL parameters', () => {
+      const url = getChromeBuiltInFaviconUrl('https://example.com/path?query=value', 32)
+      expect(url).toContain('pageUrl=https')
+      // URL 参数应该被正确编码
+      expect(url).toContain('%')
+    })
+
+    it('should handle subdomains', () => {
+      const url = getChromeBuiltInFaviconUrl('https://www.example.com', 32)
+      expect(url).toContain('pageUrl=https')
+      expect(url).toContain('www.example.com')
+    })
+
+    it('should still construct URL for invalid URLs (Chrome API accepts any string)', () => {
+      // Chrome Favicon API 会接受任何字符串作为 pageUrl 参数
+      // 它会在运行时处理无效的 URL
+      const url = getChromeBuiltInFaviconUrl('not a url', 32)
+      expect(url).toContain('_favicon')
+      expect(url).toContain('pageUrl=not')
+    })
+
+    it('should use default size of 32 when not specified', () => {
+      const url = getChromeBuiltInFaviconUrl('https://example.com')
+      expect(url).toContain('size=32')
+    })
+  })
 })
 

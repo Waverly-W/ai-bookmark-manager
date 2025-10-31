@@ -66,6 +66,30 @@ function getFaviconGrabberUrl(url: string): string {
 }
 
 /**
+ * 获取Chrome内置Favicon API URL（最快，无延迟）
+ * 使用Chrome官方提供的favicon API直接访问浏览器内部缓存
+ *
+ * @param url 书签URL
+ * @param size favicon大小（默认32px）
+ * @returns Chrome Favicon API URL
+ *
+ * @example
+ * getChromeBuiltInFaviconUrl('https://www.google.com', 32)
+ * // 返回: chrome-extension://xxxxx/_favicon/?pageUrl=https%3A%2F%2Fwww.google.com&size=32
+ */
+function getChromeBuiltInFaviconUrl(url: string, size: number = 32): string {
+    try {
+        const faviconUrl = new URL(chrome.runtime.getURL('/_favicon/'));
+        faviconUrl.searchParams.set('pageUrl', url);
+        faviconUrl.searchParams.set('size', size.toString());
+        return faviconUrl.toString();
+    } catch (error) {
+        console.error('Failed to get Chrome favicon URL:', error);
+        return '';
+    }
+}
+
+/**
  * 使用fetch获取图片并转换为Data URL（解决CORS问题）
  */
 async function fetchImageAsDataUrl(imageUrl: string): Promise<string> {
@@ -232,14 +256,14 @@ async function getFaviconFromCache(url: string): Promise<string | null> {
         const result = await browser.storage.local.get(CACHE_KEY);
         const cache: FaviconCache = result[CACHE_KEY] || {};
         const domain = extractDomain(url);
-        
+
         if (!domain || !cache[domain]) {
             return null;
         }
-        
+
         const cachedItem = cache[domain];
         const now = Date.now();
-        
+
         // 检查是否过期
         if (now > cachedItem.expires) {
             // 删除过期项
@@ -247,7 +271,7 @@ async function getFaviconFromCache(url: string): Promise<string | null> {
             await browser.storage.local.set({ [CACHE_KEY]: cache });
             return null;
         }
-        
+
         return cachedItem.dataUrl;
     } catch (error) {
         console.error('Error getting favicon from cache:', error);
@@ -262,17 +286,17 @@ async function saveFaviconToCache(url: string, dataUrl: string): Promise<void> {
     try {
         const domain = extractDomain(url);
         if (!domain) return;
-        
+
         const result = await browser.storage.local.get(CACHE_KEY);
         const cache: FaviconCache = result[CACHE_KEY] || {};
         const now = Date.now();
-        
+
         cache[domain] = {
             dataUrl,
             timestamp: now,
             expires: now + CACHE_DURATION
         };
-        
+
         await browser.storage.local.set({ [CACHE_KEY]: cache });
     } catch (error) {
         console.error('Error saving favicon to cache:', error);
@@ -380,20 +404,32 @@ async function fetchFaviconFromNetwork(url: string): Promise<string | null> {
 
 /**
  * 获取favicon（主要接口）
+ * 优先级：
+ * 1. Chrome Favicon API（最快，无延迟）⭐
+ * 2. 缓存（备用）
+ * 3. 网络获取（备用）
+ *
  * @param url 书签URL
- * @returns favicon的Data URL，获取失败返回null
+ * @returns favicon URL（Chrome Favicon API URL 或 Data URL），获取失败返回null
  */
 export async function getFavicon(url: string): Promise<string | null> {
     if (!url) return null;
-    
+
     try {
-        // 首先尝试从缓存获取
+        // 方法1：使用Chrome Favicon API（最快，无延迟）⭐
+        // 直接返回Chrome内部缓存的favicon URL，无需网络请求
+        const chromeUrl = getChromeBuiltInFaviconUrl(url, 32);
+        if (chromeUrl) {
+            return chromeUrl;
+        }
+
+        // 方法2：从缓存获取（备用）
         const cachedFavicon = await getFaviconFromCache(url);
         if (cachedFavicon) {
             return cachedFavicon;
         }
-        
-        // 缓存中没有，从网络获取
+
+        // 方法3：从网络获取（备用）
         return await fetchFaviconFromNetwork(url);
     } catch (error) {
         console.error('Error getting favicon:', error);
@@ -413,7 +449,7 @@ export async function preloadFavicons(urls: string[]): Promise<void> {
             console.warn('Failed to preload favicon for:', url, error);
         }
     });
-    
+
     // 并发处理，但不等待全部完成
     Promise.allSettled(promises);
 }
@@ -427,14 +463,14 @@ export async function cleanupFaviconCache(): Promise<void> {
         const cache: FaviconCache = result[CACHE_KEY] || {};
         const now = Date.now();
         let hasChanges = false;
-        
+
         for (const domain in cache) {
             if (now > cache[domain].expires) {
                 delete cache[domain];
                 hasChanges = true;
             }
         }
-        
+
         if (hasChanges) {
             await browser.storage.local.set({ [CACHE_KEY]: cache });
         }
@@ -455,12 +491,12 @@ export async function getFaviconCacheStats(): Promise<{
     try {
         const result = await browser.storage.local.get(CACHE_KEY);
         const cache: FaviconCache = result[CACHE_KEY] || {};
-        
+
         const items = Object.values(cache);
         const totalItems = items.length;
         const totalSize = JSON.stringify(cache).length;
         const timestamps = items.map(item => item.timestamp);
-        
+
         return {
             totalItems,
             totalSize,

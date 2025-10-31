@@ -5,7 +5,7 @@
   "i18nSettings": "界面语言",
   "bookmarks": "书签",
   "searchBookmarks": "搜索书签",
-  "bookmarksTotal": "个书签",
+  "bookmarksTotal": "书签个数",
   "noBookmarks": "暂无书签",
   "bookmarksLoadError": "加载书签失败",
   "loading": "加载中...",

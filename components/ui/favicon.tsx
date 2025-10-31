@@ -10,14 +10,25 @@ interface FaviconProps {
     fallbackIcon?: React.ReactNode;
 }
 
-export const Favicon: React.FC<FaviconProps> = ({ 
-    url, 
+/**
+ * Favicon 组件
+ *
+ * 优化说明：
+ * - 使用 Chrome Favicon API 获取图标，无需加载状态
+ * - 直接从浏览器内部缓存读取，毫秒级响应
+ * - 移除了加载动画，提升用户体验
+ *
+ * @example
+ * <Favicon url="https://www.google.com" size={24} />
+ */
+
+export const Favicon: React.FC<FaviconProps> = ({
+    url,
     className,
     size = 24,
     fallbackIcon
 }) => {
     const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
@@ -28,11 +39,10 @@ export const Favicon: React.FC<FaviconProps> = ({
         }
 
         let isMounted = true;
-        
+
         const loadFavicon = async () => {
-            setIsLoading(true);
             setHasError(false);
-            
+
             try {
                 const favicon = await getFavicon(url);
                 if (isMounted) {
@@ -49,10 +59,6 @@ export const Favicon: React.FC<FaviconProps> = ({
                 if (isMounted) {
                     setFaviconUrl(null);
                     setHasError(true);
-                }
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false);
                 }
             }
         };
@@ -81,22 +87,6 @@ export const Favicon: React.FC<FaviconProps> = ({
                 className
             )}>
                 {fallbackIcon || <FaBookmark className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
-            </div>
-        );
-    }
-
-    // 如果正在加载，显示默认图标
-    if (isLoading) {
-        return (
-            <div className={cn(
-                "flex items-center justify-center",
-                "w-8 h-8 rounded-lg",
-                "bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20",
-                "border border-amber-200/50 dark:border-amber-700/50",
-                "shadow-sm animate-pulse",
-                className
-            )}>
-                {fallbackIcon || <FaBookmark className="h-5 w-5 text-amber-600/50 dark:text-amber-400/50" />}
             </div>
         );
     }

@@ -1,5 +1,7 @@
 // ThemeContext.js
 import React, {createContext, useState, useContext, useEffect} from 'react';
+import { browser } from "wxt/browser";
+import { configSyncManager } from "@/lib/configSyncManager";
 
 const ThemeContext = createContext<{ theme: string, toggleTheme: Function }>({
     theme: 'light', toggleTheme: (theme: string) => {
@@ -16,9 +18,9 @@ export const ThemeProvider = ({children}: { children: any }) => {
     };
 
     async function initTheme() {
-        let data = await browser.storage.local.get('theme');
-        if (data.theme) {
-            setTheme(data.theme)
+        const theme = await configSyncManager.getConfig('theme');
+        if (theme) {
+            setTheme(theme)
         }
     }
 

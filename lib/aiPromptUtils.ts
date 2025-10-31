@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { configSyncManager } from "./configSyncManager";
 
 /**
  * 默认的中文Prompt模板
@@ -50,15 +51,13 @@ export const getDefaultPrompt = (locale: string = 'zh_CN'): string => {
 };
 
 /**
- * 保存自定义Prompt模板
+ * 保存自定义Prompt模板（自动同步到其他设备）
  * @param prompt 自定义Prompt模板
  */
 export const saveCustomPrompt = async (prompt: string): Promise<void> => {
     try {
-        await browser.storage.local.set({
-            [STORAGE_KEYS.CUSTOM_PROMPT]: prompt,
-            [STORAGE_KEYS.USE_CUSTOM_PROMPT]: true
-        });
+        await configSyncManager.saveConfig(STORAGE_KEYS.CUSTOM_PROMPT, prompt);
+        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT, true);
     } catch (error) {
         console.error('Failed to save custom prompt:', error);
         throw new Error('Failed to save custom prompt template');
@@ -72,18 +71,13 @@ export const saveCustomPrompt = async (prompt: string): Promise<void> => {
  */
 export const getCurrentPrompt = async (locale: string = 'zh_CN'): Promise<string> => {
     try {
-        const result = await browser.storage.local.get([
-            STORAGE_KEYS.CUSTOM_PROMPT,
-            STORAGE_KEYS.USE_CUSTOM_PROMPT
-        ]);
-        
-        const useCustom = result[STORAGE_KEYS.USE_CUSTOM_PROMPT];
-        const customPrompt = result[STORAGE_KEYS.CUSTOM_PROMPT];
-        
+        const useCustom = await configSyncManager.getConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT);
+        const customPrompt = await configSyncManager.getConfig(STORAGE_KEYS.CUSTOM_PROMPT);
+
         if (useCustom && customPrompt) {
             return customPrompt;
         }
-        
+
         return getDefaultPrompt(locale);
     } catch (error) {
         console.error('Failed to get current prompt:', error);
@@ -97,8 +91,8 @@ export const getCurrentPrompt = async (locale: string = 'zh_CN'): Promise<string
  */
 export const isUsingCustomPrompt = async (): Promise<boolean> => {
     try {
-        const result = await browser.storage.local.get(STORAGE_KEYS.USE_CUSTOM_PROMPT);
-        return result[STORAGE_KEYS.USE_CUSTOM_PROMPT] || false;
+        const useCustom = await configSyncManager.getConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT);
+        return useCustom || false;
     } catch (error) {
         console.error('Failed to check custom prompt status:', error);
         return false;
@@ -106,13 +100,11 @@ export const isUsingCustomPrompt = async (): Promise<boolean> => {
 };
 
 /**
- * 恢复默认Prompt模板
+ * 恢复默认Prompt模板（自动同步到其他设备）
  */
 export const restoreDefaultPrompt = async (): Promise<void> => {
     try {
-        await browser.storage.local.set({
-            [STORAGE_KEYS.USE_CUSTOM_PROMPT]: false
-        });
+        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT, false);
     } catch (error) {
         console.error('Failed to restore default prompt:', error);
         throw new Error('Failed to restore default prompt template');
