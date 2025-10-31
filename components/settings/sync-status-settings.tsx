@@ -61,7 +61,7 @@ export function SyncStatusSettings() {
     // 格式化时间
     const formatTime = (timestamp: number | null): string => {
         if (!timestamp) {
-            return t('never') || 'Never';
+            return t('never');
         }
         const date = new Date(timestamp);
         return date.toLocaleString();
@@ -70,22 +70,22 @@ export function SyncStatusSettings() {
     // 获取同步状态显示文本
     const getSyncStatusText = (): string => {
         if (!syncStatus) {
-            return t('loading') || 'Loading...';
+            return t('loading');
         }
 
         if (syncStatus.isSyncing) {
-            return t('syncing') || 'Syncing...';
+            return t('syncing');
         }
 
         if (syncStatus.lastError) {
-            return t('syncFailed') || 'Sync Failed';
+            return t('syncFailed');
         }
 
         if (syncStatus.lastSyncTime) {
-            return t('synced') || 'Synced';
+            return t('synced');
         }
 
-        return t('notSynced') || 'Not Synced';
+        return t('notSynced');
     };
 
     // 获取同步状态图标
@@ -113,9 +113,9 @@ export function SyncStatusSettings() {
         <div className="space-y-4">
             {/* 标题和描述 */}
             <div className="space-y-1">
-                <h4 className="font-medium text-sm">{t('syncStatus') || 'Sync Status'}</h4>
+                <h4 className="font-medium text-sm">{t('syncStatus')}</h4>
                 <p className="text-xs text-muted-foreground">
-                    {t('syncStatusDescription') || 'Manage configuration synchronization across devices'}
+                    {t('syncStatusDescription')}
                 </p>
             </div>
 
@@ -131,7 +131,7 @@ export function SyncStatusSettings() {
 
                 {/* 最后同步时间 */}
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{t('lastSyncTime') || 'Last Sync'}:</span>
+                    <span className="text-muted-foreground">{t('lastSyncTime')}:</span>
                     <span className="font-mono text-xs">
                         {formatTime(syncStatus?.lastSyncTime || null)}
                     </span>
@@ -140,7 +140,7 @@ export function SyncStatusSettings() {
                 {/* 待同步变更数 */}
                 {syncStatus && syncStatus.pendingChanges > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{t('pendingChanges') || 'Pending Changes'}:</span>
+                        <span className="text-muted-foreground">{t('pendingChanges')}:</span>
                         <span className="font-mono text-xs">{syncStatus.pendingChanges}</span>
                     </div>
                 )}
@@ -148,7 +148,7 @@ export function SyncStatusSettings() {
                 {/* 错误提示 */}
                 {syncStatus?.lastError && (
                     <div className="rounded bg-red-50 p-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                        <p className="font-medium">{t('syncError') || 'Sync Error'}:</p>
+                        <p className="font-medium">{t('syncError')}:</p>
                         <p className="mt-1 break-words">{syncStatus.lastError}</p>
                     </div>
                 )}
@@ -164,12 +164,12 @@ export function SyncStatusSettings() {
                 {syncing || syncStatus?.isSyncing ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t('syncing') || 'Syncing...'}
+                        {t('syncing')}...
                     </>
                 ) : (
                     <>
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        {t('manualSync') || 'Manual Sync'}
+                        {t('manualSync')}
                     </>
                 )}
             </Button>
@@ -177,7 +177,7 @@ export function SyncStatusSettings() {
             {/* 信息提示 */}
             <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                 <p>
-                    {t('syncInfo') || 'Your configuration will automatically sync across all devices logged in with the same Google account.'}
+                    {t('syncInfo')}
                 </p>
             </div>
         </div>

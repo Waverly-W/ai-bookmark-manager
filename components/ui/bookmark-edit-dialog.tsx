@@ -32,7 +32,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
 }) => {
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
-    
+
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
     const [isRenaming, setIsRenaming] = useState(false);
@@ -61,7 +61,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
         if (!bookmark?.url) {
             toast({
                 title: t('renameFailed'),
-                description: 'URL is required for AI rename',
+                description: t('urlRequired'),
                 variant: "destructive"
             });
             return;
@@ -72,7 +72,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
         if (!aiConfigured) {
             toast({
                 title: t('aiNotConfigured'),
-                description: 'Please configure AI service in settings first',
+                description: t('aiNotConfigured'),
                 variant: "destructive"
             });
             return;
@@ -95,17 +95,17 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
             if (result.success && result.newTitle) {
                 setTitle(result.newTitle);
                 toast({
-                    title: 'AI Rename Success',
-                    description: 'AI has suggested a new title for your bookmark',
+                    title: t('aiRenameSuccess'),
+                    description: t('aiRenameSuggestion'),
                 });
             } else {
-                throw new Error(result.error || 'AI rename failed');
+                throw new Error(result.error || t('renameFailed'));
             }
         } catch (error) {
             console.error('AI rename error:', error);
             toast({
                 title: t('renameFailed'),
-                description: error instanceof Error ? error.message : 'Unknown error occurred',
+                description: error instanceof Error ? error.message : t('unknownError'),
                 variant: "destructive"
             });
         } finally {
@@ -119,8 +119,8 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
 
         if (!title.trim()) {
             toast({
-                title: 'Validation Error',
-                description: 'Bookmark name cannot be empty',
+                title: t('validationError'),
+                description: t('bookmarkNameEmpty'),
                 variant: "destructive"
             });
             return;
@@ -128,8 +128,8 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
 
         if (!url.trim()) {
             toast({
-                title: 'Validation Error',
-                description: 'Bookmark URL cannot be empty',
+                title: t('validationError'),
+                description: t('bookmarkUrlEmpty'),
                 variant: "destructive"
             });
             return;
@@ -140,8 +140,8 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
             await onSave(bookmark.id, title.trim(), url.trim());
             console.log('Bookmark saved successfully');
             toast({
-                title: 'Success',
-                description: 'Bookmark updated successfully',
+                title: t('save'),
+                description: t('bookmarkUpdatedSuccess'),
             });
             // 重置状态并关闭弹窗
             setIsRenaming(false);
@@ -151,8 +151,8 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
         } catch (error) {
             console.error('Save bookmark error:', error);
             toast({
-                title: 'Save Failed',
-                description: error instanceof Error ? error.message : 'Failed to save bookmark',
+                title: t('saveFailed'),
+                description: error instanceof Error ? error.message : t('failedToSaveBookmark'),
                 variant: "destructive"
             });
         } finally {
@@ -192,7 +192,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
                         {t('editBookmarkDescription')}
                     </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="grid gap-4 py-4">
                     {/* 书签名称 */}
                     <div className="grid gap-2">
@@ -229,7 +229,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
                             id="bookmark-url"
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
-                            placeholder="https://example.com"
+                            placeholder={t('apiUrlPlaceholder')}
                             type="url"
                         />
                     </div>
@@ -252,7 +252,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
                         {isSaving ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Saving...
+                                {t('saving')}...
                             </>
                         ) : (
                             t('save')

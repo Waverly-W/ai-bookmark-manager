@@ -29,7 +29,7 @@ export const FolderEditDialog: React.FC<FolderEditDialogProps> = ({
 }) => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
-    
+
     const [title, setTitle] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -55,8 +55,8 @@ export const FolderEditDialog: React.FC<FolderEditDialogProps> = ({
         const trimmedTitle = title.trim();
         if (!trimmedTitle) {
             toast({
-                title: t('saveBookmarkFailed'),
-                description: t('bookmarkNameRequired'),
+                title: t('saveFolderFailed'),
+                description: t('folderNameRequired'),
                 variant: "destructive"
             });
             return;
@@ -124,7 +124,7 @@ export const FolderEditDialog: React.FC<FolderEditDialogProps> = ({
                         {t('editFolderDescription')}
                     </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="grid gap-4 py-4">
                     {/* 文件夹名称 */}
                     <div className="grid gap-2">

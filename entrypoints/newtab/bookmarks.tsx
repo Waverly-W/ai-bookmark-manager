@@ -783,7 +783,7 @@ export const Bookmarks: React.FC = () => {
                     <Card>
                         <CardContent className="p-8">
                             <div className="text-center text-muted-foreground">
-                                {isSearching ? '未找到匹配的书签' : t('noBookmarks')}
+                                {isSearching ? t('searchNoResults') : t('noBookmarks')}
                             </div>
                         </CardContent>
                     </Card>
