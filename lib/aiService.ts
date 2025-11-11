@@ -1,5 +1,5 @@
 import { AIConfig, decodeApiKey } from './aiConfigUtils';
-import { getCurrentPrompt, formatPrompt, enhancePromptForBatch, formatBatchPrompt, parseBatchRenameResponse } from './aiPromptUtils';
+import { getCurrentPrompt, formatPrompt, enhancePromptForBatch, formatBatchPrompt, parseBatchRenameResponse, getDefaultPrompt } from './aiPromptUtils';
 
 /**
  * AI API响应接口
@@ -13,11 +13,11 @@ interface AIResponse {
 }
 // 请求可选参数（供超时、重试、取消等）
 export interface AIRequestOptions {
-  timeoutMs?: number;
-  retries?: number;
-  backoffMs?: number;
-  signal?: AbortSignal;
-  maxConcurrency?: number; // 最大并发数（仅用于逐个模式）
+    timeoutMs?: number;
+    retries?: number;
+    backoffMs?: number;
+    signal?: AbortSignal;
+    maxConcurrency?: number; // 最大并发数（仅用于逐个模式）
 }
 
 
@@ -26,78 +26,78 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 // 统一 API 端点构造（处理尾斜杠）
 const buildEndpoint = (apiUrl: string, path: string = 'chat/completions'): string => {
-  const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-  return `${baseUrl}/${path}`;
+    const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+    return `${baseUrl}/${path}`;
 };
 
 // 简单的并发控制器
 class ConcurrencyController {
-  private running = 0;
-  private queue: Array<() => Promise<any>> = [];
+    private running = 0;
+    private queue: Array<() => Promise<any>> = [];
 
-  constructor(private maxConcurrency: number = 1) {}
+    constructor(private maxConcurrency: number = 1) { }
 
-  async run<T>(fn: () => Promise<T>): Promise<T> {
-    while (this.running >= this.maxConcurrency) {
-      await new Promise(resolve => setTimeout(resolve, 10));
+    async run<T>(fn: () => Promise<T>): Promise<T> {
+        while (this.running >= this.maxConcurrency) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        this.running++;
+        try {
+            return await fn();
+        } finally {
+            this.running--;
+        }
     }
-    this.running++;
-    try {
-      return await fn();
-    } finally {
-      this.running--;
-    }
-  }
 }
 
 // 带超时与指数退避重试的 fetch 封装（默认超时 30s，重试 2 次，基础退避 800ms）
 async function fetchWithRetry(
-  url: string,
-  init: RequestInit,
-  opts?: { timeoutMs?: number; retries?: number; backoffMs?: number; signal?: AbortSignal }
+    url: string,
+    init: RequestInit,
+    opts?: { timeoutMs?: number; retries?: number; backoffMs?: number; signal?: AbortSignal }
 ): Promise<Response> {
-  const timeoutMs = opts?.timeoutMs ?? 30000;
-  const retries = opts?.retries ?? 2;
-  const backoffMs = opts?.backoffMs ?? 800;
+    const timeoutMs = opts?.timeoutMs ?? 30000;
+    const retries = opts?.retries ?? 2;
+    const backoffMs = opts?.backoffMs ?? 800;
 
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // 合并外部信号到我们的 controller
-    const externalSignal = init.signal ?? opts?.signal;
-    if (externalSignal) {
-      if (externalSignal.aborted) {
-        controller.abort();
-      } else {
-        externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
-      }
+        // 合并外部信号到我们的 controller
+        const externalSignal = init.signal ?? opts?.signal;
+        if (externalSignal) {
+            if (externalSignal.aborted) {
+                controller.abort();
+            } else {
+                externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+            }
+        }
+
+        try {
+            const response = await fetch(url, { ...init, signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!response.ok && attempt < retries && (response.status === 429 || response.status >= 500)) {
+                await sleep(backoffMs * Math.pow(2, attempt));
+                continue;
+            }
+
+            return response;
+        } catch (e: any) {
+            clearTimeout(timeoutId);
+            lastError = e;
+            const aborted = e?.name === 'AbortError';
+            if (aborted || attempt >= retries) {
+                throw e;
+            }
+            await sleep(backoffMs * Math.pow(2, attempt));
+        }
     }
 
-    try {
-      const response = await fetch(url, { ...init, signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (!response.ok && attempt < retries && (response.status === 429 || response.status >= 500)) {
-        await sleep(backoffMs * Math.pow(2, attempt));
-        continue;
-      }
-
-      return response;
-    } catch (e: any) {
-      clearTimeout(timeoutId);
-      lastError = e;
-      const aborted = e?.name === 'AbortError';
-      if (aborted || attempt >= retries) {
-        throw e;
-      }
-      await sleep(backoffMs * Math.pow(2, attempt));
-    }
-  }
-
-  // 理论上不会到达这里
-  throw lastError instanceof Error ? lastError : new Error('fetchWithRetry failed');
+    // 理论上不会到达这里
+    throw lastError instanceof Error ? lastError : new Error('fetchWithRetry failed');
 }
 
 /**
@@ -123,13 +123,15 @@ export interface AIRenameResult {
  * @param config AI配置
  * @param prompt 提示词
  * @param maxTokens 最大token数
+ * @param useJsonMode 是否启用 JSON Mode（确保返回标准 JSON 格式）
  * @returns AI响应内容
  */
 const callAIAPI = async (
     config: AIConfig,
     prompt: string,
     maxTokens: number = 100,
-    options?: AIRequestOptions
+    options?: AIRequestOptions,
+    useJsonMode: boolean = false
 ): Promise<string> => {
     const { apiUrl, apiKey, modelId } = config;
 
@@ -140,23 +142,32 @@ const callAIAPI = async (
 
     try {
         const endpoint = buildEndpoint(apiUrl);
+
+        // 构建请求体
+        const requestBody: any = {
+            model: modelId,
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: maxTokens
+        };
+
+        // 如果启用 JSON Mode，添加 response_format 参数
+        if (useJsonMode) {
+            requestBody.response_format = { type: 'json_object' };
+        }
+
         const response = await fetchWithRetry(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-                model: modelId,
-                messages: [
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                temperature: 0.7,
-                max_tokens: maxTokens
-            })
+            body: JSON.stringify(requestBody)
         }, options);
 
         if (!response.ok) {
@@ -217,20 +228,42 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
  * @param bookmarkUrl 书签URL
  * @param currentTitle 当前标题
  * @param locale 当前语言（可选，用于获取默认Prompt）
+ * @param referenceBookmarks 参考书签标题列表（可选，用于保持命名风格一致）
  * @returns 重命名结果
  */
 export const renameBookmarkWithAI = async (
     config: AIConfig,
     bookmarkUrl: string,
     currentTitle: string,
-    locale?: string
+    locale?: string,
+    referenceBookmarks?: string[]
 ): Promise<AIRenameResult> => {
     try {
+        // 判断是否使用参考格式
+        const useReference = referenceBookmarks && referenceBookmarks.length >= 3;
+
         // 获取当前的Prompt模板
-        const promptTemplate = await getCurrentPrompt(locale);
+        let promptTemplate: string;
+        if (useReference) {
+            // 使用带参考格式的 Prompt
+            promptTemplate = getDefaultPrompt(locale, true);
+        } else {
+            // 使用普通 Prompt
+            promptTemplate = await getCurrentPrompt(locale);
+        }
 
         // 格式化Prompt（替换占位符）
-        const prompt = formatPrompt(promptTemplate, bookmarkUrl, currentTitle);
+        const prompt = formatPrompt(
+            promptTemplate,
+            bookmarkUrl,
+            currentTitle,
+            useReference ? referenceBookmarks : undefined
+        );
+
+        console.log('[AI Rename] 使用参考格式:', useReference);
+        if (useReference) {
+            console.log('[AI Rename] 参考书签数量:', referenceBookmarks?.length);
+        }
 
         // 调用AI API
         const newTitle = await callAIAPI(config, prompt, 50);

@@ -150,7 +150,7 @@ export function filterBookmarksByRoot(
     if (rootFolderId === 'all') {
         return bookmarks;
     }
-    
+
     // 递归查找指定的根文件夹
     function findFolder(nodes: any[]): any | null {
         for (const node of nodes) {
@@ -164,7 +164,7 @@ export function filterBookmarksByRoot(
         }
         return null;
     }
-    
+
     const rootFolder = findFolder(bookmarks);
     return rootFolder?.children || [];
 }
@@ -283,6 +283,26 @@ export const broadcastBookmarkUpdate = async (bookmarkId: string, newTitle: stri
 };
 
 /**
+ * 创建Chrome书签
+ * @param title 书签标题
+ * @param url 书签URL
+ * @param parentId 父文件夹ID（可选，默认为书签栏）
+ */
+export const createChromeBookmark = async (title: string, url: string, parentId?: string): Promise<any> => {
+    try {
+        const bookmark = await browser.bookmarks.create({
+            parentId: parentId || '1', // 默认添加到书签栏（ID为'1'）
+            title: title.trim(),
+            url: url.trim()
+        });
+        return bookmark;
+    } catch (error) {
+        console.error('Failed to create Chrome bookmark:', error);
+        throw new Error('Failed to create bookmark in Chrome');
+    }
+};
+
+/**
  * 获取指定文件夹中的所有书签
  * @param folderId 文件夹ID
  * @returns 书签列表
@@ -322,6 +342,32 @@ export const getBookmarksInFolder = async (folderId: string): Promise<Array<{ id
     } catch (error) {
         console.error('Failed to get bookmarks in folder:', error);
         // 返回空数组而不是抛出错误，避免页面崩溃
+        return [];
+    }
+};
+
+/**
+ * 获取指定文件夹中的书签标题列表（用于 AI 参考命名格式）
+ * @param folderId 文件夹 ID
+ * @param maxCount 最多返回的书签数量（默认 20）
+ * @returns 书签标题列表
+ */
+export const getBookmarkTitlesInFolder = async (
+    folderId: string,
+    maxCount: number = 20
+): Promise<string[]> => {
+    try {
+        const children = await browser.bookmarks.getChildren(folderId);
+
+        // 只获取书签（有 URL 的节点），不包括子文件夹
+        const bookmarks = children
+            .filter(node => node.url)
+            .slice(0, maxCount)
+            .map(node => node.title);
+
+        return bookmarks;
+    } catch (error) {
+        console.error('Failed to get bookmark titles in folder:', error);
         return [];
     }
 };

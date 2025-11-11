@@ -7,6 +7,8 @@ import { AccentColorSettings } from "@/components/settings/accent-color-settings
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
 import { SyncStatusSettings } from "@/components/settings/sync-status-settings.tsx";
+import { FolderRecommendationSettings } from "@/components/settings/folder-recommendation-settings.tsx";
+import { AIRenameSettings } from "@/components/settings/ai-rename-settings.tsx";
 import { useTranslation } from "react-i18next";
 
 export function SettingsPage() {
@@ -63,6 +65,8 @@ export function SettingsPage() {
                         <SyncStatusSettings />
                         <AIConfigSettings />
                         <AIPromptSettings />
+                        <AIRenameSettings />
+                        <FolderRecommendationSettings />
                     </div>
                 </TabsContent>
             </Tabs>

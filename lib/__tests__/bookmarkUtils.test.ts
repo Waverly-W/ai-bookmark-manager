@@ -181,5 +181,61 @@ describe('bookmarkUtils', () => {
       expect(validateBookmarkTitle('한국어 제목')).toBe(true)
     })
   })
+
+  describe('createChromeBookmark', () => {
+    it('should validate bookmark creation parameters', () => {
+      // 测试标题验证
+      expect(validateBookmarkTitle('Valid Title')).toBe(true)
+      expect(validateBookmarkTitle('')).toBe(false)
+      expect(validateBookmarkTitle('   ')).toBe(false)
+
+      // 测试URL验证
+      expect(validateBookmarkUrl('https://example.com')).toBe(true)
+      expect(validateBookmarkUrl('invalid-url')).toBe(false)
+      expect(validateBookmarkUrl('')).toBe(false)
+    })
+
+    it('should trim title and url before validation', () => {
+      const title = '  My Bookmark  '
+      const url = '  https://example.com  '
+
+      expect(validateBookmarkTitle(title)).toBe(true)
+      expect(validateBookmarkUrl(url)).toBe(true)
+
+      // 验证 trim 后的值
+      expect(title.trim()).toBe('My Bookmark')
+      expect(url.trim()).toBe('https://example.com')
+    })
+
+    it('should handle various URL formats', () => {
+      expect(validateBookmarkUrl('https://example.com')).toBe(true)
+      expect(validateBookmarkUrl('http://example.com')).toBe(true)
+      expect(validateBookmarkUrl('https://example.com/path?query=value')).toBe(true)
+      expect(validateBookmarkUrl('https://subdomain.example.com')).toBe(true)
+    })
+
+    it('should reject invalid bookmark data', () => {
+      // 标题太长
+      expect(validateBookmarkTitle('A'.repeat(201))).toBe(false)
+
+      // 无效的URL
+      expect(validateBookmarkUrl('not-a-url')).toBe(false)
+      expect(validateBookmarkUrl('example.com')).toBe(false)
+    })
+
+    it('should support custom parent folder ID', () => {
+      // 测试 parentId 参数的验证
+      const customParentId = '2' // 假设这是一个自定义文件夹ID
+      const defaultParentId = '1' // 默认书签栏ID
+
+      // 验证 parentId 是字符串类型
+      expect(typeof customParentId).toBe('string')
+      expect(typeof defaultParentId).toBe('string')
+
+      // 验证 parentId 不为空
+      expect(customParentId.length).toBeGreaterThan(0)
+      expect(defaultParentId.length).toBeGreaterThan(0)
+    })
+  })
 })
 

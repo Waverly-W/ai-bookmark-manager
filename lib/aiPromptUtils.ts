@@ -34,19 +34,221 @@ Current Title: {title}
 New Title:`;
 
 /**
+ * 带参考命名格式的中文 Prompt 模板
+ */
+export const DEFAULT_PROMPT_WITH_REFERENCE_ZH = `请根据以下书签的URL和当前标题，生成一个简洁、描述性的中文标题。
+
+重要：请参考同一文件夹中现有书签的命名风格，保持一致性。
+
+参考书签标题（同一文件夹中的现有书签）：
+{referenceBookmarks}
+
+要求：
+1. 分析参考书签的命名模式（如：是否使用中英文、是否包含分类标签、长度风格、格式等）
+2. 生成的新标题应与参考书签的命名风格保持一致
+3. 不超过30个字符
+4. 准确反映网页内容
+5. 便于搜索和识别
+6. 只返回新标题，不要有其他说明文字
+
+书签URL: {url}
+当前标题: {title}
+
+新标题：`;
+
+/**
+ * 带参考命名格式的英文 Prompt 模板
+ */
+export const DEFAULT_PROMPT_WITH_REFERENCE_EN = `Based on the following bookmark's URL and current title, generate a concise and descriptive title.
+
+IMPORTANT: Please refer to the naming style of existing bookmarks in the same folder to maintain consistency.
+
+Reference bookmark titles (existing bookmarks in the same folder):
+{referenceBookmarks}
+
+Requirements:
+1. Analyze the naming pattern of reference bookmarks (e.g., language usage, category labels, length style, format, etc.)
+2. The new title should match the naming style of reference bookmarks
+3. No more than 50 characters
+4. Accurately reflect the page content
+5. Easy to search and identify
+6. Return only the new title, no additional text
+
+Bookmark URL: {url}
+Current Title: {title}
+
+New Title:`;
+
+/**
+ * 默认的文件夹推荐 Prompt 模板（中文）
+ */
+export const DEFAULT_FOLDER_RECOMMENDATION_PROMPT_ZH = `你是一个智能书签管理助手。请根据以下信息，推荐最合适的书签文件夹。
+
+页面信息：
+- URL: {url}
+- 标题: {title}
+
+可用文件夹列表：
+{folderList}
+
+要求：
+1. 分析页面的主题和内容类型
+2. 从可用文件夹中选择最合适的一个
+3. 只返回文件夹的序号（如 "3"）
+4. 如果没有合适的文件夹，返回 "0"（表示使用默认书签栏）
+
+推荐的文件夹序号：`;
+
+/**
+ * 默认的文件夹推荐 Prompt 模板（英文）
+ */
+export const DEFAULT_FOLDER_RECOMMENDATION_PROMPT_EN = `You are an intelligent bookmark management assistant. Please recommend the most suitable bookmark folder based on the following information.
+
+Page Information:
+- URL: {url}
+- Title: {title}
+
+Available Folders:
+{folderList}
+
+Requirements:
+1. Analyze the page's theme and content type
+2. Select the most suitable folder from the available folders
+3. Return only the folder number (e.g., "3")
+4. If no suitable folder exists, return "0" (use default bookmarks bar)
+
+Recommended folder number:`;
+
+/**
+ * 带推荐理由的文件夹推荐 Prompt 模板（中文）- 单个推荐
+ */
+export const DEFAULT_FOLDER_RECOMMENDATION_WITH_REASON_PROMPT_ZH = `你是一个智能书签管理助手。请根据以下信息，推荐最合适的书签文件夹，并说明理由。
+
+页面信息：
+- URL: {url}
+- 标题: {title}
+
+可用文件夹列表：
+{folderList}
+
+要求：
+1. 分析页面的主题和内容类型
+2. 从可用文件夹中选择最合适的一个
+3. 推荐理由要简洁明了，不超过20个字
+4. 如果没有合适的文件夹，返回 index 为 0
+
+【重要】必须返回 JSON 格式的响应：
+{"recommendation": {"index": 序号, "reason": "推荐理由", "confidence": 0.9}}
+
+其中 index 是文件夹列表中的序号（从 1 开始），0 表示默认书签栏。
+不要返回任何其他文本或解释，只返回 JSON 对象。`;
+
+/**
+ * 带推荐理由的文件夹推荐 Prompt 模板（英文）- 单个推荐
+ */
+export const DEFAULT_FOLDER_RECOMMENDATION_WITH_REASON_PROMPT_EN = `You are an intelligent bookmark management assistant. Please recommend the most suitable bookmark folder based on the following information and provide a reason.
+
+Page Information:
+- URL: {url}
+- Title: {title}
+
+Available Folders:
+{folderList}
+
+Requirements:
+1. Analyze the page's theme and content type
+2. Select the most suitable folder from the available folders
+3. Keep the reason concise, no more than 30 characters
+4. If no suitable folder exists, return index as 0
+
+【IMPORTANT】You MUST return a JSON format response:
+{"recommendation": {"index": number, "reason": "explanation", "confidence": 0.9}}
+
+Where index is the folder number from the list (starting from 1), 0 means default bookmarks bar.
+Do not return any other text or explanation, only return the JSON object.`;
+
+/**
+ * 多推荐文件夹 Prompt 模板（中文）
+ */
+export const DEFAULT_FOLDER_MULTI_RECOMMENDATION_PROMPT_ZH = `你是一个智能书签管理助手。请根据以下信息，推荐 {maxRecommendations} 个最合适的书签文件夹，并说明理由。
+
+页面信息：
+- URL: {url}
+- 标题: {title}
+
+可用文件夹列表：
+{folderList}
+
+要求：
+1. 分析页面的主题和内容类型
+2. 从可用文件夹中选择最合适的 {maxRecommendations} 个文件夹，按推荐优先级排序
+3. 推荐理由要简洁明了，不超过20个字
+4. 置信度范围 0-1，第一个推荐的置信度应该最高
+5. 如果合适的文件夹少于 {maxRecommendations} 个，只返回合适的
+6. 如果没有合适的文件夹，返回 {"recommendations": [{"index": 0, "reason": "使用默认书签栏", "confidence": 0.5}]}
+
+【重要】必须返回 JSON 格式的响应，格式如下：
+{
+  "recommendations": [
+    {"index": 1, "reason": "推荐理由", "confidence": 0.9},
+    {"index": 2, "reason": "推荐理由", "confidence": 0.7}
+  ]
+}
+
+其中 index 是文件夹列表中的序号（从 1 开始），0 表示默认书签栏。
+不要返回任何其他文本或解释，只返回 JSON 对象。`;
+
+/**
+ * 多推荐文件夹 Prompt 模板（英文）
+ */
+export const DEFAULT_FOLDER_MULTI_RECOMMENDATION_PROMPT_EN = `You are an intelligent bookmark management assistant. Please recommend {maxRecommendations} most suitable bookmark folders based on the following information and provide reasons.
+
+Page Information:
+- URL: {url}
+- Title: {title}
+
+Available Folders:
+{folderList}
+
+Requirements:
+1. Analyze the page's theme and content type
+2. Select the {maxRecommendations} most suitable folders from available folders, sorted by priority
+3. Keep the reason concise, no more than 30 characters
+4. Confidence range 0-1, the first recommendation should have the highest confidence
+5. If there are fewer suitable folders than {maxRecommendations}, return only the suitable ones
+6. If no suitable folder exists, return {"recommendations": [{"index": 0, "reason": "Use default bookmarks bar", "confidence": 0.5}]}
+
+【IMPORTANT】You MUST return a JSON format response as follows:
+{
+  "recommendations": [
+    {"index": 1, "reason": "explanation", "confidence": 0.9},
+    {"index": 2, "reason": "explanation", "confidence": 0.7}
+  ]
+}
+
+Where index is the folder number from the list (starting from 1), 0 means default bookmarks bar.
+Do not return any other text or explanation, only return the JSON object.`;
+
+/**
  * 存储键名
  */
 const STORAGE_KEYS = {
     CUSTOM_PROMPT: 'aiCustomPrompt',
-    USE_CUSTOM_PROMPT: 'aiUseCustomPrompt'
+    USE_CUSTOM_PROMPT: 'aiUseCustomPrompt',
+    CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiFolderRecommendationPrompt',
+    USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiUseCustomFolderRecommendationPrompt'
 };
 
 /**
  * 获取默认Prompt模板（根据当前语言）
  * @param locale 当前语言代码
+ * @param withReference 是否使用带参考格式的 Prompt
  * @returns 默认Prompt模板
  */
-export const getDefaultPrompt = (locale: string = 'zh_CN'): string => {
+export const getDefaultPrompt = (locale: string = 'zh_CN', withReference: boolean = false): string => {
+    if (withReference) {
+        return locale.startsWith('zh') ? DEFAULT_PROMPT_WITH_REFERENCE_ZH : DEFAULT_PROMPT_WITH_REFERENCE_EN;
+    }
     return locale.startsWith('zh') ? DEFAULT_PROMPT_ZH : DEFAULT_PROMPT_EN;
 };
 
@@ -131,12 +333,28 @@ export const clearCustomPrompt = async (): Promise<void> => {
  * @param template Prompt模板
  * @param url 书签URL
  * @param title 书签标题
+ * @param referenceBookmarks 参考书签标题列表（可选）
  * @returns 格式化后的Prompt
  */
-export const formatPrompt = (template: string, url: string, title: string): string => {
-    return template
+export const formatPrompt = (
+    template: string,
+    url: string,
+    title: string,
+    referenceBookmarks?: string[]
+): string => {
+    let formatted = template
         .replace(/{url}/g, url)
         .replace(/{title}/g, title);
+
+    // 如果有参考书签，格式化为列表
+    if (referenceBookmarks && referenceBookmarks.length > 0) {
+        const bookmarkList = referenceBookmarks
+            .map((title, index) => `${index + 1}. ${title}`)
+            .join('\n');
+        formatted = formatted.replace(/{referenceBookmarks}/g, bookmarkList);
+    }
+
+    return formatted;
 };
 
 /**
@@ -149,28 +367,28 @@ export const validatePrompt = (prompt: string): {
     errors: string[];
 } => {
     const errors: string[] = [];
-    
+
     if (!prompt || prompt.trim() === '') {
         errors.push('Prompt template cannot be empty');
     }
-    
+
     if (prompt && prompt.length < 20) {
         errors.push('Prompt template is too short (minimum 20 characters)');
     }
-    
+
     if (prompt && prompt.length > 2000) {
         errors.push('Prompt template is too long (maximum 2000 characters)');
     }
-    
+
     // 检查是否包含占位符（建议但不强制）
     const hasUrlPlaceholder = prompt.includes('{url}');
     const hasTitlePlaceholder = prompt.includes('{title}');
-    
+
     if (!hasUrlPlaceholder && !hasTitlePlaceholder) {
         // 这只是警告，不是错误
         console.warn('Prompt template does not contain {url} or {title} placeholders');
     }
-    
+
     return {
         valid: errors.length === 0,
         errors
@@ -318,4 +536,178 @@ export const parseBatchRenameResponse = (aiResponse: string): Array<{ index: num
         console.error('Failed to parse batch rename response:', error);
         return [];
     }
+};
+
+
+/**
+ * 获取默认文件夹推荐 Prompt 模板（根据当前语言）
+ * @param locale 当前语言代码
+ * @param includeReason 是否包含推荐理由
+ * @param multiRecommendation 是否返回多个推荐
+ * @returns 默认文件夹推荐 Prompt 模板
+ */
+export const getDefaultFolderRecommendationPrompt = (
+    locale: string = 'zh_CN',
+    includeReason: boolean = false,
+    multiRecommendation: boolean = false
+): string => {
+    const isZh = locale.startsWith('zh');
+
+    // 多推荐模式（总是包含理由和置信度）
+    if (multiRecommendation) {
+        return isZh
+            ? DEFAULT_FOLDER_MULTI_RECOMMENDATION_PROMPT_ZH
+            : DEFAULT_FOLDER_MULTI_RECOMMENDATION_PROMPT_EN;
+    }
+
+    // 单推荐模式
+    if (includeReason) {
+        return isZh
+            ? DEFAULT_FOLDER_RECOMMENDATION_WITH_REASON_PROMPT_ZH
+            : DEFAULT_FOLDER_RECOMMENDATION_WITH_REASON_PROMPT_EN;
+    }
+
+    return isZh
+        ? DEFAULT_FOLDER_RECOMMENDATION_PROMPT_ZH
+        : DEFAULT_FOLDER_RECOMMENDATION_PROMPT_EN;
+};
+
+/**
+ * 获取当前使用的文件夹推荐 Prompt 模板
+ * @param locale 当前语言代码
+ * @param includeReason 是否包含推荐理由
+ * @param multiRecommendation 是否返回多个推荐
+ * @returns 当前文件夹推荐 Prompt 模板
+ */
+export const getCurrentFolderRecommendationPrompt = async (
+    locale: string = 'zh_CN',
+    includeReason: boolean = false,
+    multiRecommendation: boolean = false
+): Promise<string> => {
+    try {
+        const useCustom = await configSyncManager.getConfig(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
+        const customPrompt = await configSyncManager.getConfig(STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
+
+        if (useCustom && customPrompt) {
+            return customPrompt;
+        }
+
+        return getDefaultFolderRecommendationPrompt(locale, includeReason, multiRecommendation);
+    } catch (error) {
+        console.error('Failed to get current folder recommendation prompt:', error);
+        return getDefaultFolderRecommendationPrompt(locale, includeReason, multiRecommendation);
+    }
+};
+
+/**
+ * 保存自定义文件夹推荐 Prompt 模板（自动同步到其他设备）
+ * @param prompt 自定义 Prompt 模板
+ */
+export const saveCustomFolderRecommendationPrompt = async (prompt: string): Promise<void> => {
+    try {
+        await configSyncManager.saveConfig(STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT, prompt);
+        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT, true);
+    } catch (error) {
+        console.error('Failed to save custom folder recommendation prompt:', error);
+        throw new Error('Failed to save custom folder recommendation prompt template');
+    }
+};
+
+/**
+ * 恢复默认文件夹推荐 Prompt 模板（自动同步到其他设备）
+ */
+export const restoreDefaultFolderRecommendationPrompt = async (): Promise<void> => {
+    try {
+        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT, false);
+    } catch (error) {
+        console.error('Failed to restore default folder recommendation prompt:', error);
+        throw new Error('Failed to restore default folder recommendation prompt template');
+    }
+};
+
+/**
+ * 格式化文件夹列表为 Prompt 文本
+ * @param folders 文件夹列表
+ * @param maxFolders 最大文件夹数量（防止 Prompt 过长）
+ * @param locale 当前语言
+ * @returns 格式化的文件夹列表文本
+ */
+export const formatFolderListForPrompt = (
+    folders: any[],
+    maxFolders: number = 50,
+    locale: string = 'zh_CN'
+): string => {
+    // 扁平化文件夹列表
+    const flattenFolders = (folders: any[], level: number = 0, result: any[] = []): any[] => {
+        if (!folders || !Array.isArray(folders)) {
+            return result;
+        }
+
+        for (const folder of folders) {
+            if (!folder) continue;
+
+            // 跳过特殊文件夹
+            if (folder.id === 'all') continue;
+
+            result.push({
+                id: folder.id,
+                title: folder.title,
+                path: folder.path || folder.title,
+                level
+            });
+
+            if (folder.children && folder.children.length > 0) {
+                flattenFolders(folder.children, level + 1, result);
+            }
+        }
+
+        return result;
+    };
+
+    const flatFolders = flattenFolders(folders);
+
+    // 如果文件夹数量超过限制，优先选择顶层和二级文件夹
+    let selectedFolders = flatFolders;
+    if (flatFolders.length > maxFolders) {
+        const topLevel = flatFolders.filter(f => f.level === 0);
+        const secondLevel = flatFolders.filter(f => f.level === 1);
+        selectedFolders = [...topLevel, ...secondLevel].slice(0, maxFolders);
+    }
+
+    // 格式化为文本列表
+    return selectedFolders
+        .map((folder, index) => {
+            const indent = '  '.repeat(folder.level);
+            return `${index + 1}. ${indent}${folder.path}`;
+        })
+        .join('\n');
+};
+
+/**
+ * 格式化文件夹推荐 Prompt（替换占位符）
+ * @param template Prompt 模板
+ * @param url 页面 URL
+ * @param title 页面标题
+ * @param folderList 文件夹列表文本
+ * @param maxRecommendations 最大推荐数量（可选）
+ * @returns 格式化后的 Prompt
+ */
+export const formatFolderRecommendationPrompt = (
+    template: string,
+    url: string,
+    title: string,
+    folderList: string,
+    maxRecommendations?: number
+): string => {
+    let result = template
+        .replace(/{url}/g, url)
+        .replace(/{title}/g, title)
+        .replace(/{folderList}/g, folderList);
+
+    // 如果提供了 maxRecommendations，替换占位符
+    if (maxRecommendations !== undefined) {
+        result = result.replace(/{maxRecommendations}/g, maxRecommendations.toString());
+    }
+
+    return result;
 };
