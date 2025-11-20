@@ -35,7 +35,7 @@ const STORAGE_KEY = 'folderRecommendationConfig';
  */
 export const getFolderRecommendationConfig = async (): Promise<FolderRecommendationConfig> => {
     try {
-        const savedConfig = await configSyncManager.getConfig(STORAGE_KEY);
+        const savedConfig = await configSyncManager.get(STORAGE_KEY);
 
         if (savedConfig) {
             // 合并保存的配置和默认配置，确保所有字段都存在
@@ -58,7 +58,7 @@ export const getFolderRecommendationConfig = async (): Promise<FolderRecommendat
  */
 export const saveFolderRecommendationConfig = async (config: FolderRecommendationConfig): Promise<void> => {
     try {
-        await configSyncManager.saveConfig(STORAGE_KEY, config);
+        await configSyncManager.set(STORAGE_KEY, config);
     } catch (error) {
         console.error('Failed to save folder recommendation config:', error);
         throw new Error('Failed to save folder recommendation configuration');

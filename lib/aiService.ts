@@ -315,7 +315,13 @@ export const batchRenameBookmarks = async (
     config: AIConfig,
     bookmarks: Array<{ id: string; url: string; title: string }>,
     locale?: string,
-    onProgress?: (current: number, total: number) => void,
+    onProgress?: (current: number, total: number, result?: {
+        id: string;
+        originalTitle: string;
+        newTitle?: string;
+        success: boolean;
+        error?: string;
+    }) => void,
     signal?: AbortSignal,
     maxConcurrency: number = 1
 ): Promise<Array<{
@@ -358,7 +364,13 @@ export const batchRenameBookmarks = async (
 
             // 调用进度回调
             if (onProgress) {
-                onProgress(results.length, total);
+                onProgress(results.length, total, {
+                    id: bookmark.id,
+                    originalTitle: bookmark.title,
+                    newTitle: result.newTitle,
+                    success: result.success,
+                    error: result.error
+                });
             }
 
             // 添加延迟以避免API速率限制（每次请求间隔500ms）
@@ -390,7 +402,13 @@ export const batchRenameBookmarksWithConsistency = async (
     config: AIConfig,
     bookmarks: Array<{ id: string; url: string; title: string }>,
     locale?: string,
-    onProgress?: (current: number, total: number) => void,
+    onProgress?: (current: number, total: number, result?: {
+        id: string;
+        originalTitle: string;
+        newTitle?: string;
+        success: boolean;
+        error?: string;
+    }) => void,
     useIndividualRequests: boolean = false,
     options?: AIRequestOptions
 ): Promise<Array<{

@@ -40,16 +40,7 @@ class ConfigSyncManager {
   private changeListeners: Set<(changes: SyncChanges) => void>;
   private deviceId: string = '';
   private initialized: boolean = false;
-
-  // 需要同步的配置键
-  private syncableKeys = [
-    'aiConfig',
-    'theme',
-    'accentColor',
-    'locale',
-    'aiCustomPrompt',
-    'aiUseCustomPrompt'
-  ];
+  private readonly APP_SETTINGS_KEY = 'app_settings';
 
   private constructor() {
     this.syncStatus = {
@@ -83,63 +74,46 @@ class ConfigSyncManager {
       // 1. 获取或生成设备ID
       this.deviceId = await this.getOrCreateDeviceId();
 
-      // 2. 检查是否首次同步
+      // 2. 尝试迁移旧数据
+      await this.migrateOldSyncData();
+
+      // 3. 检查是否需要从 Sync 恢复 (本地无数据或强制恢复)
       const isFirstSync = await this.isFirstSync();
 
       if (isFirstSync) {
-        // 将本地配置上传到 sync
-        await this.uploadLocalConfigToSync();
+        console.log('First sync detected, attempting to restore from sync...');
+        await this.restoreFromSync();
       } else {
-        // 从 sync 拉取配置
-        await this.pullConfigFromSync();
+        console.log('Sync already initialized');
       }
 
-      // 3. 监听 storage 变更
+      // 4. 监听 storage 变更
       this.setupStorageListener();
 
       this.initialized = true;
       console.log('ConfigSyncManager initialized successfully');
     } catch (error) {
       console.error('Failed to initialize ConfigSyncManager:', error);
-      throw error;
+      // 初始化失败不应阻断应用启动，但记录错误
     }
   }
 
   /**
    * 保存配置（自动同步）
    */
-  async saveConfig(key: string, value: any): Promise<void> {
-    if (!this.syncableKeys.includes(key)) {
-      // 非同步配置，只保存到 local
-      await browser.storage.local.set({ [key]: value });
-      return;
-    }
-
+  async set(key: string, value: any): Promise<void> {
     try {
-      // 1. 保存到 local
+      // 1. 保存到 local (快速响应)
       await browser.storage.local.set({ [key]: value });
 
-      // 2. 准备同步元数据
-      const metadata: SyncMetadata = {
-        lastModified: Date.now(),
-        version: await this.getNextVersion(key),
-        deviceId: this.deviceId
-      };
+      // 2. 更新到 Sync 的 app_settings
+      await this.updateSyncSettings(key, value);
 
-      // 3. 上传到 sync
-      const syncKey = key;
-      const metadataKey = `${key}__metadata`;
-
-      await browser.storage.sync.set({
-        [syncKey]: value,
-        [metadataKey]: metadata
-      });
-
-      // 4. 更新同步状态
+      // 3. 更新同步状态
       this.syncStatus.lastSyncTime = Date.now();
       this.syncStatus.lastError = null;
 
-      console.log(`Config saved: ${key}`);
+      console.log(`Config saved and synced: ${key}`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       this.syncStatus.lastError = errorMsg;
@@ -151,7 +125,7 @@ class ConfigSyncManager {
   /**
    * 获取配置
    */
-  async getConfig(key: string): Promise<any> {
+  async get(key: string): Promise<any> {
     try {
       // 优先从 local 读取
       const localResult = await browser.storage.local.get(key);
@@ -163,7 +137,20 @@ class ConfigSyncManager {
   }
 
   /**
-   * 手动同步
+   * 获取原始同步数据 (用于调试/查看)
+   */
+  async getRawSyncData(): Promise<any> {
+    try {
+      const syncResult = await browser.storage.sync.get(this.APP_SETTINGS_KEY);
+      return syncResult[this.APP_SETTINGS_KEY] || {};
+    } catch (error) {
+      console.error('Failed to get raw sync data:', error);
+      return {};
+    }
+  }
+
+  /**
+   * 手动同步 (强制从 Sync 拉取并覆盖本地)
    */
   async manualSync(): Promise<void> {
     if (this.syncStatus.isSyncing) {
@@ -174,19 +161,7 @@ class ConfigSyncManager {
     this.syncStatus.isSyncing = true;
 
     try {
-      // 1. 从 sync 拉取所有配置
-      const syncData = await browser.storage.sync.get(null);
-
-      // 2. 比较并解决冲突
-      const conflicts = await this.detectConflicts(syncData);
-      const resolved = await this.resolveConflicts(conflicts);
-
-      // 3. 应用更新
-      await this.applyChanges(resolved);
-
-      this.syncStatus.lastSyncTime = Date.now();
-      this.syncStatus.lastError = null;
-
+      await this.restoreFromSync();
       console.log('Manual sync completed successfully');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -236,69 +211,141 @@ class ConfigSyncManager {
       return deviceId;
     } catch (error) {
       console.error('Failed to get or create device ID:', error);
-      throw error;
+      // 如果失败，返回一个临时 ID，不阻断流程
+      return this.generateUUID();
     }
   }
 
   /**
-   * 检查是否首次同步
+   * 检查是否首次同步 (本地是否已初始化)
    */
   private async isFirstSync(): Promise<boolean> {
     try {
       const result = await browser.storage.local.get('syncInitialized');
       return !result.syncInitialized;
     } catch (error) {
-      console.error('Failed to check first sync:', error);
       return true;
     }
   }
 
   /**
-   * 上传本地配置到 sync
+   * 迁移旧的同步数据到新的 app_settings 结构
    */
-  private async uploadLocalConfigToSync(): Promise<void> {
+  private async migrateOldSyncData(): Promise<void> {
     try {
-      for (const key of this.syncableKeys) {
-        const result = await browser.storage.local.get(key);
-        if (result[key]) {
-          const metadata: SyncMetadata = {
-            lastModified: Date.now(),
-            version: 1,
-            deviceId: this.deviceId
-          };
+      // 检查是否已经存在 app_settings
+      const syncResult = await browser.storage.sync.get(this.APP_SETTINGS_KEY);
+      if (syncResult[this.APP_SETTINGS_KEY]) {
+        return; // 已存在新结构，无需迁移
+      }
 
-          await browser.storage.sync.set({
-            [key]: result[key],
-            [`${key}__metadata`]: metadata
-          });
+      console.log('Checking for old sync data to migrate...');
+
+      // 旧的 key 列表
+      const oldKeys = [
+        'aiConfig',
+        'theme',
+        'accentColor',
+        'locale',
+        'aiCustomPrompt',
+        'aiUseCustomPrompt'
+      ];
+
+      const oldData = await browser.storage.sync.get(oldKeys);
+      const migratedSettings: Record<string, any> = {};
+      let hasData = false;
+
+      for (const key of oldKeys) {
+        if (oldData[key] !== undefined) {
+          migratedSettings[key] = oldData[key];
+          hasData = true;
         }
       }
 
-      await browser.storage.local.set({ syncInitialized: true });
-      console.log('Local config uploaded to sync');
+      if (hasData) {
+        console.log('Migrating old sync data:', Object.keys(migratedSettings));
+
+        // 添加元数据
+        migratedSettings._metadata = {
+          lastModified: Date.now(),
+          deviceId: this.deviceId,
+          version: 1,
+          migrated: true
+        };
+
+        // 保存到新结构
+        await browser.storage.sync.set({ [this.APP_SETTINGS_KEY]: migratedSettings });
+
+        // 可选：清理旧数据 (为了安全起见，暂不清理，或者稍后清理)
+        // await browser.storage.sync.remove(oldKeys);
+        console.log('Migration completed successfully');
+      }
     } catch (error) {
-      console.error('Failed to upload local config to sync:', error);
+      console.error('Failed to migrate old sync data:', error);
+    }
+  }
+
+  /**
+   * 从 Sync 恢复配置到本地
+   */
+  private async restoreFromSync(): Promise<void> {
+    try {
+      const syncResult = await browser.storage.sync.get(this.APP_SETTINGS_KEY);
+      const appSettings = syncResult[this.APP_SETTINGS_KEY];
+
+      if (appSettings && typeof appSettings === 'object') {
+        const updates: Record<string, any> = {};
+
+        // 遍历 app_settings 中的所有键值对
+        for (const [key, value] of Object.entries(appSettings)) {
+          // 跳过元数据
+          if (key === '_metadata') continue;
+          updates[key] = value;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await browser.storage.local.set(updates);
+          console.log('Restored settings from sync:', Object.keys(updates));
+        }
+      }
+
+      // 标记为已初始化
+      await browser.storage.local.set({ syncInitialized: true });
+
+      // 更新同步状态时间
+      this.syncStatus.lastSyncTime = Date.now();
+      this.syncStatus.lastError = null;
+    } catch (error) {
+      console.error('Failed to restore from sync:', error);
       throw error;
     }
   }
 
   /**
-   * 从 sync 拉取配置
+   * 更新 Sync 中的设置
    */
-  private async pullConfigFromSync(): Promise<void> {
+  private async updateSyncSettings(key: string, value: any): Promise<void> {
     try {
-      const syncData = await browser.storage.sync.get(null);
+      // 1. 获取当前的 app_settings
+      const syncResult = await browser.storage.sync.get(this.APP_SETTINGS_KEY);
+      const currentSettings = syncResult[this.APP_SETTINGS_KEY] || {};
 
-      for (const key of this.syncableKeys) {
-        if (syncData[key]) {
-          await browser.storage.local.set({ [key]: syncData[key] });
+      // 2. 更新值和元数据
+      const newSettings = {
+        ...currentSettings,
+        [key]: value,
+        _metadata: {
+          lastModified: Date.now(),
+          deviceId: this.deviceId,
+          version: (currentSettings._metadata?.version || 0) + 1
         }
-      }
+      };
 
-      console.log('Config pulled from sync');
+      // 3. 保存回 Sync
+      await browser.storage.sync.set({ [this.APP_SETTINGS_KEY]: newSettings });
     } catch (error) {
-      console.error('Failed to pull config from sync:', error);
-      throw error;
+      console.error('Failed to update sync settings:', error);
+      // 不抛出错误，以免影响本地保存
     }
   }
 
@@ -307,149 +354,76 @@ class ConfigSyncManager {
    */
   private setupStorageListener(): void {
     browser.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'sync') {
-        this.handleSyncChanges(changes);
+      if (areaName === 'sync' && changes[this.APP_SETTINGS_KEY]) {
+        this.handleSyncChanges(changes[this.APP_SETTINGS_KEY]);
       }
     });
   }
 
   /**
-   * 处理 sync 存储变更
+   * 处理 Sync 变更
    */
-  private async handleSyncChanges(changes: any): Promise<void> {
+  private async handleSyncChanges(change: any): Promise<void> {
     try {
+      const newValue = change.newValue;
+      const oldValue = change.oldValue;
+
+      if (!newValue) return; // 被删除了？暂不处理删除
+
+      // 检查是否是本设备产生的变更 (避免循环更新)
+      if (newValue._metadata?.deviceId === this.deviceId) {
+        return;
+      }
+
       const syncChanges: SyncChanges = {};
+      const updates: Record<string, any> = {};
 
-      for (const [key, change] of Object.entries(changes)) {
-        // 跳过元数据键
-        if (key.endsWith('__metadata')) continue;
+      // 比较新旧值，找出变更的字段
+      // 如果是首次同步下来（oldValue 为空），则所有字段都视为变更
+      const keysToCheck = new Set([
+        ...Object.keys(newValue),
+        ...(oldValue ? Object.keys(oldValue) : [])
+      ]);
 
-        syncChanges[key] = {
-          oldValue: change.oldValue,
-          newValue: change.newValue,
-          source: 'sync'
-        };
+      for (const key of keysToCheck) {
+        if (key === '_metadata') continue;
 
-        // 应用到 local
-        if (change.newValue !== undefined) {
-          await browser.storage.local.set({ [key]: change.newValue });
+        const newVal = newValue[key];
+        const oldVal = oldValue ? oldValue[key] : undefined;
+
+        // 简单的值比较 (JSON stringify)
+        if (JSON.stringify(newVal) !== JSON.stringify(oldVal)) {
+          syncChanges[key] = {
+            oldValue: oldVal,
+            newValue: newVal,
+            source: 'sync'
+          };
+
+          if (newVal !== undefined) {
+            updates[key] = newVal;
+          }
         }
       }
 
-      // 通知监听器
-      this.changeListeners.forEach(listener => {
-        try {
-          listener(syncChanges);
-        } catch (error) {
-          console.error('Error in sync change listener:', error);
-        }
-      });
+      // 应用变更到本地
+      if (Object.keys(updates).length > 0) {
+        await browser.storage.local.set(updates);
+        console.log('Applied sync updates:', Object.keys(updates));
 
-      console.log('Sync changes applied:', Object.keys(syncChanges));
+        // 通知监听器
+        this.changeListeners.forEach(listener => {
+          try {
+            listener(syncChanges);
+          } catch (error) {
+            console.error('Error in sync change listener:', error);
+          }
+        });
+
+        // 更新同步时间
+        this.syncStatus.lastSyncTime = Date.now();
+      }
     } catch (error) {
       console.error('Failed to handle sync changes:', error);
-    }
-  }
-
-  /**
-   * 检测冲突
-   */
-  private async detectConflicts(syncData: any): Promise<any[]> {
-    try {
-      const conflicts = [];
-
-      for (const key of this.syncableKeys) {
-        const localResult = await browser.storage.local.get(key);
-        const localValue = localResult[key];
-        const syncValue = syncData[key];
-
-        if (localValue && syncValue && JSON.stringify(localValue) !== JSON.stringify(syncValue)) {
-          conflicts.push({
-            key,
-            localValue,
-            syncValue,
-            localMetadata: syncData[`${key}__metadata`],
-            syncMetadata: syncData[`${key}__metadata`]
-          });
-        }
-      }
-
-      return conflicts;
-    } catch (error) {
-      console.error('Failed to detect conflicts:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 解决冲突
-   */
-  private async resolveConflicts(conflicts: any[]): Promise<any> {
-    try {
-      const resolved = {};
-
-      for (const conflict of conflicts) {
-        const winner = this.compareMetadata(
-          conflict.localMetadata,
-          conflict.syncMetadata
-        );
-
-        resolved[conflict.key] = winner === 'local'
-          ? conflict.localValue
-          : conflict.syncValue;
-      }
-
-      return resolved;
-    } catch (error) {
-      console.error('Failed to resolve conflicts:', error);
-      return {};
-    }
-  }
-
-  /**
-   * 比较元数据，确定优先级
-   */
-  private compareMetadata(local: SyncMetadata, sync: SyncMetadata): 'local' | 'sync' {
-    // 比较时间戳
-    if (local.lastModified > sync.lastModified) return 'local';
-    if (sync.lastModified > local.lastModified) return 'sync';
-
-    // 比较版本号
-    if (local.version > sync.version) return 'local';
-    if (sync.version > local.version) return 'sync';
-
-    // 比较设备ID（字典序）
-    return local.deviceId > sync.deviceId ? 'local' : 'sync';
-  }
-
-  /**
-   * 应用变更
-   */
-  private async applyChanges(changes: any): Promise<void> {
-    try {
-      for (const [key, value] of Object.entries(changes)) {
-        await browser.storage.local.set({ [key]: value });
-      }
-    } catch (error) {
-      console.error('Failed to apply changes:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取下一个版本号
-   */
-  private async getNextVersion(key: string): Promise<number> {
-    try {
-      const versionKey = `${key}__version`;
-      const result = await browser.storage.local.get(versionKey);
-      const currentVersion = result[versionKey] || 0;
-      const nextVersion = currentVersion + 1;
-      await browser.storage.local.set({ [versionKey]: nextVersion });
-      return nextVersion;
-    } catch (error) {
-      console.error('Failed to get next version:', error);
-      return 1;
     }
   }
 
@@ -457,7 +431,7 @@ class ConfigSyncManager {
    * 生成UUID
    */
   private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);

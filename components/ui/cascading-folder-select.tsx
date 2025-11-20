@@ -121,12 +121,15 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
     placeholder = "选择文件夹"
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [hoveredPath, setHoveredPath] = useState<string[]>([]);
-    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // 获取当前选中的文件夹信息
     const selectedFolder = useMemo(() => {
         return findFolderById(folders, selectedId);
+    }, [folders, selectedId]);
+
+    // 根据选中ID计算展开路径
+    const activePath = useMemo(() => {
+        return findFolderPath(folders, selectedId);
     }, [folders, selectedId]);
 
     // 构建面板数据
@@ -142,8 +145,8 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
             parentId: undefined
         });
 
-        // 根据悬停路径构建后续面板
-        for (const folderId of hoveredPath) {
+        // 根据路径构建后续面板
+        for (const folderId of activePath) {
             const folder = findFolderById(currentFolders, folderId);
             if (folder && folder.children && folder.children.length > 0) {
                 level++;
@@ -154,48 +157,23 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                 });
                 currentFolders = folder.children;
             } else {
+                // 如果当前层级找不到对应的文件夹（理论上不应该发生，除非数据不一致），则停止
                 break;
             }
         }
 
         return result;
-    }, [folders, hoveredPath]);
-
-    // 处理文件夹悬停
-    const handleFolderHover = useCallback((folderId: string | null, level: number) => {
-        // 清除之前的延时
-        if (hoverTimeoutRef.current) {
-            clearTimeout(hoverTimeoutRef.current);
-        }
-
-        if (folderId === null) {
-            // 鼠标离开，延时清除悬停状态
-            hoverTimeoutRef.current = setTimeout(() => {
-                setHoveredPath([]);
-            }, 150);
-        } else {
-            // 鼠标进入，立即更新悬停路径
-            const newPath = hoveredPath.slice(0, level);
-            newPath.push(folderId);
-            setHoveredPath(newPath);
-        }
-    }, [hoveredPath]);
+    }, [folders, activePath]);
 
     // 处理文件夹点击
     const handleFolderClick = useCallback((folderId: string) => {
         onSelect(folderId);
-        setIsOpen(false);
-        setHoveredPath([]);
+        // 点击即选中，不需要关闭 popover，用户可能想继续浏览子文件夹
+        // 如果是叶子节点，或者用户想关闭，可以点击外部
+        // 但为了体验，如果点击的是已选中的且没有子文件夹的，可以关闭？
+        // 现在的需求是：点击那个文件夹作为选中的文件夹。
+        // 保持 popover 打开让用户确认或继续选择子文件夹是比较好的 column view 体验。
     }, [onSelect]);
-
-    // 清理定时器
-    useEffect(() => {
-        return () => {
-            if (hoverTimeoutRef.current) {
-                clearTimeout(hoverTimeoutRef.current);
-            }
-        };
-    }, []);
 
     // 生成显示值
     const getDisplayValue = () => {
@@ -244,7 +222,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                 sideOffset={4}
             >
                 <div
-                    className="flex max-h-80 overflow-hidden"
+                    className="flex max-h-80 overflow-hidden bg-popover"
                     role="tree"
                     aria-label="文件夹选择器"
                 >
@@ -260,20 +238,36 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                             <div className="py-1">
                                 {panel.folders.map((folder) => {
                                     const isSelected = folder.id === selectedId;
-                                    const isHovered = hoveredPath[panel.level] === folder.id;
+                                    // 路径中的文件夹也应该高亮（作为父级激活状态）
+                                    const isActive = activePath.includes(folder.id);
                                     const hasChildren = (folder.children?.length ?? 0) > 0;
 
                                     return (
-                                        <FolderItem
+                                        <div
                                             key={folder.id}
-                                            folder={folder}
-                                            isSelected={isSelected}
-                                            isHovered={isHovered}
-                                            hasChildren={hasChildren}
-                                            onHover={(folderId) => handleFolderHover(folderId, panel.level)}
-                                            onClick={handleFolderClick}
-                                            level={panel.level}
-                                        />
+                                            className={cn(
+                                                "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors text-sm mx-1 rounded-sm",
+                                                isSelected
+                                                    ? "bg-primary text-primary-foreground font-medium"
+                                                    : isActive
+                                                        ? "bg-muted text-foreground"
+                                                        : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                            )}
+                                            onClick={() => handleFolderClick(folder.id)}
+                                            role="treeitem"
+                                            aria-selected={isSelected}
+                                            aria-expanded={hasChildren ? isActive : undefined}
+                                        >
+                                            {folder.id === 'all' ? (
+                                                <FaBookmark className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-amber-500")} />
+                                            ) : (
+                                                <FaFolder className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-blue-500")} />
+                                            )}
+                                            <span className="flex-1 truncate">{folder.title}</span>
+                                            {hasChildren && (
+                                                <FaChevronRight className={cn("h-3 w-3 flex-shrink-0", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")} />
+                                            )}
+                                        </div>
                                     );
                                 })}
                             </div>

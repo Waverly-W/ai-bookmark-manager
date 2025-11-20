@@ -258,8 +258,8 @@ export const getDefaultPrompt = (locale: string = 'zh_CN', withReference: boolea
  */
 export const saveCustomPrompt = async (prompt: string): Promise<void> => {
     try {
-        await configSyncManager.saveConfig(STORAGE_KEYS.CUSTOM_PROMPT, prompt);
-        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT, true);
+        await configSyncManager.set(STORAGE_KEYS.CUSTOM_PROMPT, prompt);
+        await configSyncManager.set(STORAGE_KEYS.USE_CUSTOM_PROMPT, true);
     } catch (error) {
         console.error('Failed to save custom prompt:', error);
         throw new Error('Failed to save custom prompt template');
@@ -273,8 +273,8 @@ export const saveCustomPrompt = async (prompt: string): Promise<void> => {
  */
 export const getCurrentPrompt = async (locale: string = 'zh_CN'): Promise<string> => {
     try {
-        const useCustom = await configSyncManager.getConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT);
-        const customPrompt = await configSyncManager.getConfig(STORAGE_KEYS.CUSTOM_PROMPT);
+        const useCustom = await configSyncManager.get(STORAGE_KEYS.USE_CUSTOM_PROMPT);
+        const customPrompt = await configSyncManager.get(STORAGE_KEYS.CUSTOM_PROMPT);
 
         if (useCustom && customPrompt) {
             return customPrompt;
@@ -293,7 +293,7 @@ export const getCurrentPrompt = async (locale: string = 'zh_CN'): Promise<string
  */
 export const isUsingCustomPrompt = async (): Promise<boolean> => {
     try {
-        const useCustom = await configSyncManager.getConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT);
+        const useCustom = await configSyncManager.get(STORAGE_KEYS.USE_CUSTOM_PROMPT);
         return useCustom || false;
     } catch (error) {
         console.error('Failed to check custom prompt status:', error);
@@ -306,7 +306,7 @@ export const isUsingCustomPrompt = async (): Promise<boolean> => {
  */
 export const restoreDefaultPrompt = async (): Promise<void> => {
     try {
-        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_PROMPT, false);
+        await configSyncManager.set(STORAGE_KEYS.USE_CUSTOM_PROMPT, false);
     } catch (error) {
         console.error('Failed to restore default prompt:', error);
         throw new Error('Failed to restore default prompt template');
@@ -585,8 +585,8 @@ export const getCurrentFolderRecommendationPrompt = async (
     multiRecommendation: boolean = false
 ): Promise<string> => {
     try {
-        const useCustom = await configSyncManager.getConfig(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
-        const customPrompt = await configSyncManager.getConfig(STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
+        const useCustom = await configSyncManager.get(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
+        const customPrompt = await configSyncManager.get(STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
 
         if (useCustom && customPrompt) {
             return customPrompt;
@@ -605,8 +605,8 @@ export const getCurrentFolderRecommendationPrompt = async (
  */
 export const saveCustomFolderRecommendationPrompt = async (prompt: string): Promise<void> => {
     try {
-        await configSyncManager.saveConfig(STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT, prompt);
-        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT, true);
+        await configSyncManager.set(STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT, prompt);
+        await configSyncManager.set(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT, true);
     } catch (error) {
         console.error('Failed to save custom folder recommendation prompt:', error);
         throw new Error('Failed to save custom folder recommendation prompt template');
@@ -618,7 +618,7 @@ export const saveCustomFolderRecommendationPrompt = async (prompt: string): Prom
  */
 export const restoreDefaultFolderRecommendationPrompt = async (): Promise<void> => {
     try {
-        await configSyncManager.saveConfig(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT, false);
+        await configSyncManager.set(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT, false);
     } catch (error) {
         console.error('Failed to restore default folder recommendation prompt:', error);
         throw new Error('Failed to restore default folder recommendation prompt template');

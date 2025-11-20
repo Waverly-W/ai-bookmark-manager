@@ -71,11 +71,11 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                 <div className={cn(
                     "flex items-center justify-center",
                     "w-8 h-8 rounded-lg",
-                    "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20",
-                    "border border-blue-200/50 dark:border-blue-700/50",
+                    "bg-primary/10 dark:bg-primary/20",
+                    "border border-primary/20 dark:border-primary/30",
                     "shadow-sm"
                 )}>
-                    <FaFolder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <FaFolder className="h-5 w-5 text-primary" />
                 </div>
             );
         }

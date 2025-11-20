@@ -56,7 +56,7 @@ export const saveAIConfig = async (config: AIConfig): Promise<void> => {
         };
 
         // 使用同步管理器保存配置
-        await configSyncManager.saveConfig(STORAGE_KEYS.AI_CONFIG, configToSave);
+        await configSyncManager.set(STORAGE_KEYS.AI_CONFIG, configToSave);
     } catch (error) {
         console.error('Failed to save AI config:', error);
         throw new Error('Failed to save AI configuration');
@@ -70,7 +70,7 @@ export const saveAIConfig = async (config: AIConfig): Promise<void> => {
 export const getAIConfig = async (): Promise<AIConfig> => {
     try {
         // 使用同步管理器读取配置
-        const savedConfig = await configSyncManager.getConfig(STORAGE_KEYS.AI_CONFIG);
+        const savedConfig = await configSyncManager.get(STORAGE_KEYS.AI_CONFIG);
 
         if (savedConfig) {
             // 解密API Key
@@ -107,19 +107,19 @@ export const validateAIConfig = (config: AIConfig): {
     errors: string[];
 } => {
     const errors: string[] = [];
-    
+
     if (!config.apiUrl || config.apiUrl.trim() === '') {
         errors.push('apiUrlRequired');
     }
-    
+
     if (!config.apiKey || config.apiKey.trim() === '') {
         errors.push('apiKeyRequired');
     }
-    
+
     if (!config.modelId || config.modelId.trim() === '') {
         errors.push('modelIdRequired');
     }
-    
+
     // 验证URL格式
     if (config.apiUrl) {
         try {
@@ -128,7 +128,7 @@ export const validateAIConfig = (config: AIConfig): {
             errors.push('Invalid API URL format');
         }
     }
-    
+
     return {
         valid: errors.length === 0,
         errors

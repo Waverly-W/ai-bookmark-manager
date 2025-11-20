@@ -1,10 +1,8 @@
-import React, {useState} from "react";
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
-import {IoMdCloseCircle} from "react-icons/io";
-import {IoIosSettings} from "react-icons/io";
-import {RiDashboardFill} from "react-icons/ri";
-import {Sparkles} from "lucide-react";
-import {useTranslation} from "react-i18next";
+import React, { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { X, Settings, Home, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 export enum SidebarType {
     'home' = 'home',
@@ -13,146 +11,209 @@ export enum SidebarType {
 }
 
 const Sidebar = (
-    {sideNav, closeContent}: {
+    { sideNav, closeContent }: {
         sideNav: (sidebarType: SidebarType) => void,
         closeContent?: () => void
     }) => {
     const [sidebarType, setSidebarType] = useState<SidebarType>(SidebarType.home);
     const { t } = useTranslation('common');
 
-    const navItemClass = (isActive: boolean) => `
-        hover:cursor-pointer flex items-center justify-center text-muted-foreground
-        transition-smooth hover:text-foreground
-        md:h-9 md:w-9 md:rounded-full
-        h-12 w-12 rounded-lg
-        ${isActive ? "md:bg-primary md:text-primary-foreground bg-primary text-primary-foreground" : ""}
-    `;
+    const handleNavClick = (type: SidebarType) => {
+        setSidebarType(type);
+        sideNav(type);
+    };
 
     return (
         <>
-            {/* 桌面端侧边栏 - 左侧竖向 */}
-            <aside className="hidden md:flex fixed inset-y-0 left-0 z-10 flex-col border-r bg-background w-14">
-                {closeContent && <a
-                    className="hover:cursor-pointer flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground mx-auto"
-                    href="#" onClick={() => {
-                    closeContent()
-                }}
-                >
-                    <IoMdCloseCircle className="h-4 w-4 transition-all group-hover:scale-110"/>
-                    <span className="sr-only">close sidebar</span>
-                </a>
-                }
-                <nav className="flex flex-col items-center gap-4 px-2 py-5">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <a
-                                    className={navItemClass(sidebarType === SidebarType.home)}
-                                    href="#" onClick={() => {
-                                    setSidebarType(SidebarType.home)
-                                    sideNav(SidebarType.home)
-                                }}
-                                    title={t('home')}
-                                >
-                                    <RiDashboardFill className="h-5 w-5 transition-smooth hover:scale-110"/>
-                                    <span className="sr-only">{t('home')}</span>
-                                </a>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="animate-fade-in">{t('home')}</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+            {/* Desktop Sidebar - Left vertical */}
+            <aside className="hidden md:flex fixed inset-y-0 left-0 z-10 flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-16">
+                {/* Close button */}
+                {closeContent && (
+                    <div className="flex h-14 items-center justify-center border-b">
+                        <button
+                            onClick={closeContent}
+                            className={cn(
+                                "inline-flex items-center justify-center rounded-md",
+                                "h-9 w-9 text-muted-foreground",
+                                "transition-colors hover:bg-accent hover:text-accent-foreground",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            )}
+                            aria-label="Close sidebar"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                )}
 
-                    <TooltipProvider>
+                {/* Main navigation */}
+                <nav className="flex flex-col items-center gap-2 px-2 py-4">
+                    <TooltipProvider delayDuration={0}>
+                        {/* Home */}
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <a
-                                    className={navItemClass(sidebarType === SidebarType.batchRename)}
-                                    href="#" onClick={() => {
-                                    setSidebarType(SidebarType.batchRename)
-                                    sideNav(SidebarType.batchRename)
-                                }}
-                                    title={t('batchRenameTitle')}
+                                <button
+                                    onClick={() => handleNavClick(SidebarType.home)}
+                                    className={cn(
+                                        "inline-flex items-center justify-center rounded-lg",
+                                        "h-11 w-11 transition-all duration-200",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        sidebarType === SidebarType.home
+                                            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                    )}
+                                    aria-label={t('home')}
                                 >
-                                    <Sparkles className="h-5 w-5 transition-smooth hover:scale-110"/>
-                                    <span className="sr-only">{t('batchRenameTitle')}</span>
-                                </a>
+                                    <Home className="h-5 w-5" />
+                                </button>
                             </TooltipTrigger>
-                            <TooltipContent side="right" className="animate-fade-in">{t('batchRenameTitle')}</TooltipContent>
+                            <TooltipContent side="right" className="font-medium">
+                                {t('home')}
+                            </TooltipContent>
+                        </Tooltip>
+
+                        {/* Batch Rename */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={() => handleNavClick(SidebarType.batchRename)}
+                                    className={cn(
+                                        "inline-flex items-center justify-center rounded-lg",
+                                        "h-11 w-11 transition-all duration-200",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        sidebarType === SidebarType.batchRename
+                                            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                    )}
+                                    aria-label={t('batchRenameTitle')}
+                                >
+                                    <Sparkles className="h-5 w-5" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="font-medium">
+                                {t('batchRenameTitle')}
+                            </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </nav>
-                <nav className="mt-auto flex flex-col items-center gap-4 px-2 py-5">
-                    <TooltipProvider>
+
+                {/* Bottom navigation - Settings */}
+                <nav className="mt-auto flex flex-col items-center gap-2 px-2 py-4 border-t">
+                    <TooltipProvider delayDuration={0}>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <a
-                                    className={navItemClass(sidebarType === SidebarType.settings)}
-                                    href="#" onClick={() => {
-                                    setSidebarType(SidebarType.settings)
-                                    sideNav(SidebarType.settings)
-                                }}
-                                    title={t('settings')}
+                                <button
+                                    onClick={() => handleNavClick(SidebarType.settings)}
+                                    className={cn(
+                                        "inline-flex items-center justify-center rounded-lg",
+                                        "h-11 w-11 transition-all duration-200",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        sidebarType === SidebarType.settings
+                                            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                    )}
+                                    aria-label={t('settings')}
                                 >
-                                    <IoIosSettings className="h-5 w-5 transition-smooth hover:scale-110"/>
-                                    <span className="sr-only">{t('settings')}</span>
-                                </a>
+                                    <Settings className="h-5 w-5" />
+                                </button>
                             </TooltipTrigger>
-                            <TooltipContent side="right" className="animate-fade-in">{t('settings')}</TooltipContent>
+                            <TooltipContent side="right" className="font-medium">
+                                {t('settings')}
+                            </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </nav>
             </aside>
 
-            {/* 移动端底部导航栏 */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-10 flex items-center justify-around border-t bg-background h-16 px-2 py-2 gap-2">
-                <div className="flex flex-col items-center gap-1 flex-1">
-                    <a
-                        className={navItemClass(sidebarType === SidebarType.home)}
-                        href="#" onClick={() => {
-                        setSidebarType(SidebarType.home)
-                        sideNav(SidebarType.home)
-                    }}
-                        title={t('home')}
+            {/* Mobile Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="flex items-center justify-around h-16 px-2">
+                    {/* Home */}
+                    <button
+                        onClick={() => handleNavClick(SidebarType.home)}
+                        className={cn(
+                            "flex flex-col items-center justify-center gap-1 flex-1 h-full",
+                            "transition-colors duration-200",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset rounded-lg"
+                        )}
+                        aria-label={t('home')}
                     >
-                        <RiDashboardFill className="h-5 w-5 transition-smooth"/>
-                        <span className="sr-only">{t('home')}</span>
-                    </a>
-                    <span className="text-xs text-muted-foreground">{t('home')}</span>
-                </div>
+                        <div className={cn(
+                            "flex items-center justify-center rounded-lg h-10 w-10 transition-all duration-200",
+                            sidebarType === SidebarType.home
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            <Home className="h-5 w-5" />
+                        </div>
+                        <span className={cn(
+                            "text-xs font-medium transition-colors",
+                            sidebarType === SidebarType.home
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            {t('home')}
+                        </span>
+                    </button>
 
-                <div className="flex flex-col items-center gap-1 flex-1">
-                    <a
-                        className={navItemClass(sidebarType === SidebarType.batchRename)}
-                        href="#" onClick={() => {
-                        setSidebarType(SidebarType.batchRename)
-                        sideNav(SidebarType.batchRename)
-                    }}
-                        title={t('batchRenameTitle')}
+                    {/* Batch Rename */}
+                    <button
+                        onClick={() => handleNavClick(SidebarType.batchRename)}
+                        className={cn(
+                            "flex flex-col items-center justify-center gap-1 flex-1 h-full",
+                            "transition-colors duration-200",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset rounded-lg"
+                        )}
+                        aria-label={t('batchRenameTitle')}
                     >
-                        <Sparkles className="h-5 w-5 transition-smooth"/>
-                        <span className="sr-only">{t('batchRenameTitle')}</span>
-                    </a>
-                    <span className="text-xs text-muted-foreground truncate">{t('batchRenameTitle')}</span>
-                </div>
+                        <div className={cn(
+                            "flex items-center justify-center rounded-lg h-10 w-10 transition-all duration-200",
+                            sidebarType === SidebarType.batchRename
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            <Sparkles className="h-5 w-5" />
+                        </div>
+                        <span className={cn(
+                            "text-xs font-medium truncate max-w-[80px] transition-colors",
+                            sidebarType === SidebarType.batchRename
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            {t('batchRenameTitle')}
+                        </span>
+                    </button>
 
-                <div className="flex flex-col items-center gap-1 flex-1">
-                    <a
-                        className={navItemClass(sidebarType === SidebarType.settings)}
-                        href="#" onClick={() => {
-                        setSidebarType(SidebarType.settings)
-                        sideNav(SidebarType.settings)
-                    }}
-                        title={t('settings')}
+                    {/* Settings */}
+                    <button
+                        onClick={() => handleNavClick(SidebarType.settings)}
+                        className={cn(
+                            "flex flex-col items-center justify-center gap-1 flex-1 h-full",
+                            "transition-colors duration-200",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset rounded-lg"
+                        )}
+                        aria-label={t('settings')}
                     >
-                        <IoIosSettings className="h-5 w-5 transition-smooth"/>
-                        <span className="sr-only">{t('settings')}</span>
-                    </a>
-                    <span className="text-xs text-muted-foreground">{t('settings')}</span>
+                        <div className={cn(
+                            "flex items-center justify-center rounded-lg h-10 w-10 transition-all duration-200",
+                            sidebarType === SidebarType.settings
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            <Settings className="h-5 w-5" />
+                        </div>
+                        <span className={cn(
+                            "text-xs font-medium transition-colors",
+                            sidebarType === SidebarType.settings
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            {t('settings')}
+                        </span>
+                    </button>
                 </div>
             </nav>
-        </>);
+        </>
+    );
 };
 
 export default Sidebar;
-
-

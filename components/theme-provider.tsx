@@ -1,5 +1,5 @@
 // ThemeContext.js
-import React, {createContext, useState, useContext, useEffect} from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { browser } from "wxt/browser";
 import { configSyncManager } from "@/lib/configSyncManager";
 
@@ -10,7 +10,7 @@ const ThemeContext = createContext<{ theme: string, toggleTheme: Function }>({
 
 export const useTheme = () => useContext(ThemeContext);
 
-export const ThemeProvider = ({children}: { children: any }) => {
+export const ThemeProvider = ({ children }: { children: any }) => {
     const [theme, setTheme] = useState('light');
 
     const toggleTheme = (theme: string) => {
@@ -18,7 +18,7 @@ export const ThemeProvider = ({children}: { children: any }) => {
     };
 
     async function initTheme() {
-        const theme = await configSyncManager.getConfig('theme');
+        const theme = await configSyncManager.get('theme');
         if (theme) {
             setTheme(theme)
         }
@@ -29,7 +29,7 @@ export const ThemeProvider = ({children}: { children: any }) => {
     }, []);
 
     return (
-        <ThemeContext.Provider value={{theme, toggleTheme}}>
+        <ThemeContext.Provider value={{ theme, toggleTheme }}>
             {children}
         </ThemeContext.Provider>
     );

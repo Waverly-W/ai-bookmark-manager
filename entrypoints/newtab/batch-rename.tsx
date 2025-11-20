@@ -24,6 +24,7 @@ interface BookmarkItem {
 interface RenameResult {
     id: string;
     originalTitle: string;
+    url: string;  // 书签的URL
     newTitle?: string;
     editedTitle?: string;  // 用户手动编辑的标题
     success: boolean;
@@ -40,7 +41,7 @@ enum BatchRenameStep {
 export const BatchRenamePage: React.FC = () => {
     const { t, i18n } = useTranslation('common');
     const { toast } = useToast();
-    
+
     const [currentStep, setCurrentStep] = useState<BatchRenameStep>(BatchRenameStep.FolderSelection);
     const [selectedFolderId, setSelectedFolderId] = useState<string>('');
     const [selectedFolderName, setSelectedFolderName] = useState<string>('');
@@ -49,7 +50,7 @@ export const BatchRenamePage: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [folders, setFolders] = useState<BookmarkFolder[]>([]);
-    const [useIndividualRequests, setUseIndividualRequests] = useState(false);
+    const [useIndividualRequests, setUseIndividualRequests] = useState(true);
     const [consistencyCheck, setConsistencyCheck] = useState<{
         isConsistent: boolean;
         issues: string[];
@@ -82,7 +83,7 @@ export const BatchRenamePage: React.FC = () => {
             // 获取文件夹中的书签
             const folderBookmarks = await getBookmarksInFolder(folderId);
             setBookmarks(folderBookmarks);
-            
+
             if (folderBookmarks.length === 0) {
                 setErrorMessage({
                     title: t('noBookmarksFound'),
@@ -145,18 +146,32 @@ export const BatchRenamePage: React.FC = () => {
                 config,
                 bookmarks,
                 i18n.language,
-                (current, total) => {
+                (current, total, result) => {
                     setProgress((current / total) * 100);
+                    if (result) {
+                        setRenameResults(prev => {
+                            // 避免重复添加
+                            if (prev.some(r => r.id === result.id)) return prev;
+                            // 从 bookmarks 中获取 url
+                            const bookmark = bookmarks.find(b => b.id === result.id);
+                            return [...prev, { ...result, url: bookmark?.url || '', selected: result.success && !!result.newTitle }];
+                        });
+                    }
                 },
                 useIndividualRequests,
                 { signal: abortControllerRef.current.signal }
             );
 
             // 转换结果格式并默认选中成功的项
-            const formattedResults: RenameResult[] = (results || []).map(result => ({
-                ...result,
-                selected: result.success && !!result.newTitle
-            }));
+            const formattedResults: RenameResult[] = (results || []).map(result => {
+                // 从 bookmarks 中获取 url
+                const bookmark = bookmarks.find(b => b.id === result.id);
+                return {
+                    ...result,
+                    url: bookmark?.url || '',
+                    selected: result.success && !!result.newTitle
+                };
+            });
 
             setRenameResults(formattedResults);
 
@@ -249,7 +264,7 @@ export const BatchRenamePage: React.FC = () => {
     // 应用选中的修改
     const handleApplySelected = async () => {
         const selectedResults = (renameResults || []).filter(r => r.selected);
-        
+
         if (selectedResults.length === 0) {
             toast({
                 title: t('noBookmarksSelected'),
@@ -261,7 +276,7 @@ export const BatchRenamePage: React.FC = () => {
 
         try {
             let successCount = 0;
-            
+
             for (const result of selectedResults) {
                 // 优先使用用户编辑的标题，否则使用AI建议的标题
                 const finalTitle = result.editedTitle || result.newTitle;
@@ -303,20 +318,19 @@ export const BatchRenamePage: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="w-full max-w-5xl mx-auto space-y-8 pb-10">
             {/* 固定位置的错误提示 */}
             {errorMessage && (
-                <div className="sticky top-0 z-50 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm border-b" role="alert" aria-live="assertive" aria-atomic="true">
-                    <Alert variant="destructive" className="mb-0 animate-fade-in">
+                <div className="sticky top-4 z-50 px-4 animate-in slide-in-from-top-2">
+                    <Alert variant="destructive" className="shadow-lg border-destructive/20 bg-destructive/10 backdrop-blur-sm">
                         <AlertTriangle className="h-4 w-4" />
-                        <div className="ml-2">
+                        <div className="ml-2 flex-1">
                             <h3 className="font-semibold">{errorMessage.title}</h3>
-                            <p className="text-sm mt-1">{errorMessage.description}</p>
+                            <p className="text-sm mt-1 opacity-90">{errorMessage.description}</p>
                         </div>
                         <button
                             onClick={() => setErrorMessage(null)}
-                            className="ml-auto text-destructive hover:text-destructive/80 transition-smooth flex-shrink-0"
-                            aria-label="Close error"
+                            className="ml-2 text-destructive hover:text-destructive/80 transition-colors"
                         >
                             <XCircle className="h-4 w-4" />
                         </button>
@@ -325,429 +339,366 @@ export const BatchRenamePage: React.FC = () => {
             )}
 
             {/* 页面标题区域 */}
-            <div className="space-y-3 pb-4 border-b border-border/50">
-                <div className="flex items-center gap-3">
-                    <Sparkles className="h-7 w-7 text-primary flex-shrink-0" />
-                    <div className="min-w-0">
-                        <h1 className="text-3xl font-bold tracking-tight">{t('batchRenameTitle')}</h1>
-                        <p className="text-muted-foreground text-sm mt-1">{t('batchRenameDescription')}</p>
-                    </div>
-                </div>
+            <div className="space-y-2 text-center sm:text-left">
+                <h1 className="text-3xl font-bold tracking-tight flex items-center justify-center sm:justify-start gap-3">
+                    <Sparkles className="h-8 w-8 text-primary" />
+                    {t('batchRenameTitle')}
+                </h1>
+                <p className="text-muted-foreground max-w-2xl">
+                    {t('batchRenameDescription')}
+                </p>
             </div>
 
             {/* 步骤指示器 */}
-            <div className="flex items-center gap-2 md:gap-4 overflow-x-auto pb-2 px-1 -mx-1">
-                {/* 步骤 1: 文件夹选择 */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-all ${
-                        currentStep === BatchRenameStep.FolderSelection
-                            ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2'
-                            : currentStep === BatchRenameStep.Processing || currentStep === BatchRenameStep.Review
-                            ? 'bg-green-500 text-white'
-                            : 'bg-muted text-muted-foreground'
-                    }`}>
-                        {currentStep === BatchRenameStep.Processing || currentStep === BatchRenameStep.Review ? (
-                            <CheckCircle className="h-5 w-5" />
-                        ) : (
-                            '1'
-                        )}
-                    </div>
-                    <span className="text-sm font-medium hidden sm:inline">{t('selectFolder')}</span>
-                </div>
+            <div className="relative">
+                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -z-10" />
+                <div className="flex justify-between max-w-3xl mx-auto">
+                    {[
+                        { step: BatchRenameStep.FolderSelection, label: t('selectFolder'), number: 1 },
+                        { step: BatchRenameStep.Processing, label: t('processing'), number: 2 },
+                        { step: BatchRenameStep.Review, label: t('review'), number: 3 }
+                    ].map((item, index) => {
+                        const isActive = currentStep === item.step;
+                        const isCompleted =
+                            (currentStep === BatchRenameStep.Processing && index === 0) ||
+                            (currentStep === BatchRenameStep.Review && index < 2);
 
-                {/* 连接线 1 */}
-                <div className={`flex-1 h-1 rounded transition-all min-w-4 md:min-w-8 ${
-                    currentStep === BatchRenameStep.Processing || currentStep === BatchRenameStep.Review
-                        ? 'bg-primary'
-                        : 'bg-muted'
-                }`} />
-
-                {/* 步骤 2: 处理 */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-all ${
-                        currentStep === BatchRenameStep.Processing
-                            ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2'
-                            : currentStep === BatchRenameStep.Review
-                            ? 'bg-green-500 text-white'
-                            : 'bg-muted text-muted-foreground'
-                    }`}>
-                        {currentStep === BatchRenameStep.Review ? (
-                            <CheckCircle className="h-5 w-5" />
-                        ) : (
-                            '2'
-                        )}
-                    </div>
-                    <span className="text-sm font-medium hidden sm:inline">{t('processing')}</span>
-                </div>
-
-                {/* 连接线 2 */}
-                <div className={`flex-1 h-1 rounded transition-all min-w-4 md:min-w-8 ${
-                    currentStep === BatchRenameStep.Review
-                        ? 'bg-primary'
-                        : 'bg-muted'
-                }`} />
-
-                {/* 步骤 3: 审查 */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-all ${
-                        currentStep === BatchRenameStep.Review
-                            ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2'
-                            : 'bg-muted text-muted-foreground'
-                    }`}>
-                        3
-                    </div>
-                    <span className="text-sm font-medium hidden sm:inline">{t('review')}</span>
+                        return (
+                            <div key={item.step} className="flex flex-col items-center bg-background px-4">
+                                <div className={`
+                                    w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2
+                                    ${isActive || isCompleted
+                                        ? 'border-primary bg-primary text-primary-foreground scale-110'
+                                        : 'border-muted bg-background text-muted-foreground'}
+                                `}>
+                                    {isCompleted ? <CheckCircle className="h-6 w-6" /> : item.number}
+                                </div>
+                                <span className={`mt-2 text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'
+                                    }`}>
+                                    {item.label}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* 文件夹选择步骤 */}
-            {currentStep === BatchRenameStep.FolderSelection && (
-                <Card className="border-l-4 border-l-primary animate-fade-in">
-                    <CardHeader className="pb-4 border-b border-border/50">
-                        <CardTitle className="flex items-center gap-2">
-                            <FolderOpen className="h-5 w-5 text-primary" />
-                            {t('selectFolderToRename')}
-                        </CardTitle>
-                        <CardDescription className="mt-2">
-                            {t('selectFolderDescription')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <CascadingFolderSelect
-                            folders={folders}
-                            selectedId={selectedFolderId}
-                            onSelect={(folderId: string) => {
-                                // 找到对应的文件夹名称
-                                const findFolderName = (folders: BookmarkFolder[], id: string): string => {
-                                    for (const folder of folders) {
-                                        if (folder.id === id) return folder.title;
-                                        if (folder.children) {
-                                            const childName = findFolderName(folder.children, id);
-                                            if (childName) return childName;
-                                        }
-                                    }
-                                    return '';
-                                };
-                                const folderName = findFolderName(folders, folderId);
-                                handleFolderSelect(folderId, folderName);
-                            }}
-                            placeholder={t('chooseFolderPlaceholder')}
-                        />
-                        
-                        {bookmarks.length > 0 && (
-                            <div className="space-y-4">
-                                <Alert>
-                                    <CheckCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        {t('foundText')} {bookmarks.length} {t('bookmarksText')}
-                                    </AlertDescription>
-                                </Alert>
+            {/* 主要内容区域 */}
+            <div className="min-h-[400px]">
+                {/* 步骤 1: 文件夹选择 */}
+                {currentStep === BatchRenameStep.FolderSelection && (
+                    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <Card className="border-muted/60 shadow-sm">
+                            <CardHeader>
+                                <CardTitle>{t('selectFolderToRename')}</CardTitle>
+                                <CardDescription>{t('selectFolderDescription')}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <CascadingFolderSelect
+                                    folders={folders}
+                                    selectedId={selectedFolderId}
+                                    onSelect={(folderId: string) => {
+                                        const findFolderName = (folders: BookmarkFolder[], id: string): string => {
+                                            for (const folder of folders) {
+                                                if (folder.id === id) return folder.title;
+                                                if (folder.children) {
+                                                    const childName = findFolderName(folder.children, id);
+                                                    if (childName) return childName;
+                                                }
+                                            }
+                                            return '';
+                                        };
+                                        const folderName = findFolderName(folders, folderId);
+                                        handleFolderSelect(folderId, folderName);
+                                    }}
+                                    placeholder={t('chooseFolderPlaceholder')}
+                                />
 
-                                {/* 处理模式选择 */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            id="individual-requests"
-                                            checked={useIndividualRequests}
-                                            onChange={(e) => setUseIndividualRequests(e.target.checked)}
-                                            className="rounded border-gray-300"
-                                        />
-                                        <label htmlFor="individual-requests" className="text-sm font-medium">
-                                            {t('useIndividualRequests')}
-                                        </label>
+                                {bookmarks.length > 0 && (
+                                    <div className="space-y-6 pt-4 border-t">
+                                        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 text-primary border border-primary/10">
+                                            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                                            <span className="font-medium">
+                                                {t('foundText')} {bookmarks.length} {t('bookmarksText')}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex items-start gap-3">
+                                                <Checkbox
+                                                    id="individual-requests"
+                                                    checked={useIndividualRequests}
+                                                    onCheckedChange={(checked) => setUseIndividualRequests(checked as boolean)}
+                                                    className="mt-1"
+                                                />
+                                                <div className="space-y-1">
+                                                    <label
+                                                        htmlFor="individual-requests"
+                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                    >
+                                                        {t('useIndividualRequests')}
+                                                    </label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {useIndividualRequests
+                                                            ? t('individualRequestsDescription')
+                                                            : t('batchRequestsDescription')
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            onClick={handleStartBatchRename}
+                                            className="w-full h-12 text-lg shadow-md hover:shadow-lg transition-all"
+                                            size="lg"
+                                        >
+                                            <Sparkles className="mr-2 h-5 w-5" />
+                                            {t('startBatchRename')}
+                                        </Button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {useIndividualRequests
-                                            ? t('individualRequestsDescription')
-                                            : t('batchRequestsDescription')
-                                        }
-                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* 步骤 2: 处理 */}
+                {currentStep === BatchRenameStep.Processing && (
+                    <div className="max-w-xl mx-auto mt-12 animate-in fade-in zoom-in-95 duration-500 space-y-6">
+                        <Card className="border-primary/20 shadow-lg overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20 animate-pulse" />
+                            <CardHeader className="text-center pb-2">
+                                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                                </div>
+                                <CardTitle className="text-xl">{t('processingProgress')}</CardTitle>
+                                <CardDescription>
+                                    {useIndividualRequests ? t('individualProcessingDescription') : t('batchProcessingDescription')}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-8 pt-6">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm font-medium">
+                                        <span>{Math.round(progress)}%</span>
+                                        <span>{Math.round(progress * bookmarks.length / 100)} / {bookmarks.length}</span>
+                                    </div>
+                                    <Progress value={progress} className="h-3" />
                                 </div>
 
+                                {useIndividualRequests && (
+                                    <div className="text-center p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                                        {t('individualProcessingNote')}
+                                    </div>
+                                )}
+
+                                <div className="flex justify-center">
+                                    {isProcessing ? (
+                                        <Button variant="destructive" onClick={handleCancelBatchRename}>
+                                            {t('cancel')}
+                                        </Button>
+                                    ) : (
+                                        <Button variant="outline" onClick={handleBackToFolderSelection}>
+                                            <ArrowLeft className="mr-2 h-4 w-4" />
+                                            {t('backToFolderSelection')}
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* 实时显示处理结果 */}
+                        {renameResults.length > 0 && (
+                            <div className="space-y-2 animate-in slide-in-from-bottom-4 fade-in duration-500">
+                                <h3 className="text-sm font-medium text-muted-foreground px-1">
+                                    {t('processedItems')} ({renameResults.length})
+                                </h3>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {[...renameResults].reverse().map((result) => (
+                                        <div
+                                            key={result.id}
+                                            className="bg-background border rounded-lg p-3 text-sm flex items-center justify-between shadow-sm animate-in slide-in-from-left-2 fade-in duration-300"
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                {result.success ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                                ) : (
+                                                    <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                                                )}
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="truncate text-muted-foreground text-xs" title={result.originalTitle}>
+                                                        {result.originalTitle}
+                                                    </span>
+                                                    <span className="truncate font-medium" title={result.newTitle || t('failed')}>
+                                                        {result.newTitle || t('failed')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {result.success && (
+                                                <Badge variant="outline" className="ml-2 text-[10px] h-5">
+                                                    Done
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 步骤 3: 审查 */}
+                {currentStep === BatchRenameStep.Review && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {/* 风格一致性检查 */}
+                        {consistencyCheck && !consistencyCheck.isConsistent && (
+                            <Alert variant="destructive" className="border-destructive/20 bg-destructive/5">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertDescription>
+                                    <div className="space-y-2">
+                                        <p className="font-semibold">{t('consistencyWarning')}</p>
+                                        <ul className="list-disc list-inside text-sm space-y-1 opacity-90">
+                                            {(consistencyCheck?.issues || []).map((issue, index) => (
+                                                <li key={index}>{issue}</li>
+                                            ))}
+                                        </ul>
+                                        {consistencyCheck.suggestions.length > 0 && (
+                                            <div className="pt-2">
+                                                <p className="text-sm font-medium mb-1">{t('suggestions')}:</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {consistencyCheck.suggestions.map((suggestion, index) => (
+                                                        <Badge key={index} variant="outline" className="bg-background/50">
+                                                            {suggestion}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {/* 操作栏 - 粘性定位 */}
+                        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 border-b flex flex-wrap items-center gap-4 justify-between">
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                    <CheckCircle className="h-5 w-5 text-green-500" />
+                                    {t('renameResults')}
+                                    <Badge variant="secondary" className="ml-2">
+                                        {(renameResults || []).filter(r => r.selected).length} / {renameResults.length}
+                                    </Badge>
+                                </h2>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleSelectionChange('all')}>
+                                    {t('selectAll')}
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleSelectionChange('none')}>
+                                    {t('deselectAll')}
+                                </Button>
                                 <Button
-                                    onClick={handleStartBatchRename}
-                                    className="w-full"
-                                    size="lg"
+                                    onClick={handleApplySelected}
+                                    disabled={(renameResults || []).filter(r => r.selected).length === 0}
+                                    className="shadow-sm"
                                 >
                                     <Sparkles className="mr-2 h-4 w-4" />
-                                    {t('startBatchRename')}
+                                    {t('applySelected')}
                                 </Button>
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* 处理步骤 */}
-            {currentStep === BatchRenameStep.Processing && (
-                <Card className="border-l-4 border-l-blue-500 animate-fade-in">
-                    <CardHeader className="pb-4 border-b border-border/50">
-                        <CardTitle className="flex items-center gap-2">
-                            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                            {t('processingProgress')}
-                        </CardTitle>
-                        <CardDescription className="mt-2">
-                            {useIndividualRequests
-                                ? t('individualProcessingDescription')
-                                : t('batchProcessingDescription')
-                            }
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {/* 加载状态指示 */}
-                        <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                            <Loader2 className="h-5 w-5 animate-spin text-primary flex-shrink-0" />
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-foreground">
-                                    {useIndividualRequests ? t('processing') : t('batchProcessing')}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {useIndividualRequests
-                                        ? `${Math.floor(progress * bookmarks.length / 100)} / ${bookmarks.length} ${t('bookmarksText')}`
-                                        : t('processingBatch')
-                                    }
-                                </p>
-                            </div>
                         </div>
 
-                        {/* 进度条 */}
-                        <div className="space-y-2">
-                            <Progress value={progress} className="h-2" />
-                            <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                <span>{Math.round(progress)}% {t('complete')}</span>
-                                <span>{Math.round(progress * bookmarks.length / 100)} / {bookmarks.length}</span>
-                            </div>
-                        </div>
-
-                        {/* 处理说明 */}
-                        {useIndividualRequests && (
-                            <p className="text-xs text-muted-foreground text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
-                                {t('individualProcessingNote')}
-                            </p>
-                        )}
-
-                        {/* 操作按钮 */}
-                        <div className="flex gap-2 justify-center pt-4 flex-wrap">
-                            {/* 返回修改按钮 - 仅在处理完成后显示 */}
-                            {!isProcessing && (
-                                <Button
-                                    variant="outline"
-                                    onClick={handleBackToFolderSelection}
-                                    className="flex items-center gap-2"
+                        {/* 结果列表 - 网格布局 */}
+                        <div className="grid gap-4">
+                            {(renameResults || []).map((result, index) => (
+                                <Card
+                                    key={result.id}
+                                    className={`
+                                        transition-all duration-200 border-l-4
+                                        ${result.selected ? 'border-l-primary ring-1 ring-primary/20' : 'border-l-transparent hover:border-l-muted-foreground/30'}
+                                    `}
                                 >
-                                    <ArrowLeft className="h-4 w-4" />
-                                    {t('backToFolderSelection')}
-                                </Button>
-                            )}
+                                    <CardContent className="p-4 flex items-center gap-4">
+                                        {result.success && result.newTitle && (
+                                            <Checkbox
+                                                checked={result.selected}
+                                                onCheckedChange={() => toggleSelection(result.id)}
+                                                className="mt-1"
+                                            />
+                                        )}
 
-                            {/* 取消按钮 - 仅在处理中显示 */}
-                            {isProcessing && (
-                                <Button
-                                    variant="destructive"
-                                    onClick={handleCancelBatchRename}
-                                    disabled={!isProcessing}
-                                >
-                                    {t('cancel')}
-                                </Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* 审查步骤 */}
-            {currentStep === BatchRenameStep.Review && (
-                <div className="space-y-6 animate-fade-in">
-                    {/* 风格一致性检查 */}
-                    {consistencyCheck && !consistencyCheck.isConsistent && (
-                        <Alert variant="destructive">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertDescription>
-                                <div className="space-y-2">
-                                    <p className="font-medium">{t('consistencyWarning')}</p>
-                                    <ul className="list-disc list-inside space-y-1">
-                                        {(consistencyCheck?.issues || []).map((issue, index) => (
-                                            <li key={index} className="text-sm">{issue}</li>
-                                        ))}
-                                    </ul>
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium">{t('suggestions')}:</p>
-                                        {(consistencyCheck?.suggestions || []).map((suggestion, index) => (
-                                            <p key={index} className="text-sm">• {suggestion}</p>
-                                        ))}
-                                    </div>
-                                </div>
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
-                    {/* 操作按钮 */}
-                    <div className="flex flex-wrap gap-2 md:gap-3 items-center">
-                        {/* 主要操作按钮 - 应用选中 */}
-                        <Button
-                            onClick={handleApplySelected}
-                            disabled={(renameResults || []).filter(r => r.selected).length === 0}
-                            className="w-full sm:w-auto"
-                        >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            {t('applySelected')} ({(renameResults || []).filter(r => r.selected).length})
-                        </Button>
-
-                        {/* 次要操作按钮 - 选择操作 */}
-                        <Button
-                            variant="outline"
-                            onClick={() => handleSelectionChange('all')}
-                            size="sm"
-                            className="flex-1 sm:flex-none"
-                        >
-                            {t('selectAll')}
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            onClick={() => handleSelectionChange('none')}
-                            size="sm"
-                            className="flex-1 sm:flex-none"
-                        >
-                            {t('deselectAll')}
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            onClick={() => handleSelectionChange('invert')}
-                            size="sm"
-                            className="flex-1 sm:flex-none"
-                        >
-                            {t('invertSelection')}
-                        </Button>
-
-                        {/* 返回按钮 - 幽灵样式 */}
-                        <Button
-                            variant="ghost"
-                            onClick={handleBackToFolderSelection}
-                            className="w-full sm:w-auto"
-                        >
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            {t('backToFolderSelection')}
-                        </Button>
-                    </div>
-
-                    {/* 结果列表 */}
-                    <Card className="border-l-4 border-l-green-500 animate-scale-in">
-                        <CardHeader className="pb-4 border-b border-border/50">
-                            <CardTitle className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                {t('renameResults')}
-                            </CardTitle>
-                            <CardDescription className="mt-2">
-                                {t('reviewAndSelectChanges')}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            <div className="space-y-2">
-                                {(renameResults || []).map((result, index) => (
-                                    <div
-                                        key={result.id}
-                                        className={`border rounded-md p-3 transition-smooth animate-fade-in ${
-                                            result.selected
-                                                ? 'border-primary bg-primary/5 shadow-sm'
-                                                : 'border-border hover:border-muted-foreground/30'
-                                        }`}
-                                        style={{ animationDelay: `${index * 50}ms` }}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            {/* 复选框 */}
-                                            {result.success && result.newTitle && (
-                                                <Checkbox
-                                                    checked={result.selected}
-                                                    onCheckedChange={() => toggleSelection(result.id)}
-                                                    className="flex-shrink-0"
-                                                />
-                                            )}
-
-                                            {/* 状态图标 */}
-                                            <div className="flex-shrink-0">
-                                                {result.success ? (
-                                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                                ) : (
-                                                    <XCircle className="h-4 w-4 text-red-500" />
-                                                )}
+                                        <div className="flex-1 grid md:grid-cols-[1fr,auto,1fr] gap-4 items-center">
+                                            {/* 原标题 */}
+                                            <div className="min-w-0">
+                                                <div className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">
+                                                    {t('original')}
+                                                </div>
+                                                <div className="text-sm truncate font-medium" title={result.originalTitle}>
+                                                    {result.originalTitle}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground truncate mt-0.5 opacity-60">
+                                                    {result.url}
+                                                </div>
                                             </div>
 
-                                            {/* 内容区域 - 响应式布局 */}
-                                            <div className="flex-1 min-w-0">
-                                                {result.success && result.newTitle ? (
-                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                                        {/* 原标题 */}
-                                                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex-shrink-0">
-                                                                {t('original')}
-                                                            </span>
-                                                            <p className="text-sm text-muted-foreground truncate" title={result.originalTitle}>
-                                                                {result.originalTitle}
-                                                            </p>
+                                            {/* 箭头 */}
+                                            <div className="hidden md:flex items-center justify-center text-muted-foreground/50">
+                                                <ArrowLeft className="h-5 w-5 rotate-180" />
+                                            </div>
+
+                                            {/* 新标题 */}
+                                            <div className="min-w-0">
+                                                {result.success ? (
+                                                    <div className="space-y-1">
+                                                        <div className="text-xs font-medium text-primary mb-1 uppercase tracking-wider flex items-center justify-between">
+                                                            {t('newTitle')}
+                                                            {result.editedTitle && (
+                                                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">Modified</Badge>
+                                                            )}
                                                         </div>
-
-                                                        {/* 箭头 */}
-                                                        <span className="text-muted-foreground hidden sm:inline flex-shrink-0">→</span>
-
-                                                        {/* 编辑输入框 */}
-                                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                        <div className="flex gap-2">
                                                             <Input
                                                                 value={result.editedTitle || result.newTitle || ''}
                                                                 onChange={(e) => handleManualEdit(result.id, e.target.value)}
+                                                                className={`h-9 text-sm ${result.editedTitle ? 'border-primary/50 bg-primary/5' : ''}`}
                                                                 placeholder={t('enterCustomTitle')}
-                                                                className={`text-sm h-8 flex-1 min-w-0 ${
-                                                                    result.editedTitle
-                                                                        ? 'border-primary bg-primary/5'
-                                                                        : 'border-border'
-                                                                }`}
                                                             />
                                                             {result.editedTitle && (
-                                                                <>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => handleResetToAI(result.id)}
-                                                                        className="h-8 w-8 p-0 flex-shrink-0"
-                                                                        title={t('resetToAI')}
-                                                                    >
-                                                                        <RotateCcw className="h-3 w-3" />
-                                                                    </Button>
-                                                                    <span className="text-xs text-primary font-medium flex-shrink-0" title={t('modified')}>
-                                                                        ✓
-                                                                    </span>
-                                                                </>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-9 w-9 shrink-0"
+                                                                    onClick={() => handleResetToAI(result.id)}
+                                                                    title={t('resetToAI')}
+                                                                >
+                                                                    <RotateCcw className="h-4 w-4" />
+                                                                </Button>
                                                             )}
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex-shrink-0">
-                                                                {t('original')}
-                                                            </span>
-                                                            <p className="text-sm text-muted-foreground truncate" title={result.originalTitle}>
-                                                                {result.originalTitle}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex-shrink-0">
-                                                            <span className="text-xs font-medium text-destructive bg-destructive/10 px-2 py-1 rounded">
-                                                                {t('failed')}
-                                                            </span>
-                                                        </div>
+                                                    <div className="flex items-center gap-2 text-destructive bg-destructive/10 p-2 rounded text-sm">
+                                                        <XCircle className="h-4 w-4" />
+                                                        {t('failed')}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-center pt-6">
+                            <Button variant="ghost" onClick={handleBackToFolderSelection}>
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                {t('backToFolderSelection')}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

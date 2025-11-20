@@ -88,7 +88,7 @@ export const getAccentColorById = (colorId: string): AccentColor | null => {
  */
 export const getCurrentAccentColorId = async (): Promise<string> => {
     try {
-        const colorId = await configSyncManager.getConfig('accentColor');
+        const colorId = await configSyncManager.get('accentColor');
         return colorId || 'purple';
     } catch (error) {
         console.error('Failed to get accent color from storage:', error);
@@ -102,7 +102,7 @@ export const getCurrentAccentColorId = async (): Promise<string> => {
  */
 export const saveAccentColorId = async (colorId: string): Promise<void> => {
     try {
-        await configSyncManager.saveConfig('accentColor', colorId);
+        await configSyncManager.set('accentColor', colorId);
     } catch (error) {
         console.error('Failed to save accent color to storage:', error);
         throw error;
@@ -117,7 +117,7 @@ export const initializeAccentColor = async (): Promise<void> => {
     try {
         const colorId = await getCurrentAccentColorId();
         const color = getAccentColorById(colorId);
-        
+
         if (color) {
             applyAccentColor(color);
         } else {
@@ -146,10 +146,10 @@ export const changeAccentColor = async (colorId: string): Promise<void> => {
     if (!color) {
         throw new Error(`Accent color with id '${colorId}' not found`);
     }
-    
+
     // 应用颜色
     applyAccentColor(color);
-    
+
     // 保存到本地存储
     await saveAccentColorId(colorId);
 };

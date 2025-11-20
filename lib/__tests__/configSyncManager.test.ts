@@ -73,7 +73,7 @@ describe('ConfigSyncManager', () => {
         it('should save syncable config to both local and sync storage', async () => {
             const config = { apiUrl: 'https://api.example.com' };
 
-            await configSyncManager.saveConfig('aiConfig', config);
+            await configSyncManager.set('aiConfig', config);
 
             expect(mockStorageLocal.set).toHaveBeenCalledWith(
                 expect.objectContaining({ aiConfig: config })
@@ -84,16 +84,16 @@ describe('ConfigSyncManager', () => {
         it('should save non-syncable config to local storage only', async () => {
             const bookmarkId = 'bookmark-123';
 
-            await configSyncManager.saveConfig('bookmarkRootId', bookmarkId);
+            await configSyncManager.set('bookmarkRootId', bookmarkId);
 
             expect(mockStorageLocal.set).toHaveBeenCalledWith(
-                expect.objectContaining({ bookmarkRootId })
+                expect.objectContaining({ bookmarkRootId: bookmarkId })
             );
             expect(mockStorageSync.set).not.toHaveBeenCalled();
         });
 
         it('should update sync status on successful save', async () => {
-            await configSyncManager.saveConfig('theme', 'dark');
+            await configSyncManager.set('theme', 'dark');
 
             const status = configSyncManager.getSyncStatus();
             expect(status.lastError).toBeNull();
@@ -110,7 +110,7 @@ describe('ConfigSyncManager', () => {
         it('should retrieve config from local storage', async () => {
             mockStorageLocal.get.mockResolvedValueOnce({ theme: 'dark' });
 
-            const config = await configSyncManager.getConfig('theme');
+            const config = await configSyncManager.get('theme');
 
             expect(config).toBe('dark');
             expect(mockStorageLocal.get).toHaveBeenCalledWith('theme');
@@ -119,7 +119,7 @@ describe('ConfigSyncManager', () => {
         it('should return null if config does not exist', async () => {
             mockStorageLocal.get.mockResolvedValueOnce({});
 
-            const config = await configSyncManager.getConfig('nonexistent');
+            const config = await configSyncManager.get('nonexistent');
 
             expect(config).toBeUndefined();
         });
@@ -226,7 +226,7 @@ describe('ConfigSyncManager', () => {
         it('should handle storage errors gracefully', async () => {
             mockStorageLocal.set.mockRejectedValueOnce(new Error('Storage error'));
 
-            await expect(configSyncManager.saveConfig('theme', 'dark')).rejects.toThrow();
+            await expect(configSyncManager.set('theme', 'dark')).rejects.toThrow();
 
             const status = configSyncManager.getSyncStatus();
             expect(status.lastError).not.toBeNull();

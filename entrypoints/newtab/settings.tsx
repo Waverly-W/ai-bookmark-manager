@@ -1,75 +1,66 @@
 import React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { ThemeSettings } from "@/components/settings/theme-settings.tsx";
 import { I18nSettings } from "@/components/settings/i18n-settings.tsx";
 import { BookmarkSettings } from "@/components/settings/bookmark-settings.tsx";
 import { AccentColorSettings } from "@/components/settings/accent-color-settings.tsx";
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
-import { SyncStatusSettings } from "@/components/settings/sync-status-settings.tsx";
-import { FolderRecommendationSettings } from "@/components/settings/folder-recommendation-settings.tsx";
-import { AIRenameSettings } from "@/components/settings/ai-rename-settings.tsx";
+import { SyncSettings } from "@/components/settings/sync-settings.tsx";
 import { useTranslation } from "react-i18next";
 
 export function SettingsPage() {
     const { t } = useTranslation();
+    const [activeTab, setActiveTab] = React.useState("bookmarks");
 
     return (
-        <div className="w-full max-w-4xl mx-auto space-y-6">
-            {/* 页面标题区域 */}
-            <div className="space-y-2 pb-4 border-b border-border/50">
-                <h1 className="text-3xl font-bold tracking-tight">{t('settings')}</h1>
-                <p className="text-muted-foreground text-sm">{t('settingsDescription')}</p>
-            </div>
+        <div className="flex h-[calc(100vh-4rem)] w-full max-w-6xl mx-auto gap-8 p-6">
+            {/* Sidebar */}
+            <aside className="w-64 flex-shrink-0 space-y-6">
+                <div className="space-y-2 px-4">
+                    <h1 className="text-2xl font-bold tracking-tight">{t('settings')}</h1>
+                    <p className="text-muted-foreground text-sm">{t('settingsDescription')}</p>
+                </div>
+                <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+            </aside>
 
-            <Tabs defaultValue="bookmarks" className="w-full">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2">
-                    <TabsTrigger value="bookmarks">{t('bookmarkSettingsTab')}</TabsTrigger>
-                    <TabsTrigger value="appearance">{t('appearanceSettingsTab')}</TabsTrigger>
-                    <TabsTrigger value="ai">{t('aiSettingsTab')}</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="bookmarks" className="mt-6">
-                    <div className="max-w-2xl">
+            {/* Content */}
+            <main className="flex-1 overflow-y-auto pr-4">
+                <div className="max-w-3xl space-y-6 pb-10">
+                    {activeTab === "bookmarks" && (
                         <BookmarkSettings />
-                    </div>
-                </TabsContent>
+                    )}
 
-                <TabsContent value="appearance" className="mt-6">
-                    <div className="max-w-2xl space-y-6">
-                        {/* 外观设置标题 */}
-                        <div className="space-y-2 pb-4 border-b border-border/50">
-                            <h2 className="text-xl font-semibold">{t('appearanceSettings')}</h2>
-                            <p className="text-sm text-muted-foreground max-w-prose">
-                                {t('appearanceSettingsDescription')}
-                            </p>
-                        </div>
+                    {activeTab === "appearance" && (
+                        <div className="space-y-8">
+                            <div className="space-y-2 pb-4 border-b border-border/50">
+                                <h2 className="text-xl font-semibold">{t('appearanceSettings')}</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {t('appearanceSettingsDescription')}
+                                </p>
+                            </div>
 
-                        {/* 外观设置项 - 水平布局 */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-4">
+                            <div className="grid gap-8">
                                 <I18nSettings />
-                            </div>
-                            <div className="space-y-4">
                                 <ThemeSettings />
-                            </div>
-                            <div className="space-y-4">
                                 <AccentColorSettings />
                             </div>
                         </div>
-                    </div>
-                </TabsContent>
+                    )}
 
-                <TabsContent value="ai" className="mt-6">
-                    <div className="max-w-2xl space-y-6">
-                        <SyncStatusSettings />
+                    {activeTab === "sync" && (
+                        <SyncSettings />
+                    )}
+
+                    {activeTab === "ai-service" && (
                         <AIConfigSettings />
+                    )}
+
+                    {activeTab === "prompts" && (
                         <AIPromptSettings />
-                        <AIRenameSettings />
-                        <FolderRecommendationSettings />
-                    </div>
-                </TabsContent>
-            </Tabs>
+                    )}
+                </div>
+            </main>
         </div>
     );
 }

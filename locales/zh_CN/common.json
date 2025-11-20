@@ -33,6 +33,8 @@
   "pink": "粉色",
   "cyan": "青色",
   "aiSettingsTab": "AI设置",
+  "aiServiceTab": "AI 服务设置",
+  "promptsTab": "提示词设置",
   "aiConfig": "AI配置",
   "aiConfigDescription": "配置AI服务用于自动重命名书签",
   "apiUrl": "API代理URL",
@@ -238,5 +240,16 @@
   "useReferenceNamingDescription": "AI 重命名时参考目标文件夹中现有书签的命名风格，保持一致性",
   "aiSuggestedTitle": "AI 建议的标题",
   "aiCannotGenerateTitle": "AI 无法生成标题",
-  "pleaseEnterUrl": "请先输入 URL"
+  "pleaseEnterUrl": "请先输入 URL",
+  "syncSettingsTab": "同步设置",
+  "syncSettings": "同步设置",
+  "syncSettingsDescription": "查看和管理您的同步数据及状态。",
+  "syncDataViewer": "同步数据查看器",
+  "syncDataViewerDescription": "查看当前存储在同步存储中的原始 JSON 数据。",
+  "refresh": "刷新",
+  "copy": "复制",
+  "syncSuccess": "同步成功",
+  "syncSuccessDescription": "手动同步已成功完成。",
+  "syncDataCopied": "同步数据已复制到剪贴板。",
+  "copied": "已复制"
 }

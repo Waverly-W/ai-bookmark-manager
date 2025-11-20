@@ -33,6 +33,8 @@
   "pink": "Pink",
   "cyan": "Cyan",
   "aiSettingsTab": "AI Settings",
+  "aiServiceTab": "AI Service",
+  "promptsTab": "Prompts",
   "aiConfig": "AI Configuration",
   "aiConfigDescription": "Configure AI service for automatic bookmark renaming",
   "apiUrl": "API Proxy URL",
@@ -238,5 +240,16 @@
   "useReferenceNamingDescription": "AI rename references existing bookmark naming style in target folder for consistency",
   "aiSuggestedTitle": "AI suggested title",
   "aiCannotGenerateTitle": "AI cannot generate title",
-  "pleaseEnterUrl": "Please enter URL first"
+  "pleaseEnterUrl": "Please enter URL first",
+  "syncSettingsTab": "Sync Settings",
+  "syncSettings": "Sync Settings",
+  "syncSettingsDescription": "View and manage your synchronization data and status.",
+  "syncDataViewer": "Sync Data Viewer",
+  "syncDataViewerDescription": "View the raw JSON data currently stored in the synchronization storage.",
+  "refresh": "Refresh",
+  "copy": "Copy",
+  "syncSuccess": "Sync Success",
+  "syncSuccessDescription": "Manual synchronization completed successfully.",
+  "syncDataCopied": "Sync data copied to clipboard.",
+  "copied": "Copied"
 }

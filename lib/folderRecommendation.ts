@@ -177,6 +177,14 @@ function parseMultiRecommendationResponse(
             // 旧格式：直接返回数组（向后兼容）
             recommendationsArray = json;
             console.log('[FolderRecommendation] 使用旧格式（数组）');
+        } else if (typeof json === 'object' && json !== null) {
+            // 单个对象的情况（可能是 AI 只返回了一个推荐）
+            if (json.index !== undefined || json.folderId !== undefined) {
+                recommendationsArray = [json];
+                console.log('[FolderRecommendation] 使用单对象格式（自动包装为数组）');
+            } else {
+                console.warn('[FolderRecommendation] 响应格式不正确:', typeof json);
+            }
         } else {
             console.warn('[FolderRecommendation] 响应格式不正确:', typeof json);
         }
@@ -537,7 +545,7 @@ export async function batchRecommendFolders(
 
             results.push({
                 bookmarkId: bookmark.id,
-                recommendation: result.recommendation,
+                recommendation: result.recommendations?.[0],
                 success: result.success,
                 error: result.error
             });
