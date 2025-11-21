@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -9,16 +10,29 @@ import {
     restoreDefaultPrompt,
     isUsingCustomPrompt,
     getDefaultPrompt,
-    validatePrompt
+    validatePrompt,
+    getCurrentFolderRecommendationPrompt,
+    saveCustomFolderRecommendationPrompt,
+    restoreDefaultFolderRecommendationPrompt,
+    isUsingCustomFolderRecommendationPrompt,
+    getDefaultFolderRecommendationPrompt,
+    getCurrentContextualRenamePrompt,
+    saveCustomContextualRenamePrompt,
+    restoreDefaultContextualRenamePrompt,
+    isUsingCustomContextualRenamePrompt,
+    getDefaultContextualRenamePrompt
 } from "@/lib/aiPromptUtils";
 import { Loader2, RotateCcw, Save, Info } from "lucide-react";
 
 import { bookmarkRenameScenario } from "@/lib/ai/scenarios/bookmarkRename";
+import { folderRecommendationScenario } from "@/lib/ai/scenarios/folderRecommendation";
+import { contextualBookmarkRenameScenario } from "@/lib/ai/scenarios/contextualBookmarkRename";
 
 export function AIPromptSettings() {
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
 
+    const [activeTab, setActiveTab] = useState('basic');
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -28,9 +42,22 @@ export function AIPromptSettings() {
     // 加载当前Prompt
     useEffect(() => {
         const loadPrompt = async () => {
+            setLoading(true);
             try {
-                const currentPrompt = await getCurrentPrompt(i18n.language);
-                const usingCustom = await isUsingCustomPrompt();
+                let currentPrompt = '';
+                let usingCustom = false;
+
+                if (activeTab === 'basic') {
+                    currentPrompt = await getCurrentPrompt(i18n.language);
+                    usingCustom = await isUsingCustomPrompt();
+                } else if (activeTab === 'contextual') {
+                    currentPrompt = await getCurrentContextualRenamePrompt(i18n.language);
+                    usingCustom = await isUsingCustomContextualRenamePrompt();
+                } else if (activeTab === 'folder') {
+                    currentPrompt = await getCurrentFolderRecommendationPrompt(i18n.language);
+                    usingCustom = await isUsingCustomFolderRecommendationPrompt();
+                }
+
                 setPrompt(currentPrompt);
                 setIsCustom(usingCustom);
             } catch (error) {
@@ -46,7 +73,7 @@ export function AIPromptSettings() {
         };
 
         loadPrompt();
-    }, [i18n.language, t, toast]);
+    }, [activeTab, i18n.language, t, toast]);
 
     // 处理Prompt变化
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -69,7 +96,14 @@ export function AIPromptSettings() {
         setSaving(true);
 
         try {
-            await saveCustomPrompt(prompt);
+            if (activeTab === 'basic') {
+                await saveCustomPrompt(prompt);
+            } else if (activeTab === 'contextual') {
+                await saveCustomContextualRenamePrompt(prompt);
+            } else if (activeTab === 'folder') {
+                await saveCustomFolderRecommendationPrompt(prompt);
+            }
+
             setIsCustom(true);
             toast({
                 title: t('templateSaved'),
@@ -92,8 +126,18 @@ export function AIPromptSettings() {
         setRestoring(true);
 
         try {
-            await restoreDefaultPrompt();
-            const defaultPrompt = getDefaultPrompt(i18n.language);
+            let defaultPrompt = '';
+            if (activeTab === 'basic') {
+                await restoreDefaultPrompt();
+                defaultPrompt = getDefaultPrompt(i18n.language);
+            } else if (activeTab === 'contextual') {
+                await restoreDefaultContextualRenamePrompt();
+                defaultPrompt = getDefaultContextualRenamePrompt(i18n.language);
+            } else if (activeTab === 'folder') {
+                await restoreDefaultFolderRecommendationPrompt();
+                defaultPrompt = getDefaultFolderRecommendationPrompt(i18n.language);
+            }
+
             setPrompt(defaultPrompt);
             setIsCustom(false);
             toast({
@@ -112,13 +156,16 @@ export function AIPromptSettings() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-        );
-    }
+    const getSystemPrompt = () => {
+        if (activeTab === 'basic') {
+            return bookmarkRenameScenario.getSystemPrompt(i18n.language);
+        } else if (activeTab === 'contextual') {
+            return contextualBookmarkRenameScenario.getSystemPrompt(i18n.language);
+        } else if (activeTab === 'folder') {
+            return folderRecommendationScenario.getSystemPrompt(i18n.language);
+        }
+        return '';
+    };
 
     return (
         <div className="space-y-6">
@@ -133,76 +180,94 @@ export function AIPromptSettings() {
                 <p className="text-sm text-muted-foreground max-w-prose">{t('aiPromptDescription')}</p>
             </div>
 
-            {/* System Prompt (Read-only) */}
-            <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('systemPrompt')}</Label>
-                <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap font-mono">
-                    {bookmarkRenameScenario.getSystemPrompt(i18n.language)}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="basic">{t('basicRename')}</TabsTrigger>
+                    <TabsTrigger value="contextual">{t('contextualRename')}</TabsTrigger>
+                    <TabsTrigger value="folder">{t('folderRecommendation')}</TabsTrigger>
+                </TabsList>
+
+                <div className="mt-4 space-y-6">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                    ) : (
+                        <>
+                            {/* System Prompt (Read-only) */}
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground">{t('systemPrompt')}</Label>
+                                <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap font-mono max-h-[150px] overflow-y-auto">
+                                    {getSystemPrompt()}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {t('systemPromptDescription')}
+                                </p>
+                            </div>
+
+                            {/* User Prompt (Editable) */}
+                            <div className="space-y-2">
+                                <Label htmlFor="promptTemplate">{t('userPrompt')}</Label>
+                                <textarea
+                                    id="promptTemplate"
+                                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y font-mono"
+                                    placeholder={t('promptPlaceholder')}
+                                    value={prompt}
+                                    onChange={handlePromptChange}
+                                />
+                            </div>
+
+                            {/* 提示信息 */}
+                            <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50">
+                                <Info className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                                <p className="text-xs text-muted-foreground">
+                                    {t('userPromptDescription')}
+                                </p>
+                            </div>
+
+                            {/* 按钮组 */}
+                            <div className="flex gap-3">
+                                <Button
+                                    onClick={handleRestoreDefault}
+                                    disabled={saving || restoring || !isCustom}
+                                    variant="outline"
+                                    className="flex-1"
+                                >
+                                    {restoring ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Restoring...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RotateCcw className="mr-2 h-4 w-4" />
+                                            {t('restoreDefault')}
+                                        </>
+                                    )}
+                                </Button>
+
+                                <Button
+                                    onClick={handleSavePrompt}
+                                    disabled={saving || restoring}
+                                    className="flex-1"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            {t('saving')}...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            {t('saveTemplate')}
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                    {t('systemPromptDescription')}
-                </p>
-            </div>
-
-            {/* User Prompt (Editable) */}
-            <div className="space-y-2">
-                <Label htmlFor="promptTemplate">{t('userPrompt')}</Label>
-                <textarea
-                    id="promptTemplate"
-                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y font-mono"
-                    placeholder={t('promptPlaceholder')}
-                    value={prompt}
-                    onChange={handlePromptChange}
-                />
-            </div>
-
-            {/* 提示信息 */}
-            <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50">
-                <Info className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                    {t('userPromptDescription')}
-                </p>
-            </div>
-
-            {/* 按钮组 */}
-            <div className="flex gap-3">
-                <Button
-                    onClick={handleRestoreDefault}
-                    disabled={saving || restoring || !isCustom}
-                    variant="outline"
-                    className="flex-1"
-                >
-                    {restoring ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Restoring...
-                        </>
-                    ) : (
-                        <>
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            {t('restoreDefault')}
-                        </>
-                    )}
-                </Button>
-
-                <Button
-                    onClick={handleSavePrompt}
-                    disabled={saving || restoring}
-                    className="flex-1"
-                >
-                    {saving ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {t('saving')}...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="mr-2 h-4 w-4" />
-                            {t('saveTemplate')}
-                        </>
-                    )}
-                </Button>
-            </div>
+            </Tabs>
         </div>
     );
 }

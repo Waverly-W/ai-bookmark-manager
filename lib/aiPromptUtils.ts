@@ -198,13 +198,35 @@ Where index is the folder number from the list (starting from 1), 0 means defaul
 Do not return any other text or explanation, only return the JSON object.`;
 
 /**
+ * 默认的上下文重命名 Prompt 模板（中文）
+ */
+export const DEFAULT_CONTEXTUAL_RENAME_PROMPT_ZH = `要求：
+1. 分析同文件夹其他书签的命名模式（如：语言、长度、格式、分隔符等）
+2. 生成的新标题必须遵循这种模式
+3. 准确反映网页内容
+4. 便于搜索和识别
+5. 只返回新标题`;
+
+/**
+ * 默认的上下文重命名 Prompt 模板（英文）
+ */
+export const DEFAULT_CONTEXTUAL_RENAME_PROMPT_EN = `Requirements:
+1. Analyze the naming pattern of other bookmarks in the folder (e.g., language, length, format, separators)
+2. The new title must follow this pattern
+3. Accurately reflect the page content
+4. Easy to search and identify
+5. Return only the new title`;
+
+/**
  * 存储键名
  */
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
     CUSTOM_PROMPT: 'aiCustomPrompt',
     USE_CUSTOM_PROMPT: 'aiUseCustomPrompt',
     CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiFolderRecommendationPrompt',
-    USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiUseCustomFolderRecommendationPrompt'
+    USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiUseCustomFolderRecommendationPrompt',
+    CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiContextualRenamePrompt',
+    USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiUseCustomContextualRenamePrompt'
 };
 
 /**
@@ -594,6 +616,57 @@ export const restoreDefaultFolderRecommendationPrompt = async (): Promise<void> 
 };
 
 /**
+ * 获取默认上下文重命名 Prompt 模板
+ */
+export const getDefaultContextualRenamePrompt = (locale: string = 'zh_CN'): string => {
+    return locale.startsWith('zh') ? DEFAULT_CONTEXTUAL_RENAME_PROMPT_ZH : DEFAULT_CONTEXTUAL_RENAME_PROMPT_EN;
+};
+
+/**
+ * 获取当前使用的上下文重命名 Prompt 模板
+ */
+export const getCurrentContextualRenamePrompt = async (locale: string = 'zh_CN'): Promise<string> => {
+    try {
+        const useCustom = await configSyncManager.get(STORAGE_KEYS.USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT);
+        const customPrompt = await configSyncManager.get(STORAGE_KEYS.CUSTOM_CONTEXTUAL_RENAME_PROMPT);
+
+        if (useCustom && customPrompt) {
+            return customPrompt;
+        }
+
+        return getDefaultContextualRenamePrompt(locale);
+    } catch (error) {
+        console.error('Failed to get current contextual rename prompt:', error);
+        return getDefaultContextualRenamePrompt(locale);
+    }
+};
+
+/**
+ * 保存自定义上下文重命名 Prompt 模板
+ */
+export const saveCustomContextualRenamePrompt = async (prompt: string): Promise<void> => {
+    try {
+        await configSyncManager.set(STORAGE_KEYS.CUSTOM_CONTEXTUAL_RENAME_PROMPT, prompt);
+        await configSyncManager.set(STORAGE_KEYS.USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT, true);
+    } catch (error) {
+        console.error('Failed to save custom contextual rename prompt:', error);
+        throw new Error('Failed to save custom contextual rename prompt template');
+    }
+};
+
+/**
+ * 恢复默认上下文重命名 Prompt 模板
+ */
+export const restoreDefaultContextualRenamePrompt = async (): Promise<void> => {
+    try {
+        await configSyncManager.set(STORAGE_KEYS.USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT, false);
+    } catch (error) {
+        console.error('Failed to restore default contextual rename prompt:', error);
+        throw new Error('Failed to restore default contextual rename prompt template');
+    }
+};
+
+/**
  * 格式化文件夹列表为 Prompt 文本
  * @param folders 文件夹列表
  * @param maxFolders 最大文件夹数量（防止 Prompt 过长）
@@ -646,9 +719,35 @@ export const formatFolderListForPrompt = (
     return selectedFolders
         .map((folder, index) => {
             const indent = '  '.repeat(folder.level);
-            return `${index + 1}. ${indent}${folder.path}`;
+            return `${index + 1}. ${indent}[ID: ${folder.id}] ${folder.path}`;
         })
         .join('\n');
+};
+
+/**
+ * 检查是否使用自定义文件夹推荐 Prompt
+ */
+export const isUsingCustomFolderRecommendationPrompt = async (): Promise<boolean> => {
+    try {
+        const useCustom = await configSyncManager.get(STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT);
+        return useCustom || false;
+    } catch (error) {
+        console.error('Failed to check custom folder recommendation prompt status:', error);
+        return false;
+    }
+};
+
+/**
+ * 检查是否使用自定义上下文重命名 Prompt
+ */
+export const isUsingCustomContextualRenamePrompt = async (): Promise<boolean> => {
+    try {
+        const useCustom = await configSyncManager.get(STORAGE_KEYS.USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT);
+        return useCustom || false;
+    } catch (error) {
+        console.error('Failed to check custom contextual rename prompt status:', error);
+        return false;
+    }
 };
 
 /**
