@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { browser } from "wxt/browser";
 import {
@@ -15,17 +15,19 @@ import {
     getBookmarkTitlesInFolder,
     getBookmarkFolders
 } from "@/lib/bookmarkUtils";
-import { Loader2, Plus, Wand2, Folder as FolderIcon, Check, Sparkles } from "lucide-react";
+import { Loader2, Plus, Wand2, Folder as FolderIcon, Check, Sparkles, Globe, LayoutGrid } from "lucide-react";
 import { CascadingFolderSelect } from "@/components/ui/cascading-folder-select";
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
 import { recommendFolderWithAI, renameBookmarkContextuallyWithAI } from "@/lib/aiService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 function App() {
     const { toast } = useToast();
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation('popup');
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -114,7 +116,7 @@ function App() {
         } catch (error) {
             console.error('AI rename failed:', error);
             toast({
-                title: i18n.language.startsWith('zh') ? "AI重命名失败" : "AI Rename Failed",
+                title: t('aiRenameFailed'),
                 description: error instanceof Error ? error.message : "Unknown error",
                 variant: "destructive"
             });
@@ -154,13 +156,13 @@ function App() {
                 setRecommendationOpen(true);
             } else {
                 toast({
-                    title: i18n.language.startsWith('zh') ? "未找到推荐文件夹" : "No recommendations found",
+                    title: t('noRecommendations'),
                 });
             }
         } catch (error) {
             console.error('AI recommend failed:', error);
             toast({
-                title: i18n.language.startsWith('zh') ? "AI推荐失败" : "AI Recommendation Failed",
+                title: t('aiRecommendFailed'),
                 description: error instanceof Error ? error.message : "Unknown error",
                 variant: "destructive"
             });
@@ -178,7 +180,6 @@ function App() {
         if (folder) {
             setSelectedFolder(folder.id);
             setRecommendationOpen(false);
-            // 不再显示Toast，直接选中即可，或者可以给按钮一个短暂的反馈（这里简化处理）
         } else {
             // Fallback: try path matching if ID fails
             const folderByPath = allFlatFolders.find(f => f.path === rec.folderPath);
@@ -187,7 +188,7 @@ function App() {
                 setRecommendationOpen(false);
             } else {
                 toast({
-                    title: i18n.language.startsWith('zh') ? "无法定位文件夹" : "Cannot locate folder",
+                    title: t('cannotLocateFolder'),
                     description: rec.folderPath,
                     variant: "destructive"
                 });
@@ -200,8 +201,8 @@ function App() {
         // 验证输入
         if (!validateBookmarkTitle(title)) {
             toast({
-                title: "验证错误",
-                description: "书签标题不能为空且不能超过200个字符",
+                title: t('validationError'),
+                description: t('titleValidationError'),
                 variant: "destructive"
             });
             return;
@@ -209,8 +210,8 @@ function App() {
 
         if (!validateBookmarkUrl(url)) {
             toast({
-                title: "验证错误",
-                description: "请输入有效的URL",
+                title: t('validationError'),
+                description: t('urlValidationError'),
                 variant: "destructive"
             });
             return;
@@ -224,21 +225,23 @@ function App() {
             const folderName = folders.find(f => f.id === selectedFolder)?.title || '书签栏';
 
             toast({
-                title: "成功",
-                description: `书签已添加到「${folderName}」`,
+                title: t('success'),
+                description: t('bookmarkAdded', { folderName }),
             });
 
             // 清空表单
             setTitle('');
             setUrl('');
 
-            // 可选：关闭popup
-            // window.close();
+            // 延迟关闭popup，让用户看到成功提示
+            setTimeout(() => {
+                window.close();
+            }, 800);
         } catch (error) {
             console.error('Failed to create bookmark:', error);
             toast({
-                title: "添加失败",
-                description: error instanceof Error ? error.message : "无法添加书签",
+                title: t('addFailed'),
+                description: error instanceof Error ? error.message : t('cannotAddBookmark'),
                 variant: "destructive"
             });
         } finally {
@@ -247,155 +250,180 @@ function App() {
     };
 
     return (
-        <div className="w-[400px] bg-background">
-            <Card className="border-none shadow-none rounded-none">
-                <CardHeader className="p-4 pb-2 border-b">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        AI Bookmark Manager
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-5">
-                    {/* 书签标题 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="bookmark-title" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {i18n.language.startsWith('zh') ? "标题" : "Title"}
-                        </Label>
-                        <div className="relative">
+        <TooltipProvider>
+            <div className="w-[400px] bg-background font-sans text-foreground">
+                <Card className="border-none shadow-none rounded-none">
+                    <CardHeader className="px-6 py-4 border-b bg-muted/10">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg font-semibold flex items-center gap-2.5">
+                                <div className="p-1.5 bg-primary/10 rounded-md">
+                                    <Sparkles className="w-4 h-4 text-primary" />
+                                </div>
+                                <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                                    AI Bookmark
+                                </span>
+                            </CardTitle>
+                            <Badge variant="outline" className="text-[10px] font-normal px-2 py-0.5 h-5 bg-background/50">
+                                v1.0
+                            </Badge>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="p-6 space-y-6">
+                        {/* 书签标题 */}
+                        <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="bookmark-title" className="text-sm font-medium text-foreground/80">
+                                    {t('title')}
+                                </Label>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleAIRename}
+                                            disabled={isRenaming || !url || !title}
+                                            className={`h-6 px-2 text-xs gap-1.5 hover:bg-primary/5 ${isRenameSuccess ? "text-green-600 hover:text-green-700" : "text-primary hover:text-primary/80"}`}
+                                        >
+                                            {isRenaming ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : isRenameSuccess ? (
+                                                <Check className="h-3 w-3" />
+                                            ) : (
+                                                <Wand2 className="h-3 w-3" />
+                                            )}
+                                            <span>{t('aiRename')}</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{t('optimizeTitleWithAI')}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
                             <Input
                                 id="bookmark-title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder={i18n.language.startsWith('zh') ? "输入书签标题" : "Enter bookmark title"}
+                                placeholder={t('enterTitle')}
                                 disabled={isCreating}
-                                className="pr-10"
+                                className="h-10 bg-background focus-visible:ring-primary/20 transition-all"
                             />
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleAIRename}
-                                disabled={isRenaming || !url || !title}
-                                title={i18n.language.startsWith('zh') ? "AI 智能重命名" : "AI Smart Rename"}
-                                className={`absolute right-0 top-0 h-full w-10 rounded-l-none hover:bg-transparent ${isRenameSuccess ? "text-green-600" : "text-muted-foreground hover:text-primary"}`}
-                            >
-                                {isRenaming ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : isRenameSuccess ? (
-                                    <Check className="h-4 w-4" />
-                                ) : (
-                                    <Wand2 className="h-4 w-4" />
-                                )}
-                            </Button>
                         </div>
-                    </div>
 
-                    {/* 书签URL */}
-                    <div className="space-y-2">
-                        <Label htmlFor="bookmark-url" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">URL</Label>
-                        <Input
-                            id="bookmark-url"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder="https://example.com"
-                            type="url"
-                            disabled={isCreating}
-                            className="font-mono text-xs text-muted-foreground bg-muted/30"
-                        />
-                    </div>
+                        {/* 书签URL */}
+                        <div className="space-y-2.5">
+                            <Label htmlFor="bookmark-url" className="text-sm font-medium text-foreground/80 flex items-center gap-2">
+                                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                                URL
+                            </Label>
+                            <Input
+                                id="bookmark-url"
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                                placeholder="https://example.com"
+                                type="url"
+                                disabled={isCreating}
+                                className="h-10 font-mono text-xs text-muted-foreground bg-muted/30 focus-visible:ring-primary/20"
+                            />
+                        </div>
 
-                    {/* 文件夹选择 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="bookmark-folder" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {i18n.language.startsWith('zh') ? "保存到" : "Folder"}
-                        </Label>
-                        <div className="relative flex gap-2">
-                            <div className="flex-1 min-w-0">
-                                <CascadingFolderSelect
-                                    folders={folders}
-                                    selectedId={selectedFolder}
-                                    onSelect={setSelectedFolder}
-                                    placeholder={i18n.language.startsWith('zh') ? "选择文件夹" : "Select folder"}
-                                    className="w-full"
-                                />
+                        {/* 文件夹选择 */}
+                        <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="bookmark-folder" className="text-sm font-medium text-foreground/80 flex items-center gap-2">
+                                    <LayoutGrid className="w-3.5 h-3.5 text-muted-foreground" />
+                                    {t('location')}
+                                </Label>
+                                <Popover open={recommendationOpen} onOpenChange={setRecommendationOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleAIRecommend}
+                                            disabled={isRecommending || !url || !title}
+                                            className="h-6 px-2 text-xs gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        >
+                                            {isRecommending ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <Sparkles className="h-3 w-3" />
+                                            )}
+                                            <span>{t('aiRecommend')}</span>
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[320px] p-0 shadow-lg border-border/50" align="end" sideOffset={5}>
+                                        <div className="p-3 bg-muted/30 border-b flex items-center justify-between">
+                                            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+                                                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                                                {t('aiRecommendations')}
+                                            </h4>
+                                            <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                                                {recommendations.length}
+                                            </Badge>
+                                        </div>
+                                        <div className="p-1 max-h-[280px] overflow-y-auto custom-scrollbar">
+                                            {recommendations.map((rec, index) => (
+                                                <div key={index}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        className="w-full justify-start h-auto py-2.5 px-3 text-left flex flex-col items-start gap-1 hover:bg-accent/50 group transition-colors"
+                                                        onClick={() => handleSelectRecommendation(rec)}
+                                                    >
+                                                        <div className="flex items-center gap-2.5 w-full">
+                                                            <div className="p-1.5 rounded-md bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors shrink-0">
+                                                                <FolderIcon className="h-3.5 w-3.5" />
+                                                            </div>
+                                                            <span className="text-sm font-medium truncate flex-1 text-foreground/90 group-hover:text-foreground">
+                                                                {rec.folderPath}
+                                                            </span>
+                                                        </div>
+                                                        {rec.reason && (
+                                                            <span className="text-xs text-muted-foreground/80 line-clamp-2 pl-9 leading-relaxed">
+                                                                {rec.reason}
+                                                            </span>
+                                                        )}
+                                                    </Button>
+                                                    {index < recommendations.length - 1 && <Separator className="my-1 opacity-30" />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
 
-                            <Popover open={recommendationOpen} onOpenChange={setRecommendationOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={handleAIRecommend}
-                                        disabled={isRecommending || !url || !title}
-                                        title={i18n.language.startsWith('zh') ? "AI 推荐文件夹" : "AI Recommend Folder"}
-                                        className="shrink-0"
-                                    >
-                                        {isRecommending ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Wand2 className="h-4 w-4 text-blue-500" />
-                                        )}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[340px] p-0" align="end" sideOffset={5}>
-                                    <div className="p-3 bg-muted/30 border-b">
-                                        <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-                                            <Sparkles className="w-3 h-3 text-blue-500" />
-                                            {i18n.language.startsWith('zh') ? "AI 推荐文件夹" : "AI Recommendations"}
-                                        </h4>
-                                    </div>
-                                    <div className="p-1 max-h-[300px] overflow-y-auto">
-                                        {recommendations.map((rec, index) => (
-                                            <div key={index}>
-                                                <Button
-                                                    variant="ghost"
-                                                    className="w-full justify-start h-auto py-3 px-3 text-left flex flex-col items-start gap-1.5 hover:bg-accent/50 group"
-                                                    onClick={() => handleSelectRecommendation(rec)}
-                                                >
-                                                    <div className="flex items-center gap-2 w-full">
-                                                        <div className="p-1.5 rounded-md bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
-                                                            <FolderIcon className="h-4 w-4" />
-                                                        </div>
-                                                        <span className="text-sm font-medium truncate flex-1 text-foreground">{rec.folderPath}</span>
-                                                    </div>
-                                                    {rec.reason && (
-                                                        <span className="text-xs text-muted-foreground line-clamp-2 pl-9 leading-relaxed">
-                                                            {rec.reason}
-                                                        </span>
-                                                    )}
-                                                </Button>
-                                                {index < recommendations.length - 1 && <Separator className="my-1 opacity-30" />}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+                            <CascadingFolderSelect
+                                folders={folders}
+                                selectedId={selectedFolder}
+                                onSelect={setSelectedFolder}
+                                placeholder={t('selectFolder')}
+                                className="w-full"
+                            />
                         </div>
-                    </div>
+                    </CardContent>
 
-                    {/* 添加按钮 */}
-                    <div className="pt-2">
+                    <CardFooter className="p-6 pt-2 pb-6 bg-background">
                         <Button
                             onClick={handleAddBookmark}
                             disabled={isCreating || !title.trim() || !url.trim()}
-                            className="w-full h-10 text-sm font-medium shadow-sm"
+                            className="w-full h-11 text-sm font-medium shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90"
                             size="lg"
                         >
                             {isCreating ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {i18n.language.startsWith('zh') ? "添加中..." : "Adding..."}
+                                    {t('adding')}
                                 </>
                             ) : (
                                 <>
                                     <Plus className="mr-2 h-4 w-4" />
-                                    {i18n.language.startsWith('zh') ? "添加书签" : "Add Bookmark"}
+                                    {t('addBookmark')}
                                 </>
                             )}
                         </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                    </CardFooter>
+                </Card>
+            </div>
+        </TooltipProvider>
     );
 }
 

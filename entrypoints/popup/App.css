@@ -1,35 +1,26 @@
 #root {
   margin: 0;
-  width: 480px;
-  min-height: 400px;
+  width: 400px;
+  min-height: auto;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
+/* Custom scrollbar for the recommendation list */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
 
-.logo:hover {
-  filter: drop-shadow(0 0 2em #54bc4ae0);
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 4px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
 }

@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { FaFolder, FaBookmark, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { cn } from '@/lib/utils';
 import { BookmarkFolder } from '@/lib/bookmarkUtils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CascadingFolderSelectProps {
     folders: BookmarkFolder[];
@@ -27,59 +28,6 @@ interface FolderItemProps {
     onClick: (folderId: string) => void;
     level: number;
 }
-
-const FolderItem: React.FC<FolderItemProps> = ({
-    folder,
-    isSelected,
-    isHovered,
-    hasChildren,
-    onHover,
-    onClick,
-    level
-}) => {
-    const handleMouseEnter = () => {
-        onHover(folder.id);
-    };
-
-    const handleMouseLeave = () => {
-        onHover(null);
-    };
-
-    const handleClick = () => {
-        onClick(folder.id);
-    };
-
-    const getIcon = () => {
-        if (folder.id === 'all') {
-            return <FaBookmark className="h-4 w-4 text-amber-500 flex-shrink-0" />;
-        }
-        return <FaFolder className="h-4 w-4 text-blue-500 flex-shrink-0" />;
-    };
-
-    return (
-        <div
-            className={cn(
-                "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors text-sm",
-                "hover:bg-muted/50",
-                isSelected && "bg-primary/10 text-primary font-medium",
-                isHovered && !isSelected && "bg-muted/30"
-            )}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleClick}
-            role="treeitem"
-            aria-selected={isSelected}
-            aria-expanded={hasChildren ? isHovered : undefined}
-            aria-level={level + 1}
-        >
-            {getIcon()}
-            <span className="flex-1 truncate">{folder.title}</span>
-            {hasChildren && (
-                <FaChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-            )}
-        </div>
-    );
-};
 
 // 根据ID查找文件夹信息
 const findFolderById = (folders: BookmarkFolder[], id: string): BookmarkFolder | null => {
@@ -157,7 +105,6 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                 });
                 currentFolders = folder.children;
             } else {
-                // 如果当前层级找不到对应的文件夹（理论上不应该发生，除非数据不一致），则停止
                 break;
             }
         }
@@ -168,11 +115,6 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
     // 处理文件夹点击
     const handleFolderClick = useCallback((folderId: string) => {
         onSelect(folderId);
-        // 点击即选中，不需要关闭 popover，用户可能想继续浏览子文件夹
-        // 如果是叶子节点，或者用户想关闭，可以点击外部
-        // 但为了体验，如果点击的是已选中的且没有子文件夹的，可以关闭？
-        // 现在的需求是：点击那个文件夹作为选中的文件夹。
-        // 保持 popover 打开让用户确认或继续选择子文件夹是比较好的 column view 体验。
     }, [onSelect]);
 
     // 生成显示值
@@ -191,6 +133,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                         "hover:bg-accent hover:text-accent-foreground",
                         "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                         "disabled:cursor-not-allowed disabled:opacity-50",
+                        "h-10 transition-colors",
                         className
                     )}
                     role="combobox"
@@ -201,22 +144,22 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                         {selectedFolder && (
                             <>
                                 {selectedFolder.id === 'all' ? (
-                                    <FaBookmark className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                    <FaBookmark className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                                 ) : (
-                                    <FaFolder className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                    <FaFolder className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                                 )}
                             </>
                         )}
-                        <span className="truncate">{getDisplayValue()}</span>
+                        <span className={cn("truncate", !selectedFolder && "text-muted-foreground")}>{getDisplayValue()}</span>
                     </div>
                     <FaChevronDown className={cn(
-                        "h-4 w-4 text-muted-foreground transition-transform",
+                        "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200",
                         isOpen && "rotate-180"
                     )} />
                 </div>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0 max-w-none"
+                className="w-auto p-0 max-w-none shadow-xl border-border/50"
                 align="start"
                 side="bottom"
                 sideOffset={4}
@@ -230,47 +173,48 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                         <div
                             key={panel.level}
                             className={cn(
-                                "w-48 border-r border-border last:border-r-0",
-                                "overflow-y-auto flex-shrink-0"
+                                "w-48 border-r border-border/50 last:border-r-0",
+                                "flex-shrink-0 flex flex-col"
                             )}
                             style={{ maxHeight: '320px' }}
                         >
-                            <div className="py-1">
-                                {panel.folders.map((folder) => {
-                                    const isSelected = folder.id === selectedId;
-                                    // 路径中的文件夹也应该高亮（作为父级激活状态）
-                                    const isActive = activePath.includes(folder.id);
-                                    const hasChildren = (folder.children?.length ?? 0) > 0;
+                            <ScrollArea className="h-full w-full">
+                                <div className="p-1">
+                                    {panel.folders.map((folder) => {
+                                        const isSelected = folder.id === selectedId;
+                                        const isActive = activePath.includes(folder.id);
+                                        const hasChildren = (folder.children?.length ?? 0) > 0;
 
-                                    return (
-                                        <div
-                                            key={folder.id}
-                                            className={cn(
-                                                "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors text-sm mx-1 rounded-sm",
-                                                isSelected
-                                                    ? "bg-primary text-primary-foreground font-medium"
-                                                    : isActive
-                                                        ? "bg-muted text-foreground"
-                                                        : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                                            )}
-                                            onClick={() => handleFolderClick(folder.id)}
-                                            role="treeitem"
-                                            aria-selected={isSelected}
-                                            aria-expanded={hasChildren ? isActive : undefined}
-                                        >
-                                            {folder.id === 'all' ? (
-                                                <FaBookmark className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-amber-500")} />
-                                            ) : (
-                                                <FaFolder className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-blue-500")} />
-                                            )}
-                                            <span className="flex-1 truncate">{folder.title}</span>
-                                            {hasChildren && (
-                                                <FaChevronRight className={cn("h-3 w-3 flex-shrink-0", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")} />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        return (
+                                            <div
+                                                key={folder.id}
+                                                className={cn(
+                                                    "flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-all text-sm mx-1 rounded-md mb-0.5",
+                                                    isSelected
+                                                        ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                                                        : isActive
+                                                            ? "bg-muted text-foreground"
+                                                            : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                                )}
+                                                onClick={() => handleFolderClick(folder.id)}
+                                                role="treeitem"
+                                                aria-selected={isSelected}
+                                                aria-expanded={hasChildren ? isActive : undefined}
+                                            >
+                                                {folder.id === 'all' ? (
+                                                    <FaBookmark className={cn("h-3.5 w-3.5 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-amber-500")} />
+                                                ) : (
+                                                    <FaFolder className={cn("h-3.5 w-3.5 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-blue-500")} />
+                                                )}
+                                                <span className="flex-1 truncate">{folder.title}</span>
+                                                {hasChildren && (
+                                                    <FaChevronRight className={cn("h-3 w-3 flex-shrink-0", isSelected ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </ScrollArea>
                         </div>
                     ))}
                 </div>
