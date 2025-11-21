@@ -1,8 +1,8 @@
 {
-  "name": "ai-bookmark-manager",
-  "description": "AI 书签管家（AI Bookmark Manager）：支持AI批量重命名、书签管理与外观/国际化可配置的Chrome扩展模板",
+  "name": "qingniao-bookmark",
+  "description": "青鸟书签（Qingniao Bookmark）：AI驱动的智能书签管理扩展，支持智能推荐、批量重命名与多语言界面",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",

@@ -77,7 +77,7 @@ Note: You can't use this message in a manifest file.
     /**
      * No message description.
      *
-     * "AI Bookmark Manager"
+     * "Qingniao Bookmark"
      */
     getMessage(
       messageName: "extName",
@@ -87,7 +87,7 @@ Note: You can't use this message in a manifest file.
     /**
      * No message description.
      *
-     * "Manage and rename bookmarks with AI. Features: AI batch rename with review, dual progress modes, root folder selection, appearance (theme, accent color, language), AI config & prompt settings. Built with WXT, React, Tailwind CSS and shadcn/ui."
+     * "AI-powered smart bookmark manager inspired by the mythical Blue Bird from Shan Hai Jing. Features: intelligent folder recommendations, AI batch rename, quick add popup, multi-language support, and customizable themes."
      */
     getMessage(
       messageName: "extDescription",

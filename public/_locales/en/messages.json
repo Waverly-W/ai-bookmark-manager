@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "AI Bookmark Manager"
+    "message": "Qingniao Bookmark"
   },
   "extDescription": {
-    "message": "Manage and rename bookmarks with AI. Features: AI batch rename with review, dual progress modes, root folder selection, appearance (theme, accent color, language), AI config & prompt settings. Built with WXT, React, Tailwind CSS and shadcn/ui."
+    "message": "AI-powered smart bookmark manager inspired by the mythical Blue Bird from Shan Hai Jing. Features: intelligent folder recommendations, AI batch rename, quick add popup, multi-language support, and customizable themes."
   }
 }

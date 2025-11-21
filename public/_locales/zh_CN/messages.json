@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "AI书签管家"
+    "message": "青鸟书签"
   },
   "extDescription": {
-    "message": "基于WXT、React、Tailwind CSS、shadcn/ui构建的AI书签管理扩展：支持AI批量重命名（审查与编辑）、进度条两种模式、书签根目录选择、外观设置（主题/强调色/语言）、AI配置与提示词设置。"
+    "message": "灵感源自《山海经》中的神鸟青鸟，AI驱动的智能书签管理扩展。功能：智能文件夹推荐、AI批量重命名、快速添加书签、多语言支持、主题自定义。"
   }
 }
