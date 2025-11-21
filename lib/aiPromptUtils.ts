@@ -2,46 +2,29 @@ import { browser } from "wxt/browser";
 import { configSyncManager } from "./configSyncManager";
 
 /**
- * 默认的中文Prompt模板
+ * 默认的中文Prompt模板 (User Prompt)
  */
-export const DEFAULT_PROMPT_ZH = `请根据以下书签的URL和当前标题，生成一个简洁、描述性的中文标题。
-
-要求：
+export const DEFAULT_PROMPT_ZH = `要求：
 1. 不超过30个字符
 2. 准确反映网页内容
 3. 便于搜索和识别
 4. 只返回新标题，不要有其他说明文字
-
-书签URL: {url}
-当前标题: {title}
-
-新标题：`;
+5. 格式为：网站名称 | 功能`;
 
 /**
- * 默认的英文Prompt模板
+ * 默认的英文Prompt模板 (User Prompt)
  */
-export const DEFAULT_PROMPT_EN = `Based on the following bookmark's URL and current title, generate a concise and descriptive title.
-
-Requirements:
+export const DEFAULT_PROMPT_EN = `Requirements:
 1. No more than 50 characters
 2. Accurately reflect the page content
 3. Easy to search and identify
 4. Return only the new title, no additional text
-
-Bookmark URL: {url}
-Current Title: {title}
-
-New Title:`;
+5. Format: Site Name | Function`;
 
 /**
  * 带参考命名格式的中文 Prompt 模板
  */
-export const DEFAULT_PROMPT_WITH_REFERENCE_ZH = `请根据以下书签的URL和当前标题，生成一个简洁、描述性的中文标题。
-
-重要：请参考同一文件夹中现有书签的命名风格，保持一致性。
-
-参考书签标题（同一文件夹中的现有书签）：
-{referenceBookmarks}
+export const DEFAULT_PROMPT_WITH_REFERENCE_ZH = `重要：请参考同一文件夹中现有书签的命名风格，保持一致性。
 
 要求：
 1. 分析参考书签的命名模式（如：是否使用中英文、是否包含分类标签、长度风格、格式等）
@@ -49,22 +32,12 @@ export const DEFAULT_PROMPT_WITH_REFERENCE_ZH = `请根据以下书签的URL和�
 3. 不超过30个字符
 4. 准确反映网页内容
 5. 便于搜索和识别
-6. 只返回新标题，不要有其他说明文字
-
-书签URL: {url}
-当前标题: {title}
-
-新标题：`;
+6. 只返回新标题，不要有其他说明文字`;
 
 /**
  * 带参考命名格式的英文 Prompt 模板
  */
-export const DEFAULT_PROMPT_WITH_REFERENCE_EN = `Based on the following bookmark's URL and current title, generate a concise and descriptive title.
-
-IMPORTANT: Please refer to the naming style of existing bookmarks in the same folder to maintain consistency.
-
-Reference bookmark titles (existing bookmarks in the same folder):
-{referenceBookmarks}
+export const DEFAULT_PROMPT_WITH_REFERENCE_EN = `IMPORTANT: Please refer to the naming style of existing bookmarks in the same folder to maintain consistency.
 
 Requirements:
 1. Analyze the naming pattern of reference bookmarks (e.g., language usage, category labels, length style, format, etc.)
@@ -72,12 +45,7 @@ Requirements:
 3. No more than 50 characters
 4. Accurately reflect the page content
 5. Easy to search and identify
-6. Return only the new title, no additional text
-
-Bookmark URL: {url}
-Current Title: {title}
-
-New Title:`;
+6. Return only the new title, no additional text`;
 
 /**
  * 默认的文件夹推荐 Prompt 模板（中文）

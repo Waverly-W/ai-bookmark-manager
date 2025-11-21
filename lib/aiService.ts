@@ -1,5 +1,7 @@
 import { AIConfig, decodeApiKey } from './aiConfigUtils';
 import { getCurrentPrompt, formatPrompt, enhancePromptForBatch, formatBatchPrompt, parseBatchRenameResponse, getDefaultPrompt } from './aiPromptUtils';
+import { AIScenario } from './ai/types';
+import { bookmarkRenameScenario, formatBookmarkRenameSystemPrompt } from './ai/scenarios/bookmarkRename';
 
 /**
  * AI API响应接口
@@ -126,39 +128,54 @@ export interface AIRenameResult {
  * @param useJsonMode 是否启用 JSON Mode（确保返回标准 JSON 格式）
  * @returns AI响应内容
  */
+/**
+ * 调用AI API
+ * @param config AI配置
+ * @param prompt 提示词 (User Message)
+ * @param systemPrompt 系统提示词 (System Message)
+ * @param maxTokens 最大token数
+ * @param responseFormat 响应格式配置 (JSON Schema)
+ * @returns AI响应内容
+ */
 const callAIAPI = async (
     config: AIConfig,
     prompt: string,
-    maxTokens: number = 100,
+    systemPrompt?: string,
+    maxTokens: number = 1000, // Increased default for JSON
     options?: AIRequestOptions,
-    useJsonMode: boolean = false
+    responseFormat?: { type: "json_schema"; json_schema: any }
 ): Promise<string> => {
     const { apiUrl, apiKey, modelId } = config;
 
     // 构建完整的API URL
-    const endpoint = apiUrl.endsWith('/')
-        ? `${apiUrl}chat/completions`
-        : `${apiUrl}/chat/completions`;
+    const endpoint = buildEndpoint(apiUrl);
 
     try {
-        const endpoint = buildEndpoint(apiUrl);
+        const messages: any[] = [];
+
+        if (systemPrompt) {
+            messages.push({
+                role: 'system',
+                content: systemPrompt
+            });
+        }
+
+        messages.push({
+            role: 'user',
+            content: prompt
+        });
 
         // 构建请求体
         const requestBody: any = {
             model: modelId,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
+            messages: messages,
             temperature: 0.7,
             max_tokens: maxTokens
         };
 
-        // 如果启用 JSON Mode，添加 response_format 参数
-        if (useJsonMode) {
-            requestBody.response_format = { type: 'json_object' };
+        // 如果有 response_format，添加到请求体
+        if (responseFormat) {
+            requestBody.response_format = responseFormat;
         }
 
         const response = await fetchWithRetry(endpoint, {
@@ -189,6 +206,52 @@ const callAIAPI = async (
 };
 
 /**
+ * 执行 AI 场景
+ * @param config AI配置
+ * @param scenario AI场景定义
+ * @param input 输入数据
+ * @param userPromptTemplate 用户自定义的 Prompt 模板 (可选，默认使用场景定义的 defaultUserPrompt)
+ * @returns 解析后的输出
+ */
+export const executeScenario = async <InputType, OutputType>(
+    config: AIConfig,
+    scenario: AIScenario<InputType, OutputType>,
+    input: InputType,
+    userPromptTemplate?: string,
+    systemPromptOverride?: string, // Allow overriding system prompt (e.g. for dynamic injection)
+    locale: string = 'zh_CN'
+): Promise<OutputType> => {
+    // 1. 准备 System Prompt
+    const systemPrompt = systemPromptOverride || scenario.getSystemPrompt(locale);
+
+    // 2. 准备 User Prompt
+    const template = userPromptTemplate || scenario.defaultUserPrompt;
+    const userPrompt = scenario.formatUserPrompt(template, input);
+
+    // 3. 调用 API
+    const responseContent = await callAIAPI(
+        config,
+        userPrompt,
+        systemPrompt,
+        1000,
+        undefined,
+        {
+            type: "json_schema",
+            json_schema: scenario.responseSchema
+        }
+    );
+
+    // 4. 解析结果
+    try {
+        const jsonResponse = JSON.parse(responseContent);
+        return scenario.parseResponse(jsonResponse);
+    } catch (error) {
+        console.error('Failed to parse AI response as JSON:', error, responseContent);
+        throw new Error('AI response was not valid JSON');
+    }
+};
+
+/**
  * 测试AI连接
  * @param config AI配置
  * @returns 测试结果
@@ -197,7 +260,8 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
     try {
         // 发送一个简单的测试请求
         const testPrompt = 'Say "Hello" if you can read this.';
-        const response = await callAIAPI(config, testPrompt, 10);
+        // callAIAPI signature: (config, prompt, systemPrompt, maxTokens, options, responseFormat)
+        const response = await callAIAPI(config, testPrompt, undefined, 10);
 
         // 检查响应是否有效
         if (response && response.length > 0) {
@@ -231,6 +295,15 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
  * @param referenceBookmarks 参考书签标题列表（可选，用于保持命名风格一致）
  * @returns 重命名结果
  */
+/**
+ * 使用AI重命名书签
+ * @param config AI配置
+ * @param bookmarkUrl 书签URL
+ * @param currentTitle 当前标题
+ * @param locale 当前语言（可选，用于获取默认Prompt）
+ * @param referenceBookmarks 参考书签标题列表（可选，用于保持命名风格一致）
+ * @returns 重命名结果
+ */
 export const renameBookmarkWithAI = async (
     config: AIConfig,
     bookmarkUrl: string,
@@ -242,57 +315,39 @@ export const renameBookmarkWithAI = async (
         // 判断是否使用参考格式
         const useReference = referenceBookmarks && referenceBookmarks.length >= 3;
 
-        // 获取当前的Prompt模板
-        let promptTemplate: string;
+        // 获取当前的 User Prompt 模板
+        // Note: getCurrentPrompt now should ideally return the User Prompt for the scenario
+        // For backward compatibility or simplicity, we might need to adjust how we get the prompt.
+        // Let's assume getCurrentPrompt returns the User Prompt string.
+        let userPromptTemplate = await getCurrentPrompt(locale);
+
+        // If useReference is true, we might want to append reference info to the User Prompt
+        // or handle it within the scenario. For now, let's keep it simple and maybe append it?
+        // The original logic switched templates entirely.
         if (useReference) {
-            // 使用带参考格式的 Prompt
-            promptTemplate = getDefaultPrompt(locale, true);
-        } else {
-            // 使用普通 Prompt
-            promptTemplate = await getCurrentPrompt(locale);
+            // If using reference, we might need a different User Prompt or append to it.
+            // The new system separates System and User prompts.
+            // The reference bookmarks should probably be part of the User Prompt context.
+            const referenceText = `\n\n参考书签标题（同一文件夹中的现有书签）：\n${referenceBookmarks.join('\n')}\n\n请参考以上书签的命名风格。`;
+            userPromptTemplate += referenceText;
         }
 
-        // 格式化Prompt（替换占位符）
-        const prompt = formatPrompt(
-            promptTemplate,
-            bookmarkUrl,
-            currentTitle,
-            useReference ? referenceBookmarks : undefined
+        // 动态构建 System Prompt (因为包含 URL 和 Title)
+        const systemPrompt = formatBookmarkRenameSystemPrompt(bookmarkUrl, currentTitle, locale);
+
+        // 执行场景
+        const result = await executeScenario(
+            config,
+            bookmarkRenameScenario,
+            { url: bookmarkUrl, title: currentTitle },
+            userPromptTemplate,
+            systemPrompt,
+            locale
         );
-
-        console.log('[AI Rename] 使用参考格式:', useReference);
-        if (useReference) {
-            console.log('[AI Rename] 参考书签数量:', referenceBookmarks?.length);
-        }
-
-        // 调用AI API
-        const newTitle = await callAIAPI(config, prompt, 50);
-
-        // 清理返回的标题（移除可能的引号、换行等）
-        const cleanedTitle = newTitle
-            .replace(/^["']|["']$/g, '')  // 移除首尾引号
-            .replace(/\n/g, ' ')           // 替换换行为空格
-            .trim();
-
-        // 验证标题长度
-        if (cleanedTitle.length === 0) {
-            return {
-                success: false,
-                error: 'AI returned an empty title'
-            };
-        }
-
-        if (cleanedTitle.length > 100) {
-            // 如果标题过长，截断
-            return {
-                success: true,
-                newTitle: cleanedTitle.substring(0, 100)
-            };
-        }
 
         return {
             success: true,
-            newTitle: cleanedTitle
+            newTitle: result.newTitle
         };
     } catch (error) {
         console.error('AI rename failed:', error);

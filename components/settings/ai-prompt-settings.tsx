@@ -13,6 +13,8 @@ import {
 } from "@/lib/aiPromptUtils";
 import { Loader2, RotateCcw, Save, Info } from "lucide-react";
 
+import { bookmarkRenameScenario } from "@/lib/ai/scenarios/bookmarkRename";
+
 export function AIPromptSettings() {
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
@@ -131,12 +133,23 @@ export function AIPromptSettings() {
                 <p className="text-sm text-muted-foreground max-w-prose">{t('aiPromptDescription')}</p>
             </div>
 
-            {/* Prompt模板输入 */}
+            {/* System Prompt (Read-only) */}
             <div className="space-y-2">
-                <Label htmlFor="promptTemplate">{t('promptTemplate')}</Label>
+                <Label className="text-muted-foreground">{t('systemPrompt')}</Label>
+                <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap font-mono">
+                    {bookmarkRenameScenario.getSystemPrompt(i18n.language)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                    {t('systemPromptDescription')}
+                </p>
+            </div>
+
+            {/* User Prompt (Editable) */}
+            <div className="space-y-2">
+                <Label htmlFor="promptTemplate">{t('userPrompt')}</Label>
                 <textarea
                     id="promptTemplate"
-                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y font-mono"
                     placeholder={t('promptPlaceholder')}
                     value={prompt}
                     onChange={handlePromptChange}
@@ -147,7 +160,7 @@ export function AIPromptSettings() {
             <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50">
                 <Info className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <p className="text-xs text-muted-foreground">
-                    {t('promptHint')}
+                    {t('userPromptDescription')}
                 </p>
             </div>
 
@@ -189,21 +202,6 @@ export function AIPromptSettings() {
                         </>
                     )}
                 </Button>
-            </div>
-
-            {/* 示例说明 */}
-            <div className="pt-4 border-t">
-                <p className="text-xs text-muted-foreground mb-2 font-medium">
-                    {t('examplePlaceholders')}
-                </p>
-                <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground font-mono">
-                        <span className="text-primary">{'{url}'}</span> → {t('placeholderUrl')}
-                    </p>
-                    <p className="text-xs text-muted-foreground font-mono">
-                        <span className="text-primary">{'{title}'}</span> → {t('placeholderTitle')}
-                    </p>
-                </div>
             </div>
         </div>
     );
