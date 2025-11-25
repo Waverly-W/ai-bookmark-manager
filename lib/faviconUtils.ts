@@ -79,7 +79,7 @@ function getFaviconGrabberUrl(url: string): string {
  */
 function getChromeBuiltInFaviconUrl(url: string, size: number = 32): string {
     try {
-        const faviconUrl = new URL(chrome.runtime.getURL('/_favicon/'));
+        const faviconUrl = new URL(browser.runtime.getURL('/_favicon/' as any));
         faviconUrl.searchParams.set('pageUrl', url);
         faviconUrl.searchParams.set('size', size.toString());
         return faviconUrl.toString();

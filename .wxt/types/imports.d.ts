@@ -13,10 +13,18 @@ declare global {
   const defineContentScript: typeof import('wxt/sandbox')['defineContentScript']
   const defineUnlistedScript: typeof import('wxt/sandbox')['defineUnlistedScript']
   const fakeBrowser: typeof import('wxt/testing')['fakeBrowser']
+  const getShortcutDisplay: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['getShortcutDisplay']
   const i18n: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/components/i18n')['default']
   const i18nConfig: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/components/i18nConfig')['default']
   const reducer: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['reducer']
   const storage: typeof import('wxt/storage')['storage']
   const toast: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['toast']
+  const useKeyboardShortcuts: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['useKeyboardShortcuts']
   const useToast: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['useToast']
+}
+// for type re-export
+declare global {
+  // @ts-ignore
+  export type { ShortcutConfig } from '/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts'
+  import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')
 }

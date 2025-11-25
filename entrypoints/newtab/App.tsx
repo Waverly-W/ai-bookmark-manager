@@ -51,7 +51,7 @@ export default () => {
                     setSidebarType(sidebarType);
                 }} />
                 {/* 主内容区域 - 桌面端左边距，移动端底部间距 */}
-                <main className="md:ml-14 mb-16 md:mb-0 grid gap-4 p-4 md:gap-8 md:p-8">
+                <main className="md:ml-16 mb-16 md:mb-0 min-h-screen bg-background">
                     {sidebarType === SidebarType.home && <Home />}
                     {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
                     {sidebarType === SidebarType.settings && <SettingsPage />}

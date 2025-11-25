@@ -26,21 +26,54 @@ interface BookmarkCardProps {
     onEdit?: (item: BookmarkCardItem) => void;
     onDelete?: (item: BookmarkCardItem) => void;
     className?: string;
+    highlight?: string;
+    selectable?: boolean;
+    selected?: boolean;
+    onSelect?: (item: BookmarkCardItem, selected: boolean) => void;
 }
+
+const HighlightedText = ({ text, highlight }: { text: string; highlight?: string }) => {
+    if (!highlight || !highlight.trim()) return <>{text}</>;
+
+    try {
+        // Escape special characters in highlight string
+        const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const parts = text.split(new RegExp(`(${escapedHighlight})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === highlight.toLowerCase() ?
+                        <span key={i} className="bg-yellow-200 dark:bg-yellow-900/50 text-foreground rounded-[2px] px-0.5">{part}</span> : part
+                )}
+            </span>
+        );
+    } catch (e) {
+        return <>{text}</>;
+    }
+};
 
 export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     item,
     onClick,
     onEdit,
     onDelete,
-    className
+    className,
+    highlight,
+    selectable = false,
+    selected = false,
+    onSelect
 }) => {
     const { t } = useTranslation();
     const isFolder = !item.url;
     const childrenCount = item.children?.length || 0;
 
-    const handleClick = () => {
-        onClick(item);
+    const handleClick = (e: React.MouseEvent) => {
+        if (selectable && onSelect) {
+            e.preventDefault();
+            onSelect(item, !selected);
+        } else {
+            onClick(item);
+        }
     };
 
     const handleEdit = (e?: React.MouseEvent) => {
@@ -99,11 +132,22 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         <Card
             className={cn(
                 "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02]",
-                "group border-border/50 hover:border-border",
+                "group border-border/50 hover:border-border relative",
+                selected && "ring-2 ring-primary border-primary bg-primary/5",
                 className
             )}
             onClick={handleClick}
         >
+            {selectable && (
+                <div className="absolute top-2 right-2 z-10">
+                    <div className={cn(
+                        "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                        selected ? "bg-primary border-primary" : "bg-background/80 border-muted-foreground/50 hover:border-primary"
+                    )}>
+                        {selected && <div className="w-2.5 h-1.5 border-l-2 border-b-2 border-primary-foreground -rotate-45 mb-0.5" />}
+                    </div>
+                </div>
+            )}
             <CardContent className="p-3">
                 <div className="flex items-center gap-3">
                     {/* 图标 */}
@@ -119,7 +163,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                         )}
                             title={item.title}
                         >
-                            {item.title}
+                            <HighlightedText text={item.title} highlight={highlight} />
                         </h3>
                     </div>
 

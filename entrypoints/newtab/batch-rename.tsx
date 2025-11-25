@@ -318,7 +318,7 @@ export const BatchRenamePage: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto space-y-8 pb-10">
+        <div className="container mx-auto p-6 md:p-8 max-w-7xl space-y-8 pb-10">
             {/* 固定位置的错误提示 */}
             {errorMessage && (
                 <div className="sticky top-4 z-50 px-4 animate-in slide-in-from-top-2">
@@ -339,14 +339,13 @@ export const BatchRenamePage: React.FC = () => {
             )}
 
             {/* 页面标题区域 */}
-            <div className="space-y-2 text-center sm:text-left">
-                <h1 className="text-3xl font-bold tracking-tight flex items-center justify-center sm:justify-start gap-3">
-                    <Sparkles className="h-8 w-8 text-primary" />
-                    {t('batchRenameTitle')}
-                </h1>
-                <p className="text-muted-foreground max-w-2xl">
-                    {t('batchRenameDescription')}
-                </p>
+            <div className="space-y-4 pb-4 border-b border-border/50">
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight">{t('batchRenameTitle')}</h1>
+                    <p className="text-muted-foreground text-sm">
+                        {t('batchRenameDescription')}
+                    </p>
+                </div>
             </div>
 
             {/* 步骤指示器 */}

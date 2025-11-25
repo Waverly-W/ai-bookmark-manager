@@ -7,6 +7,7 @@ import { AccentColorSettings } from "@/components/settings/accent-color-settings
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
 import { SyncSettings } from "@/components/settings/sync-settings.tsx";
+import { DataExportSettings } from "@/components/settings/data-export-settings.tsx";
 import { useTranslation } from "react-i18next";
 
 export function SettingsPage() {
@@ -14,11 +15,11 @@ export function SettingsPage() {
     const [activeTab, setActiveTab] = React.useState("bookmarks");
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] w-full max-w-6xl mx-auto gap-8 p-6">
+        <div className="container mx-auto p-6 md:p-8 max-w-7xl flex gap-8 h-[calc(100vh-2rem)]">
             {/* Sidebar */}
             <aside className="w-64 flex-shrink-0 space-y-6">
                 <div className="space-y-2 px-4">
-                    <h1 className="text-2xl font-bold tracking-tight">{t('settings')}</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('settings')}</h1>
                     <p className="text-muted-foreground text-sm">{t('settingsDescription')}</p>
                 </div>
                 <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
@@ -58,6 +59,10 @@ export function SettingsPage() {
 
                     {activeTab === "prompts" && (
                         <AIPromptSettings />
+                    )}
+
+                    {activeTab === "data" && (
+                        <DataExportSettings />
                     )}
                 </div>
             </main>

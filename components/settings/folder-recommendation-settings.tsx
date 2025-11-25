@@ -10,7 +10,8 @@ import {
     FolderRecommendationConfig,
     getFolderRecommendationConfig,
     saveFolderRecommendationConfig,
-    resetFolderRecommendationConfig
+    resetFolderRecommendationConfig,
+    DEFAULT_FOLDER_RECOMMENDATION_CONFIG
 } from "@/lib/folderRecommendationConfig";
 import {
     getCurrentFolderRecommendationPrompt,
@@ -28,7 +29,8 @@ export function FolderRecommendationSettings() {
         showReason: true,
         autoApply: true,
         fallbackToDefault: true,
-        timeoutMs: 10000
+        timeoutMs: 10000,
+        maxRecommendations: 3
     });
 
     const [customPrompt, setCustomPrompt] = useState('');
@@ -102,8 +104,8 @@ export function FolderRecommendationSettings() {
     // 重置配置
     const handleResetConfig = async () => {
         try {
-            const defaultConfig = await resetFolderRecommendationConfig();
-            setConfig(defaultConfig);
+            await resetFolderRecommendationConfig();
+            setConfig(DEFAULT_FOLDER_RECOMMENDATION_CONFIG);
             toast({
                 title: t('configReset'),
                 description: t('recommendationConfigReset'),

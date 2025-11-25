@@ -778,3 +778,16 @@ export const formatFolderRecommendationPrompt = (
 
     return result;
 };
+
+/**
+ * 格式化书签列表用于批量分类 Prompt
+ * @param bookmarks 书签列表
+ * @returns 格式化的文本
+ */
+export const formatBookmarkListForClassification = (
+    bookmarks: Array<{ id: string; title: string; url: string }>
+): string => {
+    return bookmarks
+        .map((b, index) => `${index + 1}. [ID: ${b.id}] ${b.title} (${b.url})`)
+        .join('\n');
+};

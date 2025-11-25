@@ -371,3 +371,22 @@ export const getBookmarkTitlesInFolder = async (
         return [];
     }
 };
+
+/**
+ * 移动Chrome书签
+ * @param id 书签ID
+ * @param parentId 目标父文件夹ID
+ * @param index 目标位置索引（可选）
+ */
+export const moveChromeBookmark = async (id: string, parentId: string, index?: number): Promise<void> => {
+    try {
+        const destination: { parentId: string; index?: number } = { parentId };
+        if (index !== undefined) {
+            destination.index = index;
+        }
+        await browser.bookmarks.move(id, destination);
+    } catch (error) {
+        console.error('Failed to move Chrome bookmark:', error);
+        throw new Error('Failed to move bookmark in Chrome');
+    }
+};

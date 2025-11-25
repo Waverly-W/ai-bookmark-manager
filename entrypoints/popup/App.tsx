@@ -253,19 +253,16 @@ function App() {
         <TooltipProvider>
             <div className="w-[400px] bg-background font-sans text-foreground">
                 <Card className="border-none shadow-none rounded-none">
-                    <CardHeader className="px-6 py-4 border-b bg-muted/10">
+                    <CardHeader className="px-6 py-4 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg font-semibold flex items-center gap-2.5">
+                            <CardTitle className="text-base font-semibold flex items-center gap-2">
                                 <div className="p-1.5 bg-primary/10 rounded-md">
                                     <Sparkles className="w-4 h-4 text-primary" />
                                 </div>
-                                <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                                <span className="text-foreground/90">
                                     AI Bookmark
                                 </span>
                             </CardTitle>
-                            <Badge variant="outline" className="text-[10px] font-normal px-2 py-0.5 h-5 bg-background/50">
-                                v1.0
-                            </Badge>
                         </div>
                     </CardHeader>
 
@@ -280,23 +277,22 @@ function App() {
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="ghost"
-                                            size="sm"
+                                            size="icon"
                                             onClick={handleAIRename}
                                             disabled={isRenaming || !url || !title}
-                                            className={`h-6 px-2 text-xs gap-1.5 hover:bg-primary/5 ${isRenameSuccess ? "text-green-600 hover:text-green-700" : "text-primary hover:text-primary/80"}`}
+                                            className={`h-6 w-6 hover:bg-primary/10 ${isRenameSuccess ? "text-green-600" : "text-primary/70 hover:text-primary"}`}
                                         >
                                             {isRenaming ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                             ) : isRenameSuccess ? (
-                                                <Check className="h-3 w-3" />
+                                                <Check className="h-3.5 w-3.5" />
                                             ) : (
-                                                <Wand2 className="h-3 w-3" />
+                                                <Wand2 className="h-3.5 w-3.5" />
                                             )}
-                                            <span>{t('aiRename')}</span>
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>{t('optimizeTitleWithAI')}</p>
+                                        <p>{t('aiRename')}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
@@ -341,7 +337,7 @@ function App() {
                                             size="sm"
                                             onClick={handleAIRecommend}
                                             disabled={isRecommending || !url || !title}
-                                            className="h-6 px-2 text-xs gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                            className="h-6 px-2 text-xs gap-1.5 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
                                         >
                                             {isRecommending ? (
                                                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -351,41 +347,56 @@ function App() {
                                             <span>{t('aiRecommend')}</span>
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[320px] p-0 shadow-lg border-border/50" align="end" sideOffset={5}>
-                                        <div className="p-3 bg-muted/30 border-b flex items-center justify-between">
+                                    <PopoverContent className="w-[340px] p-0 shadow-xl border-border/50 rounded-lg overflow-hidden" align="end" sideOffset={8}>
+                                        <div className="px-4 py-3 bg-muted/30 border-b flex items-center justify-between backdrop-blur-sm">
                                             <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-                                                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                                                <Sparkles className="w-3.5 h-3.5 text-primary" />
                                                 {t('aiRecommendations')}
                                             </h4>
-                                            <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-medium bg-background/80">
                                                 {recommendations.length}
                                             </Badge>
                                         </div>
-                                        <div className="p-1 max-h-[280px] overflow-y-auto custom-scrollbar">
-                                            {recommendations.map((rec, index) => (
-                                                <div key={index}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        className="w-full justify-start h-auto py-2.5 px-3 text-left flex flex-col items-start gap-1 hover:bg-accent/50 group transition-colors"
-                                                        onClick={() => handleSelectRecommendation(rec)}
-                                                    >
-                                                        <div className="flex items-center gap-2.5 w-full">
-                                                            <div className="p-1.5 rounded-md bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors shrink-0">
-                                                                <FolderIcon className="h-3.5 w-3.5" />
+                                        <div className="p-1.5 max-h-[300px] overflow-y-auto custom-scrollbar bg-background/95">
+                                            {recommendations.map((rec, index) => {
+                                                // Split path to highlight the target folder
+                                                const pathParts = rec.folderPath.split('/');
+                                                const targetFolder = pathParts.pop();
+                                                const parentPath = pathParts.join(' / ');
+
+                                                return (
+                                                    <div key={index}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            className="w-full justify-start h-auto py-3 px-3 text-left flex flex-col items-start gap-1.5 hover:bg-accent/50 group transition-all rounded-md mb-0.5"
+                                                            onClick={() => handleSelectRecommendation(rec)}
+                                                        >
+                                                            <div className="flex items-start gap-3 w-full">
+                                                                <div className="mt-0.5 p-1.5 rounded-md bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors shrink-0">
+                                                                    <FolderIcon className="h-4 w-4" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-sm font-semibold text-foreground/90 group-hover:text-primary transition-colors truncate">
+                                                                            {targetFolder}
+                                                                        </span>
+                                                                        {parentPath && (
+                                                                            <span className="text-[10px] text-muted-foreground truncate font-mono opacity-70">
+                                                                                {parentPath}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {rec.reason && (
+                                                                        <div className="mt-1.5 text-xs text-muted-foreground/80 leading-relaxed bg-muted/30 p-2 rounded-sm border border-border/30">
+                                                                            {rec.reason}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <span className="text-sm font-medium truncate flex-1 text-foreground/90 group-hover:text-foreground">
-                                                                {rec.folderPath}
-                                                            </span>
-                                                        </div>
-                                                        {rec.reason && (
-                                                            <span className="text-xs text-muted-foreground/80 line-clamp-2 pl-9 leading-relaxed">
-                                                                {rec.reason}
-                                                            </span>
-                                                        )}
-                                                    </Button>
-                                                    {index < recommendations.length - 1 && <Separator className="my-1 opacity-30" />}
-                                                </div>
-                                            ))}
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </PopoverContent>
                                 </Popover>

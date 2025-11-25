@@ -6,7 +6,8 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { AIConfig, saveAIConfig, getAIConfig, validateAIConfig } from "@/lib/aiConfigUtils";
 import { testAIConnection } from "@/lib/aiService";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Wand2 } from "lucide-react";
+import { AIConfigWizard } from './ai-config-wizard';
 
 export function AIConfigSettings() {
     const { t } = useTranslation();
@@ -25,6 +26,7 @@ export function AIConfigSettings() {
         success: boolean;
         message: string;
     } | null>(null);
+    const [showWizard, setShowWizard] = useState(false);
 
     // 加载配置
     useEffect(() => {
@@ -46,6 +48,23 @@ export function AIConfigSettings() {
 
         loadConfig();
     }, [t, toast]);
+
+    // 检测首次使用
+    useEffect(() => {
+        const checkFirstTime = async () => {
+            try {
+                const savedConfig = await getAIConfig();
+                // 如果没有API Key,认为是首次使用,自动打开向导
+                if (!savedConfig.apiKey && !loading) {
+                    setShowWizard(true);
+                }
+            } catch (error) {
+                console.error('Failed to check first time:', error);
+            }
+        };
+
+        checkFirstTime();
+    }, [loading]);
 
     // 处理输入变化
     const handleInputChange = (field: keyof AIConfig, value: string) => {
@@ -146,8 +165,20 @@ export function AIConfigSettings() {
         <div className="space-y-6">
             {/* 标题和描述 */}
             <div className="space-y-2 pb-4 border-b border-border/50">
-                <h3 className="font-semibold text-left text-lg">{t('aiConfig')}</h3>
-                <p className="text-sm text-muted-foreground max-w-prose">{t('aiConfigDescription')}</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="font-semibold text-left text-lg">{t('aiConfig')}</h3>
+                        <p className="text-sm text-muted-foreground max-w-prose">{t('aiConfigDescription')}</p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => setShowWizard(true)}
+                        className="flex items-center gap-2"
+                    >
+                        <Wand2 className="h-4 w-4" />
+                        {t('useConfigWizard')}
+                    </Button>
+                </div>
             </div>
 
             {/* API URL */}
@@ -237,6 +268,24 @@ export function AIConfigSettings() {
                     )}
                 </Button>
             </div>
+
+            {/* AI配置向导 */}
+            <AIConfigWizard
+                open={showWizard}
+                onOpenChange={setShowWizard}
+                onComplete={() => {
+                    // 向导完成后重新加载配置
+                    const loadConfig = async () => {
+                        try {
+                            const savedConfig = await getAIConfig();
+                            setConfig(savedConfig);
+                        } catch (error) {
+                            console.error('Failed to reload config:', error);
+                        }
+                    };
+                    loadConfig();
+                }}
+            />
         </div>
     );
 }

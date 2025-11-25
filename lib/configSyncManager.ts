@@ -125,11 +125,11 @@ class ConfigSyncManager {
   /**
    * 获取配置
    */
-  async get(key: string): Promise<any> {
+  async get<T = any>(key: string): Promise<T | null> {
     try {
       // 优先从 local 读取
       const localResult = await browser.storage.local.get(key);
-      return localResult[key];
+      return localResult[key] as T;
     } catch (error) {
       console.error(`Failed to get config ${key}:`, error);
       return null;

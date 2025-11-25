@@ -787,3 +787,54 @@ export const renameBookmarkContextuallyWithAI = async (
         };
     }
 };
+
+import { batchClassificationScenario, formatBatchClassificationSystemPrompt, BatchClassificationOutput } from "./ai/scenarios/batchClassification";
+import { formatBookmarkListForClassification, formatFolderListForPrompt } from "./aiPromptUtils";
+
+/**
+ * 批量分类书签
+ * @param config AI配置
+ * @param bookmarks 书签列表
+ * @param allFolders 所有文件夹列表
+ * @param locale 当前语言
+ * @returns 分类结果
+ */
+export const batchClassifyBookmarks = async (
+    config: AIConfig,
+    bookmarks: Array<{ id: string; title: string; url: string }>,
+    allFolders: any[], // BookmarkNode[] or similar structure
+    locale: string = 'zh_CN'
+): Promise<{ success: boolean; classifications?: BatchClassificationOutput['classifications']; error?: string }> => {
+    try {
+        // 1. 格式化文件夹列表 (复用现有的 formatFolderListForPrompt)
+        const foldersStr = formatFolderListForPrompt(allFolders, 100, locale);
+
+        // 2. 格式化书签列表
+        const bookmarksStr = formatBookmarkListForClassification(bookmarks);
+
+        // 3. 准备 Prompt
+        const userPromptTemplate = batchClassificationScenario.defaultUserPrompt;
+        const systemPrompt = formatBatchClassificationSystemPrompt(bookmarksStr, foldersStr, locale);
+
+        // 4. 执行场景
+        const result = await executeScenario(
+            config,
+            batchClassificationScenario,
+            { bookmarks, allFolders: [foldersStr] },
+            userPromptTemplate,
+            systemPrompt,
+            locale
+        );
+
+        return {
+            success: true,
+            classifications: result.classifications
+        };
+    } catch (error) {
+        console.error('AI batch classification failed:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+};

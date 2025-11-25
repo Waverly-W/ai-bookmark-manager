@@ -4,13 +4,26 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FaSearch } from 'react-icons/fa';
+import { FaFolder, FaSearch, FaArrowLeft, FaHistory, FaTimes } from 'react-icons/fa';
+import { Edit, Trash2, X, CheckSquare, Sparkles, Loader2, BarChart2 } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem } from '@/components/ui/breadcrumb';
 import { BookmarkCard, BookmarkCardItem } from '@/components/ui/bookmark-card';
 import { BookmarkEditDialog } from '@/components/ui/bookmark-edit-dialog';
 import { BookmarkDeleteDialog } from '@/components/ui/bookmark-delete-dialog';
 import { FolderEditDialog } from '@/components/ui/folder-edit-dialog';
 import { FolderDeleteDialog } from '@/components/ui/folder-delete-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import {
     getBookmarkRootSetting,
@@ -20,6 +33,14 @@ import {
     broadcastBookmarkUpdate
 } from '@/lib/bookmarkUtils';
 import { preloadFavicons, cleanupFaviconCache } from '@/lib/faviconUtils';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
+import { ClassificationDialog } from '@/components/ui/classification-dialog';
+import { batchClassifyBookmarks } from '@/lib/aiService';
+import { getAIConfig } from '@/lib/aiConfigUtils';
+import { getBookmarkFolders, moveChromeBookmark } from '@/lib/bookmarkUtils';
+import { StatsDashboard } from '@/components/dashboard/stats-dashboard';
+import { calculateBookmarkStats, BookmarkStats } from '@/lib/statsUtils';
 
 // 书签节点类型定义
 interface BookmarkNode {
@@ -135,6 +156,54 @@ export const Bookmarks: React.FC = () => {
     const [deletingBookmark, setDeletingBookmark] = useState<BookmarkCardItem | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+    const searchInputRef = React.useRef<HTMLInputElement>(null);
+    const [searchHistory, setSearchHistory] = useState<string[]>([]);
+    const [showSearchHistory, setShowSearchHistory] = useState(false);
+
+    // 批量管理状态
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+    // AI 批量分类状态
+    const [isClassifying, setIsClassifying] = useState(false);
+    const [classificationResults, setClassificationResults] = useState<any[]>([]);
+    const [showClassificationDialog, setShowClassificationDialog] = useState(false);
+    const [isApplyingClassification, setIsApplyingClassification] = useState(false);
+    const [allFolders, setAllFolders] = useState<any[]>([]);
+    const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+    const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+
+    // 加载搜索历史
+    useEffect(() => {
+        browser.storage.local.get('searchHistory').then((result) => {
+            if (result.searchHistory) {
+                setSearchHistory(result.searchHistory);
+            }
+        });
+    }, []);
+
+    // 保存搜索历史
+    const saveSearchHistory = (term: string) => {
+        if (!term.trim()) return;
+        const newHistory = [term, ...searchHistory.filter(h => h !== term)].slice(0, 10);
+        setSearchHistory(newHistory);
+        browser.storage.local.set({ searchHistory: newHistory });
+    };
+
+    // 清除搜索历史
+    const clearSearchHistory = () => {
+        setSearchHistory([]);
+        browser.storage.local.remove('searchHistory');
+    };
+
+    // 删除单条历史
+    const removeHistoryItem = (e: React.MouseEvent, term: string) => {
+        e.stopPropagation();
+        const newHistory = searchHistory.filter(h => h !== term);
+        setSearchHistory(newHistory);
+        browser.storage.local.set({ searchHistory: newHistory });
+    };
 
     // 文件夹编辑和删除状态
     const [editingFolder, setEditingFolder] = useState<BookmarkCardItem | null>(null);
@@ -143,7 +212,11 @@ export const Bookmarks: React.FC = () => {
     const [isFolderDeleteDialogOpen, setIsFolderDeleteDialogOpen] = useState(false);
     const [isDeletingFolder, setIsDeletingFolder] = useState(false);
 
-    const { t } = useTranslation();
+    // 统计看板状态
+    const [showStats, setShowStats] = useState(false);
+    const [statsData, setStatsData] = useState<BookmarkStats | null>(null);
+
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
 
     useEffect(() => {
@@ -166,6 +239,35 @@ export const Bookmarks: React.FC = () => {
         };
     }, []);
 
+    // 键盘快捷键
+    useKeyboardShortcuts([
+        // / - 聚焦搜索框
+        {
+            key: '/',
+            handler: () => {
+                searchInputRef.current?.focus();
+            },
+            description: t('focusSearch'),
+        },
+        // Esc - 清空搜索
+        {
+            key: 'Escape',
+            handler: () => {
+                setSearchTerm('');
+                searchInputRef.current?.blur();
+            },
+            description: t('clearSearch'),
+        },
+        // ? - 显示快捷键帮助
+        {
+            key: '?',
+            handler: () => {
+                setShowShortcutsHelp(prev => !prev);
+            },
+            description: t('showShortcuts'),
+        },
+    ]);
+
     const loadBookmarks = async () => {
         try {
             setLoading(true);
@@ -182,7 +284,14 @@ export const Bookmarks: React.FC = () => {
 
             // 根据设置过滤书签
             const filteredBookmarks = filterBookmarksByRoot(rootNodes, rootFolderId);
+
             setAllBookmarks(filteredBookmarks);
+
+            // 计算统计数据
+            // 注意：这里我们需要转换类型，因为 statsUtils 中的 BookmarkNode 定义可能略有不同
+            // 但结构是兼容的，所以直接断言
+            const stats = calculateBookmarkStats(filteredBookmarks as any);
+            setStatsData(stats);
 
             // 设置当前显示的项目（根级别）
             const rootItems = convertToCardItems(filteredBookmarks);
@@ -703,13 +812,214 @@ export const Bookmarks: React.FC = () => {
         return convertToCardItems(searchResults);
     };
 
+    // 处理搜索提交
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        saveSearchHistory(searchTerm);
+        setShowSearchHistory(false);
+    };
+
+    // 批量管理相关函数
+    const toggleSelectionMode = () => {
+        setIsSelectionMode(!isSelectionMode);
+        setSelectedItems(new Set());
+    };
+
+    const handleSelectItem = (item: BookmarkCardItem, selected: boolean) => {
+        const newSelected = new Set(selectedItems);
+        if (selected) {
+            newSelected.add(item.id);
+        } else {
+            newSelected.delete(item.id);
+        }
+        setSelectedItems(newSelected);
+    };
+
+    const handleSelectAll = () => {
+        if (selectedItems.size === displayItems.length) {
+            setSelectedItems(new Set());
+        } else {
+            const allIds = displayItems.map(item => item.id);
+            setSelectedItems(new Set(allIds));
+        }
+    };
+
+
+    const handleBatchDeleteConfirm = async () => {
+        if (selectedItems.size === 0) return;
+
+        setIsBatchDeleting(true);
+        try {
+            const idsToDelete = Array.from(selectedItems);
+
+            // 批量删除Chrome书签
+            await Promise.all(idsToDelete.map(id => deleteChromeBookmark(id)));
+
+            // 更新本地状态
+            const removeBookmarksFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
+                if (!nodes || !Array.isArray(nodes)) return [];
+                return nodes
+                    .filter(node => !selectedItems.has(node.id))
+                    .map(node => {
+                        if (node.children) {
+                            return { ...node, children: removeBookmarksFromTree(node.children) };
+                        }
+                        return node;
+                    });
+            };
+
+            const updatedBookmarks = removeBookmarksFromTree(allBookmarks);
+            setAllBookmarks(updatedBookmarks);
+
+            // 更新文件夹列表
+            const folders = await getBookmarkFolders();
+            setAllFolders(folders);
+
+            toast({
+                title: t('batchDeleteSuccess'),
+                description: t('batchDeleteSuccessDesc', { count: selectedItems.size }),
+                duration: 3000,
+            });
+
+            // 重置状态
+            setSelectedItems(new Set());
+            setIsSelectionMode(false);
+            setShowBatchDeleteDialog(false);
+        } catch (error) {
+            console.error('Batch delete failed:', error);
+            toast({
+                title: t('error'),
+                description: error instanceof Error ? error.message : t('batchDeleteFailed'),
+                variant: "destructive",
+            });
+        } finally {
+            setIsBatchDeleting(false);
+        }
+    };
+
+    const handleAIClassify = async () => {
+        // 1. 检查 AI 配置
+        const aiConfig = await getAIConfig();
+        if (!aiConfig || !aiConfig.apiKey) {
+            toast({
+                title: t('aiNotConfigured'),
+                description: t('pleaseConfigureAI'),
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsClassifying(true);
+        try {
+            // 2. 确定要分类的书签
+            let bookmarksToClassify: BookmarkCardItem[] = [];
+            if (selectedItems.size > 0) {
+                bookmarksToClassify = displayItems.filter(item => selectedItems.has(item.id));
+            } else {
+                // 如果没有选中，则分类当前视图下的所有书签（排除文件夹）
+                bookmarksToClassify = displayItems.filter(item => item.url);
+            }
+
+            if (bookmarksToClassify.length === 0) {
+                toast({
+                    title: t('noBookmarksFound'),
+                    description: t('pleaseSelectBookmarks'),
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            // 3. 获取所有文件夹
+            const folders = await getBookmarkFolders();
+            setAllFolders(folders);
+
+            // 4. 调用 AI 服务
+            const result = await batchClassifyBookmarks(
+                aiConfig,
+                bookmarksToClassify.map(b => ({ id: b.id, title: b.title, url: b.url! })),
+                folders,
+                i18n.language
+            );
+
+            if (result.success && result.classifications) {
+                // 5. 映射结果，添加原始信息
+                const enrichedResults = result.classifications.map(c => {
+                    const original = bookmarksToClassify.find(b => b.id === c.bookmarkId);
+                    return {
+                        ...c,
+                        bookmarkTitle: original?.title || '',
+                        bookmarkUrl: original?.url || ''
+                    };
+                });
+                setClassificationResults(enrichedResults);
+                setShowClassificationDialog(true);
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('AI classification failed:', error);
+            toast({
+                title: t('error'),
+                description: error instanceof Error ? error.message : t('unknownError'),
+                variant: "destructive"
+            });
+        } finally {
+            setIsClassifying(false);
+        }
+    };
+
+    const handleApplyClassification = async (results: any[]) => {
+        setIsApplyingClassification(true);
+        try {
+            let successCount = 0;
+            for (const result of results) {
+                if (result.suggestedFolderId && result.suggestedFolderId !== '0') {
+                    await moveChromeBookmark(result.bookmarkId, result.suggestedFolderId);
+                    successCount++;
+                }
+            }
+
+            toast({
+                title: t('processingCompleted'),
+                description: t('batchRenameSuccessDesc', { count: successCount }).replace('删除', '移动'),
+            });
+
+            // 刷新书签
+            const tree = await browser.bookmarks.getTree();
+            if (tree.length > 0 && tree[0].children) {
+                const flatNodes: BookmarkNode[] = [];
+                const traverse = (nodes: any[]) => {
+                    for (const node of nodes) {
+                        flatNodes.push(node);
+                        if (node.children) traverse(node.children);
+                    }
+                };
+                traverse(tree[0].children);
+                setAllBookmarks(flatNodes);
+            }
+
+            setShowClassificationDialog(false);
+            setIsSelectionMode(false);
+            setSelectedItems(new Set());
+        } catch (error) {
+            console.error('Apply classification failed:', error);
+            toast({
+                title: t('error'),
+                description: t('applyChangesFailed'),
+                variant: "destructive"
+            });
+        } finally {
+            setIsApplyingClassification(false);
+        }
+    };
+
     const displayItems = getDisplayItems();
     const isSearching = searchTerm.trim() !== '';
 
     // 生成面包屑项
     const breadcrumbItems: BreadcrumbItem[] = (navigationHistory || []).map((item, index) => ({
         id: item.id,
-        title: item.title,
+        title: item.id === 'root' ? t('allBookmarks') : item.title,
         isLast: index === navigationHistory.length - 1
     }));
 
@@ -745,26 +1055,105 @@ export const Bookmarks: React.FC = () => {
         <div className="space-y-6">
             {/* 页面标题区域 */}
             <div className="space-y-4 pb-4 border-b border-border/50">
-                <div className="space-y-2">
-                    <h1 className="text-3xl font-bold tracking-tight">{t('bookmarks')}</h1>
-                    <p className="text-muted-foreground text-sm">
-                        {t('bookmarksTotal')}: {allBookmarks.length}
-                    </p>
+                <div className="space-y-2 flex justify-between items-end">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">{t('bookmarks')}</h1>
+                        <p className="text-muted-foreground text-sm">
+                            {t('bookmarksTotal')}: {allBookmarks.length}
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant={showStats ? "secondary" : "outline"}
+                            onClick={() => setShowStats(!showStats)}
+                            className="gap-2"
+                        >
+                            <BarChart2 className="h-4 w-4" />
+                            {t('statistics')}
+                        </Button>
+                        <Button
+                            variant={isSelectionMode ? "secondary" : "outline"}
+                            onClick={toggleSelectionMode}
+                            className="gap-2"
+                        >
+                            {isSelectionMode ? (
+                                <>
+                                    <X className="h-4 w-4" />
+                                    {t('cancel')}
+                                </>
+                            ) : (
+                                <>
+                                    <CheckSquare className="h-4 w-4" />
+                                    {t('batchManage')}
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* 搜索框 */}
                 <div className="flex justify-start">
-                    <div className="relative max-w-md w-full">
-                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder={t('searchBookmarks')}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
+                    <div className="relative w-full md:w-64 lg:w-80">
+                        <form onSubmit={handleSearchSubmit}>
+                            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                            <Input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder={t('searchPlaceholder')}
+                                className="pl-9 w-full bg-background/50 backdrop-blur-sm focus:bg-background transition-all"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onFocus={() => setShowSearchHistory(true)}
+                                onBlur={() => setTimeout(() => setShowSearchHistory(false), 200)}
+                            />
+                        </form>
+
+                        {/* 搜索历史下拉面板 */}
+                        {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
+                            <Card className="absolute top-full left-0 right-0 mt-1 z-50 shadow-lg animate-in fade-in zoom-in-95 duration-100">
+                                <CardContent className="p-1">
+                                    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
+                                        <span>{t('searchHistory')}</span>
+                                        <button
+                                            onClick={clearSearchHistory}
+                                            className="hover:text-destructive transition-colors"
+                                        >
+                                            {t('clear')}
+                                        </button>
+                                    </div>
+                                    {searchHistory.map((term, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer group"
+                                            onClick={() => {
+                                                setSearchTerm(term);
+                                                setShowSearchHistory(false);
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <FaSearch className="h-3 w-3 text-muted-foreground/50" />
+                                                <span className="text-sm truncate">{term}</span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => removeHistoryItem(e, term)}
+                                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-background rounded-full text-muted-foreground hover:text-destructive transition-all"
+                                            >
+                                                <span className="sr-only">{t('delete')}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* 统计看板 */}
+            {showStats && statsData && (
+                <StatsDashboard stats={statsData} />
+            )}
 
             {/* 面包屑导航 */}
             {!isSearching && (
@@ -780,13 +1169,33 @@ export const Bookmarks: React.FC = () => {
             {/* 书签卡片网格 */}
             <div className="min-h-[200px]">
                 {displayItems.length === 0 ? (
-                    <Card>
-                        <CardContent className="p-8">
-                            <div className="text-center text-muted-foreground">
-                                {isSearching ? t('searchNoResults') : t('noBookmarks')}
-                            </div>
-                        </CardContent>
-                    </Card>
+                    isSearching ? (
+                        <EmptyState
+                            icon="🔍"
+                            title={t('searchNoResults')}
+                            variant="search"
+                        />
+                    ) : (
+                        <EmptyState
+                            icon="📚"
+                            title={t('emptyBookmarksTitle')}
+                            features={[
+                                t('emptyBookmarksFeature1'),
+                                t('emptyBookmarksFeature2'),
+                                t('emptyBookmarksFeature3')
+                            ]}
+                            actions={
+                                <>
+                                    <Button variant="default" disabled>
+                                        {t('importBookmarks')}
+                                    </Button>
+                                    <Button variant="outline" disabled>
+                                        {t('watchTutorial')}
+                                    </Button>
+                                </>
+                            }
+                        />
+                    )
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {(displayItems || []).map((item) => (
@@ -796,6 +1205,10 @@ export const Bookmarks: React.FC = () => {
                                 onClick={handleCardClick}
                                 onEdit={handleBookmarkEdit}
                                 onDelete={handleBookmarkDelete}
+                                highlight={searchTerm}
+                                selectable={isSelectionMode}
+                                selected={selectedItems.has(item.id)}
+                                onSelect={handleSelectItem}
                             />
                         ))}
                     </div>
@@ -835,6 +1248,92 @@ export const Bookmarks: React.FC = () => {
                 onConfirm={handleFolderDeleteConfirm}
                 isDeleting={isDeletingFolder}
             />
-        </div>
+
+            {/* 批量删除确认弹窗 (existing) */}
+            <AlertDialog open={showBatchDeleteDialog} onOpenChange={setShowBatchDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('batchDeleteConfirm')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('batchDeleteDescription', { count: selectedItems.size })}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleBatchDeleteConfirm}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={isBatchDeleting}
+                        >
+                            {isBatchDeleting ? t('deleting') : t('delete')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <ClassificationDialog
+                open={showClassificationDialog}
+                onOpenChange={setShowClassificationDialog}
+                results={classificationResults}
+                folders={allFolders}
+                onApply={handleApplyClassification}
+                isApplying={isApplyingClassification}
+            />
+
+            {/* 批量操作栏 */}
+            {
+                isSelectionMode && (
+                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-background border shadow-lg rounded-full px-6 py-3 flex items-center space-x-4 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+                        <span className="text-sm font-medium mr-2">
+                            {t('selectedCount', { count: selectedItems.size })}
+                        </span>
+
+                        <div className="h-4 w-px bg-border mx-2" />
+
+                        <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                            <CheckSquare className="w-4 h-4 mr-2" />
+                            {selectedItems.size === displayItems.length ? t('deselectAll') : t('selectAll')}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleAIClassify}
+                            disabled={isClassifying}
+                        >
+                            {isClassifying ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                            )}
+                            {t('aiBatchClassification')}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setShowBatchDeleteDialog(true)}
+                            disabled={selectedItems.size === 0}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            {t('delete')}
+                        </Button>
+
+                        <div className="h-4 w-px bg-border mx-2" />
+
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={toggleSelectionMode}>
+                            <X className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )
+            }
+
+            {/* 键盘快捷键帮助对话框 */}
+            <KeyboardShortcutsHelp
+                open={showShortcutsHelp}
+                onOpenChange={setShowShortcutsHelp}
+            />
+        </div >
     );
 };
