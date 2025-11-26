@@ -2,7 +2,12 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { browser } from "wxt/browser";
 import { configSyncManager } from "@/lib/configSyncManager";
 import { MessageType } from "@/entrypoints/types.ts";
-import { BackgroundConfig } from "@/components/settings/background-settings.tsx";
+export interface BackgroundConfig {
+    type: 'default' | 'color' | 'image';
+    value: string;
+    blur?: number;
+    maskOpacity?: number;
+}
 
 interface BackgroundContextType {
     backgroundConfig: BackgroundConfig;
@@ -10,14 +15,14 @@ interface BackgroundContextType {
 }
 
 const BackgroundContext = createContext<BackgroundContextType>({
-    backgroundConfig: { type: 'default', value: '' },
+    backgroundConfig: { type: 'default', value: '', blur: 0, maskOpacity: 0 },
     setBackground: async () => { }
 });
 
 export const useBackground = () => useContext(BackgroundContext);
 
 export const BackgroundProvider = ({ children }: { children: React.ReactNode }) => {
-    const [backgroundConfig, setBackgroundConfig] = useState<BackgroundConfig>({ type: 'default', value: '' });
+    const [backgroundConfig, setBackgroundConfig] = useState<BackgroundConfig>({ type: 'default', value: '', blur: 0, maskOpacity: 0 });
 
     const setBackground = async (newConfig: BackgroundConfig) => {
         setBackgroundConfig(newConfig);

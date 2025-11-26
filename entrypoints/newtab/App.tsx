@@ -65,7 +65,22 @@ export default () => {
 
     return (
         <div className={theme}>
-            <div className={`min-h-screen w-full ${!isCustomBackground ? 'bg-background' : ''}`} style={getBackgroundStyle()}>
+            {isCustomBackground && (
+                <>
+                    <div
+                        className="fixed inset-0 z-[-2] transition-all duration-300 ease-in-out"
+                        style={{
+                            ...getBackgroundStyle(),
+                            filter: `blur(${backgroundConfig.blur || 0}px)`
+                        }}
+                    />
+                    <div
+                        className="fixed inset-0 z-[-1] bg-black pointer-events-none transition-opacity duration-300 ease-in-out"
+                        style={{ opacity: backgroundConfig.maskOpacity || 0 }}
+                    />
+                </>
+            )}
+            <div className={`min-h-screen w-full ${!isCustomBackground ? 'bg-background' : ''}`}>
                 <Sidebar sideNav={(sidebarType: SidebarType) => {
                     setSidebarType(sidebarType);
                 }} />
