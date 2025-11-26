@@ -26,16 +26,16 @@ const Sidebar = (
     return (
         <>
             {/* Desktop Sidebar - Left vertical */}
-            <aside className="hidden md:flex fixed inset-y-0 left-0 z-10 flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-16">
+            <aside className="hidden md:flex fixed inset-y-0 left-0 z-10 flex-col border-r border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 w-16 transition-all duration-300 shadow-sm">
                 {/* Close button */}
                 {closeContent && (
-                    <div className="flex h-14 items-center justify-center border-b">
+                    <div className="flex h-14 items-center justify-center border-b border-border/40">
                         <button
                             onClick={closeContent}
                             className={cn(
                                 "inline-flex items-center justify-center rounded-md",
                                 "h-9 w-9 text-muted-foreground",
-                                "transition-colors hover:bg-accent hover:text-accent-foreground",
+                                "transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:scale-105",
                                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             )}
                             aria-label="Close sidebar"
@@ -46,7 +46,7 @@ const Sidebar = (
                 )}
 
                 {/* Main navigation */}
-                <nav className="flex flex-col items-center gap-2 px-2 py-4">
+                <nav className="flex flex-col items-center gap-3 px-2 py-6">
                     <TooltipProvider delayDuration={0}>
                         {/* Home */}
                         <Tooltip>
@@ -54,12 +54,12 @@ const Sidebar = (
                                 <button
                                     onClick={() => handleNavClick(SidebarType.home)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-lg",
-                                        "h-11 w-11 transition-all duration-200",
+                                        "inline-flex items-center justify-center rounded-xl",
+                                        "h-10 w-10 transition-all duration-300 ease-out",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.home
-                                            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
                                     )}
                                     aria-label={t('home')}
                                 >
@@ -77,12 +77,12 @@ const Sidebar = (
                                 <button
                                     onClick={() => handleNavClick(SidebarType.batchRename)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-lg",
-                                        "h-11 w-11 transition-all duration-200",
+                                        "inline-flex items-center justify-center rounded-xl",
+                                        "h-10 w-10 transition-all duration-300 ease-out",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.batchRename
-                                            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
                                     )}
                                     aria-label={t('batchRenameTitle')}
                                 >
@@ -97,19 +97,19 @@ const Sidebar = (
                 </nav>
 
                 {/* Bottom navigation - Settings */}
-                <nav className="mt-auto flex flex-col items-center gap-2 px-2 py-4 border-t">
+                <nav className="mt-auto flex flex-col items-center gap-3 px-2 py-6 border-t border-border/40">
                     <TooltipProvider delayDuration={0}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
                                     onClick={() => handleNavClick(SidebarType.settings)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-lg",
-                                        "h-11 w-11 transition-all duration-200",
+                                        "inline-flex items-center justify-center rounded-xl",
+                                        "h-10 w-10 transition-all duration-300 ease-out",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.settings
-                                            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
                                     )}
                                     aria-label={t('settings')}
                                 >
