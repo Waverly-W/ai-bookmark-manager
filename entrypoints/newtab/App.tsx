@@ -12,6 +12,7 @@ import { BatchRenamePage } from "@/entrypoints/newtab/batch-rename.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useTranslation } from 'react-i18next';
 import { Toaster } from "@/components/ui/toaster";
+import { useBackground } from "@/components/background-provider.tsx";
 
 export default () => {
     const [showButton, setShowButton] = useState(false)
@@ -22,6 +23,7 @@ export default () => {
     const cardRef = useRef<HTMLDivElement>(null);
     const { theme, toggleTheme } = useTheme();
     const { t, i18n } = useTranslation();
+    const { backgroundConfig } = useBackground();
 
     async function initI18n() {
         let data = await browser.storage.local.get('i18n');
@@ -44,14 +46,31 @@ export default () => {
         initI18n();
     }, []);
 
+    const getBackgroundStyle = () => {
+        if (backgroundConfig.type === 'color') {
+            return { backgroundColor: backgroundConfig.value };
+        } else if (backgroundConfig.type === 'image' && backgroundConfig.value) {
+            return {
+                backgroundImage: `url(${backgroundConfig.value})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundAttachment: 'fixed'
+            };
+        }
+        return {};
+    };
+
+    const isCustomBackground = backgroundConfig.type !== 'default';
+
     return (
         <div className={theme}>
-            <div className="min-h-screen w-full bg-background">
+            <div className={`min-h-screen w-full ${!isCustomBackground ? 'bg-background' : ''}`} style={getBackgroundStyle()}>
                 <Sidebar sideNav={(sidebarType: SidebarType) => {
                     setSidebarType(sidebarType);
                 }} />
                 {/* 主内容区域 - 桌面端左边距，移动端底部间距 */}
-                <main className="md:ml-16 mb-16 md:mb-0 min-h-screen bg-background">
+                <main className={`md:ml-16 mb-16 md:mb-0 min-h-screen ${!isCustomBackground ? 'bg-background' : 'bg-transparent'}`}>
                     {sidebarType === SidebarType.home && <Home />}
                     {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
                     {sidebarType === SidebarType.settings && <SettingsPage />}

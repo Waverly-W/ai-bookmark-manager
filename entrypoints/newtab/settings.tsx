@@ -8,6 +8,7 @@ import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
 import { SyncSettings } from "@/components/settings/sync-settings.tsx";
 import { DataExportSettings } from "@/components/settings/data-export-settings.tsx";
+import { BackgroundSettings } from "@/components/settings/background-settings.tsx";
 import { useTranslation } from "react-i18next";
 
 export function SettingsPage() {
@@ -45,6 +46,7 @@ export function SettingsPage() {
                                 <I18nSettings />
                                 <ThemeSettings />
                                 <AccentColorSettings />
+                                <BackgroundSettings />
                             </div>
                         </div>
                     )}

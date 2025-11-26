@@ -2,8 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './style.css';
-import {ThemeProvider} from "@/components/theme-provider.tsx";
-import {i18nConfig} from "@/components/i18nConfig.ts";
+import { ThemeProvider } from "@/components/theme-provider.tsx";
+import { BackgroundProvider } from "@/components/background-provider.tsx";
+import { i18nConfig } from "@/components/i18nConfig.ts";
 import initTranslations from "@/components/i18n.ts";
 import { initializeAccentColor } from "@/lib/accentColorUtils";
 import { configSyncManager } from "@/lib/configSyncManager";
@@ -26,7 +27,9 @@ async function initApp() {
     ReactDOM.createRoot(document.getElementById('root')!).render(
         <React.StrictMode>
             <ThemeProvider>
-                <App/>
+                <BackgroundProvider>
+                    <App />
+                </BackgroundProvider>
             </ThemeProvider>
         </React.StrictMode>,
     );

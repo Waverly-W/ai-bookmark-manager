@@ -333,5 +333,11 @@
   "topFolders": "热门文件夹",
   "activityTrend": "添加趋势",
   "noData": "暂无数据",
-  "statistics": "统计看板"
+  "statistics": "统计看板",
+  "backgroundSettings": "背景设置",
+  "backgroundSettingsDescription": "自定义新标签页背景",
+  "default": "默认",
+  "solidColor": "纯色",
+  "customImage": "自定义图片",
+  "uploadImage": "上传图片"
 }

@@ -3,6 +3,7 @@ export enum MessageType {
     changeLocale = "changeLocale",
     changeAccentColor = "changeAccentColor",
     clickExtIcon = "clickExtIcon",
+    changeBackground = "changeBackground",
 }
 
 export enum MessageFrom {

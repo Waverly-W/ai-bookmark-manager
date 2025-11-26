@@ -333,5 +333,11 @@
   "topFolders": "Top Folders",
   "activityTrend": "Activity Trend",
   "noData": "No Data",
-  "statistics": "Statistics"
+  "statistics": "Statistics",
+  "backgroundSettings": "Background Settings",
+  "backgroundSettingsDescription": "Customize the background of the new tab page",
+  "default": "Default",
+  "solidColor": "Solid Color",
+  "customImage": "Custom Image",
+  "uploadImage": "Upload Image"
 }
