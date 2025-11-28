@@ -24,3 +24,14 @@ class ExtMessage {
 }
 
 export default ExtMessage;
+
+export interface BookmarkNode {
+    id: string;
+    title: string;
+    url?: string;
+    children?: BookmarkNode[];
+    parentId?: string;
+    index?: number;
+    dateAdded?: number;
+    dateGroupModified?: number;
+}

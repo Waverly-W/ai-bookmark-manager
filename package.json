@@ -38,6 +38,7 @@
     "@thedutchcoder/postcss-rem-to-px": "^0.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
     "i18next": "^23.11.1",
     "i18next-resources-to-backend": "^1.2.1",
     "lucide-react": "^0.365.0",

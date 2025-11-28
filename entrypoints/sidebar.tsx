@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { X, Settings, Home, Sparkles } from "lucide-react";
+import { X, Settings, Home, Sparkles, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 export enum SidebarType {
     'home' = 'home',
     'batchRename' = 'batchRename',
-    'settings' = 'settings'
+    'settings' = 'settings',
+    'tools' = 'tools'
 }
 
 const Sidebar = (
@@ -91,6 +92,29 @@ const Sidebar = (
                             </TooltipTrigger>
                             <TooltipContent side="right" className="font-medium">
                                 {t('batchRenameTitle')}
+                            </TooltipContent>
+                        </Tooltip>
+
+                        {/* Tools */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={() => handleNavClick(SidebarType.tools)}
+                                    className={cn(
+                                        "inline-flex items-center justify-center rounded-xl",
+                                        "h-10 w-10 transition-all duration-300 ease-out",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        sidebarType === SidebarType.tools
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
+                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
+                                    )}
+                                    aria-label={t('tools')}
+                                >
+                                    <Wrench className="h-5 w-5" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="font-medium">
+                                {t('tools')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -180,6 +204,34 @@ const Sidebar = (
                                 : "text-muted-foreground"
                         )}>
                             {t('batchRenameTitle')}
+                        </span>
+                    </button>
+
+                    {/* Tools */}
+                    <button
+                        onClick={() => handleNavClick(SidebarType.tools)}
+                        className={cn(
+                            "flex flex-col items-center justify-center gap-1 flex-1 h-full",
+                            "transition-colors duration-200",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset rounded-lg"
+                        )}
+                        aria-label={t('tools')}
+                    >
+                        <div className={cn(
+                            "flex items-center justify-center rounded-lg h-10 w-10 transition-all duration-200",
+                            sidebarType === SidebarType.tools
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            <Wrench className="h-5 w-5" />
+                        </div>
+                        <span className={cn(
+                            "text-xs font-medium transition-colors",
+                            sidebarType === SidebarType.tools
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                        )}>
+                            {t('tools')}
                         </span>
                     </button>
 

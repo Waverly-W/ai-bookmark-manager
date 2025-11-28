@@ -19,6 +19,7 @@ declare global {
   const reducer: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['reducer']
   const storage: typeof import('wxt/storage')['storage']
   const toast: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['toast']
+  const useBookmarks: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-bookmarks')['useBookmarks']
   const useKeyboardShortcuts: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['useKeyboardShortcuts']
   const useToast: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['useToast']
 }

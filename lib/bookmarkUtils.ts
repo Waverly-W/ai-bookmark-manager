@@ -390,3 +390,241 @@ export const moveChromeBookmark = async (id: string, parentId: string, index?: n
         throw new Error('Failed to move bookmark in Chrome');
     }
 };
+/**
+ * 重复书签组接口
+ */
+export interface DuplicateGroup {
+    url: string;
+    bookmarks: any[]; // 使用 BookmarkNode 类型
+}
+
+/**
+ * 查找重复书签
+ * @param nodes 书签节点列表
+ */
+export const findDuplicateBookmarks = (nodes: any[]): DuplicateGroup[] => {
+    const urlMap = new Map<string, any[]>();
+
+    // 递归收集所有书签
+    const collectBookmarks = (nodeList: any[]) => {
+        for (const node of nodeList) {
+            if (node.url) {
+                // 标准化 URL (移除末尾斜杠，忽略大小写等 - 这里简单处理)
+                const url = node.url.trim();
+                if (!urlMap.has(url)) {
+                    urlMap.set(url, []);
+                }
+                urlMap.get(url)?.push(node);
+            }
+            if (node.children) {
+                collectBookmarks(node.children);
+            }
+        }
+    };
+
+    collectBookmarks(nodes);
+
+    // 筛选出有重复的书签
+    const duplicates: DuplicateGroup[] = [];
+    urlMap.forEach((bookmarks, url) => {
+        if (bookmarks.length > 1) {
+            duplicates.push({
+                url,
+                bookmarks
+            });
+        }
+    });
+
+    return duplicates;
+};
+
+/**
+ * 书签有效性检查结果
+ */
+export interface ValidityResult {
+    id: string;
+    title: string;
+    url: string;
+    status: 'valid' | 'invalid' | 'timeout' | 'error';
+    error?: string;
+}
+
+/**
+ * 检查单个书签的有效性
+ * @param url 书签URL
+ */
+export const checkBookmarkValidity = async (url: string): Promise<{ status: 'valid' | 'invalid' | 'timeout' | 'error'; error?: string }> => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        try {
+            // Try HEAD first
+            const response = await fetch(url, {
+                method: 'HEAD',
+                signal: controller.signal,
+                mode: 'no-cors' // Handle CORS
+            });
+            clearTimeout(timeoutId);
+            // With no-cors, we get an opaque response (status 0), which we treat as valid for now
+            // If it failed network-wise, it would throw
+            return { status: 'valid' };
+        } catch (headError) {
+            // Fallback to GET if HEAD fails (some servers block HEAD)
+            // or if it was a network error, try GET to be sure
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    signal: controller.signal,
+                    mode: 'no-cors'
+                });
+                clearTimeout(timeoutId);
+                return { status: 'valid' };
+            } catch (getError: any) {
+                clearTimeout(timeoutId);
+                if (getError.name === 'AbortError') {
+                    return { status: 'timeout' };
+                }
+                return { status: 'invalid', error: getError.message };
+            }
+        }
+    } catch (error: any) {
+        return { status: 'error', error: error.message };
+    }
+};
+
+/**
+ * 扫描书签有效性
+ * @param bookmarks 书签列表
+ * @param onProgress 进度回调
+ * @param signal AbortSignal 用于取消
+ */
+export const scanBookmarkValidity = async (
+    bookmarks: any[],
+    onProgress?: (current: number, total: number, url: string, result?: ValidityResult) => void,
+    signal?: AbortSignal
+): Promise<ValidityResult[]> => {
+    const results: ValidityResult[] = [];
+    const flatBookmarks: any[] = [];
+
+    // Flatten bookmarks
+    const collect = (nodes: any[]) => {
+        for (const node of nodes) {
+            if (node.url) {
+                flatBookmarks.push(node);
+            }
+            if (node.children) {
+                collect(node.children);
+            }
+        }
+    };
+    collect(bookmarks);
+
+    const total = flatBookmarks.length;
+    let processed = 0;
+
+    // Process in batches to avoid overwhelming the network
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < flatBookmarks.length; i += BATCH_SIZE) {
+        if (signal?.aborted) {
+            break;
+        }
+
+        const batch = flatBookmarks.slice(i, i + BATCH_SIZE);
+        const promises = batch.map(async (bookmark) => {
+            if (signal?.aborted) return null;
+
+            if (!bookmark.url.startsWith('http')) {
+                processed++;
+                onProgress?.(processed, total, bookmark.url);
+                return null; // Skip non-http bookmarks
+            }
+
+            onProgress?.(processed, total, bookmark.url); // Notify start check
+
+            const check = await checkBookmarkValidity(bookmark.url);
+
+            processed++;
+
+            if (check.status !== 'valid') {
+                const result: ValidityResult = {
+                    id: bookmark.id,
+                    title: bookmark.title,
+                    url: bookmark.url,
+                    status: check.status,
+                    error: check.error
+                };
+                onProgress?.(processed, total, bookmark.url, result); // Notify result
+                return result;
+            }
+
+            onProgress?.(processed, total, bookmark.url); // Notify success
+            return null;
+        });
+
+        const batchResults = await Promise.all(promises);
+        batchResults.forEach(res => {
+            if (res) results.push(res);
+        });
+    }
+
+    return results;
+};
+
+/**
+ * 根据文件夹ID过滤书签
+ * @param bookmarks 书签树
+ * @param folderId 文件夹ID
+ * @returns 过滤后的书签节点列表（包含子节点）
+ */
+export const filterBookmarksByFolder = (bookmarks: any[], folderId: string): any[] => {
+    if (!folderId || folderId === 'all') {
+        return bookmarks;
+    }
+
+    // Recursive search for the folder
+    const findFolder = (nodes: any[]): any | null => {
+        for (const node of nodes) {
+            if (node.id === folderId) {
+                return node;
+            }
+            if (node.children) {
+                const found = findFolder(node.children);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    const targetFolder = findFolder(bookmarks);
+    return targetFolder ? [targetFolder] : [];
+};
+/**
+ * 查找空文件夹
+ * @param nodes 书签树
+ * @returns 空文件夹列表
+ */
+export const findEmptyFolders = (nodes: any[]): any[] => {
+    const emptyFolders: any[] = [];
+
+    const traverse = (node: any) => {
+        // Check if it's a folder (has children property, even if empty, or specific type if available)
+        // In Chrome bookmarks, folders usually have children array (can be empty) and no url
+        if (!node.url && node.children) {
+            // It's a folder
+            if (node.children.length === 0) {
+                emptyFolders.push(node);
+            } else {
+                // Recursively check children
+                node.children.forEach(traverse);
+
+                // Optional: If we want to consider folders containing only empty folders as empty, 
+                // we'd need a post-order traversal and more complex logic. 
+                // For now, let's stick to strictly empty folders (0 children).
+            }
+        }
+    };
+
+    nodes.forEach(traverse);
+    return emptyFolders;
+};

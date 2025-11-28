@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card.tsx";
 import { Home } from "@/entrypoints/newtab/home.tsx";
 import { SettingsPage } from "@/entrypoints/newtab/settings.tsx";
 import { BatchRenamePage } from "@/entrypoints/newtab/batch-rename.tsx";
+import { ToolsPage } from "@/entrypoints/newtab/tools.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useTranslation } from 'react-i18next';
 import { Toaster } from "@/components/ui/toaster";
@@ -86,14 +87,15 @@ export default () => {
                 }} />
                 {/* Main Content Area */}
                 <main className={`md:ml-16 mb-16 md:mb-0 min-h-screen transition-all duration-300 ${!isCustomBackground
-                        ? 'bg-background'
-                        : 'bg-transparent p-4 md:p-6'
+                    ? 'bg-background'
+                    : 'bg-transparent p-4 md:p-6'
                     }`}>
                     {isCustomBackground ? (
                         <div className="h-full w-full max-w-[1600px] mx-auto animate-in fade-in zoom-in-[0.99] duration-500 slide-in-from-bottom-2">
                             <div className="bg-background/85 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl h-full min-h-[calc(100vh-3rem)] md:min-h-[calc(100vh-3rem)] p-6 md:p-8 transition-all duration-300 hover:bg-background/90 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                                 {sidebarType === SidebarType.home && <Home />}
                                 {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
+                                {sidebarType === SidebarType.tools && <ToolsPage />}
                                 {sidebarType === SidebarType.settings && <SettingsPage />}
                             </div>
                         </div>
@@ -101,6 +103,7 @@ export default () => {
                         <div className="animate-in fade-in duration-300">
                             {sidebarType === SidebarType.home && <Home />}
                             {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
+                            {sidebarType === SidebarType.tools && <ToolsPage />}
                             {sidebarType === SidebarType.settings && <SettingsPage />}
                         </div>
                     )}

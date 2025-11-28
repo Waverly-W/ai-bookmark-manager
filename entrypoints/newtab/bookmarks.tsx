@@ -39,20 +39,19 @@ import { ClassificationDialog } from '@/components/ui/classification-dialog';
 import { batchClassifyBookmarks } from '@/lib/aiService';
 import { getAIConfig } from '@/lib/aiConfigUtils';
 import { getBookmarkFolders, moveChromeBookmark } from '@/lib/bookmarkUtils';
-import { StatsDashboard } from '@/components/dashboard/stats-dashboard';
-import { calculateBookmarkStats, BookmarkStats } from '@/lib/statsUtils';
+import { BookmarkNode } from '@/entrypoints/types';
 
-// 书签节点类型定义
-interface BookmarkNode {
-    id: string;
-    title: string;
-    url?: string;
-    children?: BookmarkNode[];
-    parentId?: string;
-    index?: number;
-    dateAdded?: number;
-    dateGroupModified?: number;
-}
+// 书签节点类型定义 - 使用 entrypoints/types.ts 中的定义
+// interface BookmarkNode {
+//     id: string;
+//     title: string;
+//     url?: string;
+//     children?: BookmarkNode[];
+//     parentId?: string;
+//     index?: number;
+//     dateAdded?: number;
+//     dateGroupModified?: number;
+// }
 
 // 导航历史项
 interface NavigationItem {
@@ -212,9 +211,7 @@ export const Bookmarks: React.FC = () => {
     const [isFolderDeleteDialogOpen, setIsFolderDeleteDialogOpen] = useState(false);
     const [isDeletingFolder, setIsDeletingFolder] = useState(false);
 
-    // 统计看板状态
-    const [showStats, setShowStats] = useState(false);
-    const [statsData, setStatsData] = useState<BookmarkStats | null>(null);
+
 
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
@@ -287,11 +284,7 @@ export const Bookmarks: React.FC = () => {
 
             setAllBookmarks(filteredBookmarks);
 
-            // 计算统计数据
-            // 注意：这里我们需要转换类型，因为 statsUtils 中的 BookmarkNode 定义可能略有不同
-            // 但结构是兼容的，所以直接断言
-            const stats = calculateBookmarkStats(filteredBookmarks as any);
-            setStatsData(stats);
+
 
             // 设置当前显示的项目（根级别）
             const rootItems = convertToCardItems(filteredBookmarks);
@@ -799,7 +792,7 @@ export const Bookmarks: React.FC = () => {
         }
     };
 
-    const totalBookmarks = countBookmarks(allBookmarks);
+
 
     // 处理搜索
     const getDisplayItems = (): BookmarkCardItem[] => {
@@ -1059,18 +1052,10 @@ export const Bookmarks: React.FC = () => {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">{t('bookmarks')}</h1>
                         <p className="text-muted-foreground text-sm">
-                            {t('bookmarksTotal')}: {allBookmarks.length}
+                            {t('bookmarksTotal')}: {countBookmarks(allBookmarks)}
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            variant={showStats ? "secondary" : "outline"}
-                            onClick={() => setShowStats(!showStats)}
-                            className="gap-2"
-                        >
-                            <BarChart2 className="h-4 w-4" />
-                            {t('statistics')}
-                        </Button>
                         <Button
                             variant={isSelectionMode ? "secondary" : "outline"}
                             onClick={toggleSelectionMode}
@@ -1150,10 +1135,7 @@ export const Bookmarks: React.FC = () => {
                 </div>
             </div>
 
-            {/* 统计看板 */}
-            {showStats && statsData && (
-                <StatsDashboard stats={statsData} />
-            )}
+
 
             {/* 面包屑导航 */}
             {!isSearching && (
