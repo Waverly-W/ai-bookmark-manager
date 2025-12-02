@@ -56,7 +56,9 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
                         variant={activeTab === item.id ? "secondary" : "ghost"}
                         className={cn(
                             "justify-start gap-2 px-4",
-                            activeTab === item.id && "bg-secondary/50"
+                            activeTab === item.id
+                                ? "bg-secondary text-secondary-foreground"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
                         onClick={() => onTabChange(item.id)}
                     >

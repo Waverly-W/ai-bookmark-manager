@@ -35,7 +35,7 @@ export function SettingsPage() {
 
                     {activeTab === "appearance" && (
                         <div className="space-y-8">
-                            <div className="space-y-2 pb-4 border-b border-border/50">
+                            <div className="space-y-2 pb-4 border-b border-border">
                                 <h2 className="text-xl font-semibold">{t('appearanceSettings')}</h2>
                                 <p className="text-sm text-muted-foreground">
                                     {t('appearanceSettingsDescription')}

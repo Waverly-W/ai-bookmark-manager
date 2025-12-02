@@ -1047,7 +1047,7 @@ export const Bookmarks: React.FC = () => {
     return (
         <div className="space-y-6">
             {/* 页面标题区域 */}
-            <div className="space-y-4 pb-4 border-b border-border/50">
+            <div className="space-y-4 pb-4 border-b border-border">
                 <div className="space-y-2 flex justify-between items-end">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">{t('bookmarks')}</h1>
@@ -1265,7 +1265,7 @@ export const Bookmarks: React.FC = () => {
             {/* 批量操作栏 */}
             {
                 isSelectionMode && (
-                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-background border shadow-lg rounded-full px-6 py-3 flex items-center space-x-4 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary border shadow-lg rounded-full px-6 py-3 flex items-center space-x-4 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
                         <span className="text-sm font-medium mr-2">
                             {t('selectedCount', { count: selectedItems.size })}
                         </span>

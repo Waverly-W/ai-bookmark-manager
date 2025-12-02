@@ -164,7 +164,7 @@ export function AIConfigSettings() {
     return (
         <div className="space-y-6">
             {/* 标题和描述 */}
-            <div className="space-y-2 pb-4 border-b border-border/50">
+            <div className="space-y-2 pb-4 border-b border-border">
                 <div className="flex items-center justify-between">
                     <div>
                         <h3 className="font-semibold text-left text-lg">{t('aiConfig')}</h3>

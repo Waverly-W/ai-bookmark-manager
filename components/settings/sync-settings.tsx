@@ -151,7 +151,7 @@ export function SyncSettings() {
     return (
         <div className="space-y-6">
             {/* 标题和描述 */}
-            <div className="space-y-2 pb-4 border-b border-border/50">
+            <div className="space-y-2 pb-4 border-b border-border">
                 <h3 className="font-semibold text-left text-lg">{t('syncSettings')}</h3>
                 <p className="text-sm text-muted-foreground max-w-prose">{t('syncSettingsDescription')}</p>
             </div>
@@ -159,7 +159,7 @@ export function SyncSettings() {
             {/* 同步状态卡片 */}
             <div className="space-y-4">
                 <h4 className="font-medium text-sm">{t('syncStatus')}</h4>
-                <div className="space-y-3 rounded-lg border border-border/50 p-4">
+                <div className="space-y-3 rounded-lg border border-border p-4">
                     {/* 状态指示器 */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ export function SyncSettings() {
                     <Textarea
                         value={rawSyncData}
                         readOnly
-                        className="font-mono text-xs h-64 bg-muted/50 resize-y"
+                        className="font-mono text-xs h-64 bg-muted resize-y"
                     />
                 </div>
                 <p className="text-xs text-muted-foreground">

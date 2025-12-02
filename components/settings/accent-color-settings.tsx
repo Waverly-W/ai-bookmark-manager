@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { browser } from "wxt/browser";
 import { MessageType } from "@/entrypoints/types.ts";
 import { useTranslation } from "react-i18next";
@@ -83,37 +89,27 @@ export function AccentColorSettings() {
                     {t('accentColorDescription')}
                 </p>
             </div>
-            <RadioGroup
+            <Select
                 value={currentColor}
                 onValueChange={handleColorChange}
-                className="space-y-2"
             >
-                {accentColors.map((color) => (
-                    <div
-                        key={color.id}
-                        className="flex items-center justify-between cursor-pointer"
-                        onClick={() => handleColorChange(color.id)}
-                    >
-                        <div className="flex items-center gap-2">
-                            {/* 颜色预览圆点 */}
-                            <div
-                                className="w-3 h-3 rounded-full border border-border flex-shrink-0"
-                                style={{ backgroundColor: color.preview }}
-                            />
-                            <Label
-                                htmlFor={`accent-${color.id}`}
-                                className="cursor-pointer text-sm"
-                            >
-                                {t(color.name)}
-                            </Label>
-                        </div>
-                        <RadioGroupItem
-                            value={color.id}
-                            id={`accent-${color.id}`}
-                        />
-                    </div>
-                ))}
-            </RadioGroup>
+                <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t('selectAccentColor')} />
+                </SelectTrigger>
+                <SelectContent>
+                    {accentColors.map((color) => (
+                        <SelectItem key={color.id} value={color.id}>
+                            <div className="flex items-center gap-2">
+                                <div
+                                    className="w-3 h-3 rounded-full border border-border flex-shrink-0"
+                                    style={{ backgroundColor: color.preview }}
+                                />
+                                <span>{t(color.name)}</span>
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
     );
 }
