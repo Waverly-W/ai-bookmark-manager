@@ -13,19 +13,19 @@ declare global {
   const defineContentScript: typeof import('wxt/sandbox')['defineContentScript']
   const defineUnlistedScript: typeof import('wxt/sandbox')['defineUnlistedScript']
   const fakeBrowser: typeof import('wxt/testing')['fakeBrowser']
-  const getShortcutDisplay: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['getShortcutDisplay']
-  const i18n: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/components/i18n')['default']
-  const i18nConfig: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/components/i18nConfig')['default']
-  const reducer: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['reducer']
+  const getShortcutDisplay: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['getShortcutDisplay']
+  const i18n: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/components/i18n')['default']
+  const i18nConfig: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/components/i18nConfig')['default']
+  const reducer: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/use-toast')['reducer']
   const storage: typeof import('wxt/storage')['storage']
-  const toast: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['toast']
-  const useBookmarks: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-bookmarks')['useBookmarks']
-  const useKeyboardShortcuts: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['useKeyboardShortcuts']
-  const useToast: typeof import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/use-toast')['useToast']
+  const toast: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/use-toast')['toast']
+  const useBookmarks: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/use-bookmarks')['useBookmarks']
+  const useKeyboardShortcuts: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/useKeyboardShortcuts')['useKeyboardShortcuts']
+  const useToast: typeof import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/use-toast')['useToast']
 }
 // for type re-export
 declare global {
   // @ts-ignore
-  export type { ShortcutConfig } from '/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts'
-  import('/Users/wangfeng8/WorkSpace/Front/ai-bookmark-manager/hooks/useKeyboardShortcuts')
+  export type { ShortcutConfig } from '/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/useKeyboardShortcuts'
+  import('/home/waverly/workspace/code/front/ai-bookmark-manager/hooks/useKeyboardShortcuts')
 }

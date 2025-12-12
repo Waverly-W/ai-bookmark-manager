@@ -77,7 +77,7 @@ Note: You can't use this message in a manifest file.
     /**
      * No message description.
      *
-     * "Qingniao Bookmark"
+     * "Mustard Seed Bookmark"
      */
     getMessage(
       messageName: "extName",
@@ -87,7 +87,7 @@ Note: You can't use this message in a manifest file.
     /**
      * No message description.
      *
-     * "AI-powered smart bookmark manager inspired by the mythical Blue Bird from Shan Hai Jing. Features: intelligent folder recommendations, AI batch rename, quick add popup, multi-language support, and customizable themes."
+     * "Mustard seed contains Sumeru. AI-powered smart bookmark manager. Features: intelligent folder recommendations, AI batch rename, quick add popup, multi-language support, and customizable themes."
      */
     getMessage(
       messageName: "extDescription",
