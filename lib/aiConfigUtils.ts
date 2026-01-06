@@ -1,5 +1,4 @@
 import { browser } from "wxt/browser";
-import { configSyncManager } from "./configSyncManager";
 
 /**
  * AI配置接口
@@ -55,8 +54,8 @@ export const saveAIConfig = async (config: AIConfig): Promise<void> => {
             apiKey: encodeApiKey(config.apiKey)
         };
 
-        // 使用同步管理器保存配置
-        await configSyncManager.set(STORAGE_KEYS.AI_CONFIG, configToSave);
+        // 保存配置
+        await browser.storage.local.set({ [STORAGE_KEYS.AI_CONFIG]: configToSave });
     } catch (error) {
         console.error('Failed to save AI config:', error);
         throw new Error('Failed to save AI configuration');
@@ -69,8 +68,9 @@ export const saveAIConfig = async (config: AIConfig): Promise<void> => {
  */
 export const getAIConfig = async (): Promise<AIConfig> => {
     try {
-        // 使用同步管理器读取配置
-        const savedConfig = await configSyncManager.get(STORAGE_KEYS.AI_CONFIG);
+        // 读取配置
+        const result = await browser.storage.local.get(STORAGE_KEYS.AI_CONFIG);
+        const savedConfig = result[STORAGE_KEYS.AI_CONFIG] as AIConfig | undefined;
 
         if (savedConfig) {
             // 解密API Key

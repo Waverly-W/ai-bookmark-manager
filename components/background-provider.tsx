@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { browser } from "wxt/browser";
-import { configSyncManager } from "@/lib/configSyncManager";
+
 import { MessageType } from "@/entrypoints/types.ts";
 export interface BackgroundConfig {
     type: 'default' | 'color' | 'image';
@@ -26,7 +26,7 @@ export const BackgroundProvider = ({ children }: { children: React.ReactNode }) 
 
     const setBackground = async (newConfig: BackgroundConfig) => {
         setBackgroundConfig(newConfig);
-        await configSyncManager.set('backgroundConfig', newConfig);
+        await browser.storage.local.set({ 'backgroundConfig': newConfig });
         try {
             await browser.runtime.sendMessage({
                 messageType: MessageType.changeBackground,
@@ -39,7 +39,8 @@ export const BackgroundProvider = ({ children }: { children: React.ReactNode }) 
     };
 
     async function initBackground() {
-        const config = await configSyncManager.get<BackgroundConfig>('backgroundConfig');
+        const result = await browser.storage.local.get('backgroundConfig');
+        const config = result['backgroundConfig'] as BackgroundConfig | undefined;
         if (config) {
             setBackgroundConfig(config);
         }

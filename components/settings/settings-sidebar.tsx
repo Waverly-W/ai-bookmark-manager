@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Palette, Sparkles, RefreshCw, FileText, Database } from "lucide-react";
+import { Bookmark, Palette, Sparkles, FileText, Database } from "lucide-react";
 
 interface SettingsSidebarProps {
     activeTab: string;
@@ -34,11 +34,7 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
             label: t('promptsTab'),
             icon: FileText
         },
-        {
-            id: "sync",
-            label: t('syncSettingsTab'),
-            icon: RefreshCw
-        },
+
         {
             id: "data",
             label: t('dataManagementTab'),

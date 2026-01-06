@@ -1,4 +1,4 @@
-import { configSyncManager } from "./configSyncManager";
+import { browser } from "wxt/browser";
 
 /**
  * AI 重命名配置接口
@@ -24,7 +24,8 @@ const AI_RENAME_CONFIG_KEY = 'ai_rename_config';
  */
 export const getAIRenameConfig = async (): Promise<AIRenameConfig> => {
     try {
-        const config = await configSyncManager.get<AIRenameConfig>(AI_RENAME_CONFIG_KEY);
+        const result = await browser.storage.local.get(AI_RENAME_CONFIG_KEY);
+        const config = result[AI_RENAME_CONFIG_KEY] as AIRenameConfig | undefined;
         return config || DEFAULT_AI_RENAME_CONFIG;
     } catch (error) {
         console.error('Failed to get AI rename config:', error);
@@ -37,7 +38,7 @@ export const getAIRenameConfig = async (): Promise<AIRenameConfig> => {
  */
 export const saveAIRenameConfig = async (config: AIRenameConfig): Promise<void> => {
     try {
-        await configSyncManager.set(AI_RENAME_CONFIG_KEY, config);
+        await browser.storage.local.set({ [AI_RENAME_CONFIG_KEY]: config });
     } catch (error) {
         console.error('Failed to save AI rename config:', error);
         throw error;

@@ -1,4 +1,4 @@
-import { configSyncManager } from "./configSyncManager";
+import { browser } from "wxt/browser";
 
 /**
  * 文件夹推荐配置接口
@@ -35,7 +35,8 @@ const STORAGE_KEY = 'folderRecommendationConfig';
  */
 export const getFolderRecommendationConfig = async (): Promise<FolderRecommendationConfig> => {
     try {
-        const savedConfig = await configSyncManager.get(STORAGE_KEY);
+        const result = await browser.storage.local.get(STORAGE_KEY);
+        const savedConfig = result[STORAGE_KEY] as Partial<FolderRecommendationConfig> | undefined;
 
         if (savedConfig) {
             // 合并保存的配置和默认配置，确保所有字段都存在
@@ -58,7 +59,7 @@ export const getFolderRecommendationConfig = async (): Promise<FolderRecommendat
  */
 export const saveFolderRecommendationConfig = async (config: FolderRecommendationConfig): Promise<void> => {
     try {
-        await configSyncManager.set(STORAGE_KEY, config);
+        await browser.storage.local.set({ [STORAGE_KEY]: config });
     } catch (error) {
         console.error('Failed to save folder recommendation config:', error);
         throw new Error('Failed to save folder recommendation configuration');

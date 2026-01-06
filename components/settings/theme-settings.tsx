@@ -3,7 +3,7 @@ import { browser } from "wxt/browser";
 import { MessageType } from "@/entrypoints/types.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useTranslation } from "react-i18next";
-import { configSyncManager } from "@/lib/configSyncManager";
+
 
 export function ThemeSettings() {
     const { theme, toggleTheme } = useTheme();
@@ -16,7 +16,7 @@ export function ThemeSettings() {
             messageType: MessageType.changeTheme,
             content: newTheme
         });
-        await configSyncManager.set('theme', newTheme);
+        await browser.storage.local.set({ 'theme': newTheme });
     };
 
     return (

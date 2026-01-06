@@ -391,5 +391,18 @@
   "mergeFailed": "合并书签失败。",
   "tools": "工具",
   "toolsDescription": "使用高级工具管理和分析您的书签。",
-  "duplicateManagerCardDesc": "查找并合并重复书签，清理您的收藏。"
+  "duplicateManagerCardDesc": "查找并合并重复书签，清理您的收藏。",
+  "configManagement": "配置管理",
+  "configManagementDescription": "导入或导出您的应用设置和AI配置。",
+  "exportConfig": "导出配置",
+  "exportConfigDesc": "备份您的设置，包括主题、AI密钥和提示词。",
+  "importConfig": "导入配置",
+  "importConfigDesc": "从JSON配置文件恢复设置。",
+  "import": "导入",
+  "configExportSuccess": "配置已导出",
+  "configExportSuccessDesc": "您的设置已成功导出。",
+  "configExportFailed": "导出失败",
+  "configImportSuccess": "配置已导入",
+  "configImportSuccessDesc": "设置恢复成功。正在刷新...",
+  "configImportFailed": "导入失败"
 }

@@ -6,7 +6,7 @@ import { BookmarkSettings } from "@/components/settings/bookmark-settings.tsx";
 import { AccentColorSettings } from "@/components/settings/accent-color-settings.tsx";
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
-import { SyncSettings } from "@/components/settings/sync-settings.tsx";
+
 import { DataExportSettings } from "@/components/settings/data-export-settings.tsx";
 import { BackgroundSettings } from "@/components/settings/background-settings.tsx";
 import { useTranslation } from "react-i18next";
@@ -51,9 +51,7 @@ export function SettingsPage() {
                         </div>
                     )}
 
-                    {activeTab === "sync" && (
-                        <SyncSettings />
-                    )}
+
 
                     {activeTab === "ai-service" && (
                         <AIConfigSettings />

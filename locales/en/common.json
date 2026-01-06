@@ -393,5 +393,18 @@
   "default": "Default",
   "solidColor": "Solid Color",
   "customImage": "Custom Image",
-  "uploadImage": "Upload Image"
+  "uploadImage": "Upload Image",
+  "configManagement": "Configuration Management",
+  "configManagementDescription": "Import or export your application settings and AI configurations.",
+  "exportConfig": "Export Configuration",
+  "exportConfigDesc": "Backup your settings including themes, AI keys, and prompts.",
+  "importConfig": "Import Configuration",
+  "importConfigDesc": "Restore settings from a valid JSON configuration file.",
+  "import": "Import",
+  "configExportSuccess": "Configuration Exported",
+  "configExportSuccessDesc": "Your settings have been successfully exported.",
+  "configExportFailed": "Export Failed",
+  "configImportSuccess": "Configuration Imported",
+  "configImportSuccessDesc": "Settings restored successfully. Reloading...",
+  "configImportFailed": "Import Failed"
 }
