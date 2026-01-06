@@ -1,10 +1,10 @@
-# 青鸟书签 (Qingniao Bookmark)
+# 芥子书签 (Mustard Seed Bookmark)
 
 <div align="center">
 
-**灵感源自《山海经》中的神鸟青鸟 · AI驱动的智能书签管理扩展**
+**芥子纳须弥 · AI驱动的智能书签管理扩展**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Waverly-W/qingniao-bookmark)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Waverly-W/mustard-seed-bookmark)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [简体中文](#) | [English](#english-version)
@@ -13,11 +13,11 @@
 
 ---
 
-## 📖 关于青鸟
+## 📖 关于芥子
 
-> 在《山海经·海内北经》中，青鸟是西王母的使者，负责传递信息和收集珍宝。青鸟书签继承了这一理念，帮助你智能地收集、整理和管理网络世界中的珍贵信息。
+> "芥子纳须弥" —— 佛家典故，意指微小的芥子中能容纳巨大的须弥山。芥子书签寓意于此，帮助你在微小的浏览器扩展中，智能地收纳、整理和管理浩瀚网络世界中的无限信息。
 
-**青鸟书签**是一款基于 WXT + React + Tailwind CSS + shadcn/ui 构建的现代化 Chrome 扩展，集成了先进的 AI 技术，让书签管理变得智能、高效、优雅。
+**芥子书签**是一款基于 WXT + React + Tailwind CSS + shadcn/ui 构建的现代化 Chrome 扩展，集成了先进的 AI 技术，让书签管理变得智能、高效、优雅。
 
 - 🌐 运行环境：Node >= 18
 - 🌍 语言支持：简体中文 / English
@@ -95,8 +95,8 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/Waverly-W/qingniao-bookmark.git
-cd qingniao-bookmark
+git clone https://github.com/Waverly-W/mustard-seed-bookmark.git
+cd mustard-seed-bookmark
 
 # 安装依赖
 npm install
@@ -160,7 +160,8 @@ npm run zip
 ## 🧩 项目结构
 
 ```
-qingniao-bookmark/
+```
+mustard-seed-bookmark/
 ├── entrypoints/
 │   ├── newtab/              # 新标签页
 │   │   ├── App.tsx
@@ -259,7 +260,7 @@ A: 所有配置（包括 API Key）仅存储在浏览器本地，不会上传到
 
 Made with ❤️ by [Waverly-W](https://github.com/Waverly-W)
 
-**青鸟传书，智理书签**
+**芥子纳须弥，智理书签**
 
 </div>
 
@@ -267,19 +268,19 @@ Made with ❤️ by [Waverly-W](https://github.com/Waverly-W)
 
 ## English Version
 
-# Qingniao Bookmark
+# Mustard Seed Bookmark
 
 <div align="center">
 
-**Inspired by the mythical Blue Bird from Shan Hai Jing · AI-Powered Smart Bookmark Manager**
+**Mustard Seed Contains Sumeru · AI-Powered Smart Bookmark Manager**
 
 </div>
 
 ## About
 
-> In "Shan Hai Jing" (Classic of Mountains and Seas), the Blue Bird serves as the messenger of the Queen Mother of the West, responsible for delivering messages and collecting treasures. Qingniao Bookmark inherits this concept, helping you intelligently collect, organize, and manage valuable information from the web.
+> "Mustard seed contains Sumeru" is a Buddhist metaphor meaning a tiny mustard seed can contain the immense Mount Sumeru. Mustard Seed Bookmark embodies this concept, helping you intelligently collect, organize, and manage infinite information from the vast web within a tiny browser extension.
 
-**Qingniao Bookmark** is a modern Chrome extension built with WXT + React + Tailwind CSS + shadcn/ui, integrated with advanced AI technology to make bookmark management intelligent, efficient, and elegant.
+**Mustard Seed Bookmark** is a modern Chrome extension built with WXT + React + Tailwind CSS + shadcn/ui, integrated with advanced AI technology to make bookmark management intelligent, efficient, and elegant.
 
 ## Key Features
 
@@ -294,8 +295,8 @@ Made with ❤️ by [Waverly-W](https://github.com/Waverly-W)
 
 ```bash
 # Clone and install
-git clone https://github.com/Waverly-W/qingniao-bookmark.git
-cd qingniao-bookmark
+git clone https://github.com/Waverly-W/mustard-seed-bookmark.git
+cd mustard-seed-bookmark
 npm install
 
 # Development
@@ -320,6 +321,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Qingniao delivers messages, manages bookmarks wisely**
+**Mustard Seed contains Sumeru, manages bookmarks wisely**
 
 </div>
