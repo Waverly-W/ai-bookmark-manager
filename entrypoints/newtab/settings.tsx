@@ -3,7 +3,7 @@ import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { ThemeSettings } from "@/components/settings/theme-settings.tsx";
 import { I18nSettings } from "@/components/settings/i18n-settings.tsx";
 import { BookmarkSettings } from "@/components/settings/bookmark-settings.tsx";
-import { AccentColorSettings } from "@/components/settings/accent-color-settings.tsx";
+
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
 
@@ -45,7 +45,6 @@ export function SettingsPage() {
                             <div className="grid gap-8">
                                 <I18nSettings />
                                 <ThemeSettings />
-                                <AccentColorSettings />
                                 <BackgroundSettings />
                             </div>
                         </div>

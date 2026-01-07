@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { StatsDashboard } from '@/components/dashboard/stats-dashboard';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { calculateBookmarkStats } from '@/lib/statsUtils';
-import { Sparkles, ShieldCheck, Construction } from 'lucide-react';
+import { Sparkles, ShieldCheck, Construction, Copy, Folder } from 'lucide-react';
 import { DuplicateManager } from '@/components/tools/duplicate-manager';
 import { ValidityManager } from '@/components/tools/validity-manager';
 import { EmptyFolderManager } from '@/components/tools/empty-folder-manager';
@@ -68,12 +68,7 @@ export const ToolsPage: React.FC = () => {
                     {t('statistics')}
                 </h2>
                 {statsData ? (
-                    <StatsDashboard
-                        stats={statsData}
-                        onDuplicateClick={() => setView('duplicate-manager')}
-                        onValidityClick={() => setView('validity-manager')}
-                        onEmptyFolderClick={() => setView('empty-folder-manager')}
-                    />
+                    <StatsDashboard stats={statsData} />
                 ) : (
                     <div className="h-[200px] flex items-center justify-center border rounded-lg bg-muted/20">
                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -84,8 +79,79 @@ export const ToolsPage: React.FC = () => {
                 )}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {/* Other tools cards can go here in the future */}
+            {/* Tools Grid */}
+            <div className="space-y-4">
+                <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                    <Construction className="h-5 w-5 text-primary" />
+                    {t('managementTools')}
+                </h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Duplicate Manager Card */}
+                    <Card className="flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                        <CardHeader>
+                            <div className="p-2 w-fit rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 mb-2">
+                                <Copy className="h-6 w-6" />
+                            </div>
+                            <CardTitle>{t('duplicateManager')}</CardTitle>
+                            <CardDescription>
+                                {t('duplicateManagerDesc')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="mt-auto pt-0">
+                            <Button
+                                onClick={() => setView('duplicate-manager')}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                {t('manageDuplicates')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Validity Check Card */}
+                    <Card className="flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                        <CardHeader>
+                            <div className="p-2 w-fit rounded-lg bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 mb-2">
+                                <ShieldCheck className="h-6 w-6" />
+                            </div>
+                            <CardTitle>{t('validityCheck')}</CardTitle>
+                            <CardDescription>
+                                {t('validityCheckDesc')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="mt-auto pt-0">
+                            <Button
+                                onClick={() => setView('validity-manager')}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                {t('checkLinks')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Empty Folder Card */}
+                    <Card className="flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                        <CardHeader>
+                            <div className="p-2 w-fit rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 mb-2">
+                                <Folder className="h-6 w-6" />
+                            </div>
+                            <CardTitle>{t('emptyFolders')}</CardTitle>
+                            <CardDescription>
+                                {t('emptyFoldersDesc')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="mt-auto pt-0">
+                            <Button
+                                onClick={() => setView('empty-folder-manager')}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                {t('manageFolders')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

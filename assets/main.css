@@ -5,46 +5,95 @@
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 224 71.4% 4.1%;
-        --card: 0 0% 100%;
-        --card-foreground: 224 71.4% 4.1%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 224 71.4% 4.1%;
-        --primary: 262.1 83.3% 57.8%;
-        --primary-foreground: 210 20% 98%;
-        --secondary: 220 14.3% 95.9%;
-        --secondary-foreground: 220.9 39.3% 11%;
-        --muted: 220 14.3% 95.9%;
-        --muted-foreground: 220 8.9% 46.1%;
-        --accent: 220 14.3% 95.9%;
-        --accent-foreground: 220.9 39.3% 11%;
+        /* Material You - Purple Seed (#6750A4) - Light Mode */
+        --background: 280 100% 99%;
+        /* #FFFBFE */
+        --foreground: 270 7% 12%;
+        /* #1C1B1F - On Surface */
+
+        --card: 276 38% 95%;
+        /* #F3EDF7 - Surface Container */
+        --card-foreground: 270 7% 12%;
+        /* #1D192B - On Surface */
+
+        --popover: 280 100% 99%;
+        /* #FFFBFE - Surface */
+        --popover-foreground: 270 7% 12%;
+
+        --primary: 256 35% 48%;
+        /* #6750A4 */
+        --primary-foreground: 0 0% 100%;
+        /* #FFFFFF */
+
+        --secondary: 263 56% 92%;
+        /* #E8DEF8 - Secondary Container */
+        --secondary-foreground: 253 26% 13%;
+        /* #1D192B - On Secondary Container */
+
+        --muted: 268 23% 91%;
+        /* #E7E0EC - Surface Container Low */
+        --muted-foreground: 270 4% 47%;
+        /* #79747E - On Surface Variant (closest) */
+
+        --accent: 263 56% 92%;
+        /* #E8DEF8 - Using Secondary Container for accent/hover */
+        --accent-foreground: 253 26% 13%;
+
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 210 20% 98%;
-        --border: 220 13% 91%;
-        --input: 220 13% 91%;
-        --ring: 262.1 83.3% 57.8%;
-        --radius: 0.5rem;
+
+        --border: 270 4% 47%;
+        /* #79747E - Outline */
+        --input: 268 23% 91%;
+        /* #E7E0EC - Surface Container Low (for filled input bg) */
+        --ring: 256 35% 48%;
+        /* Primary */
+
+        --radius: 1.5rem;
+        /* 24px - Large radius */
     }
 
     .dark {
-        --background: 224 71.4% 4.1%;
-        --foreground: 210 20% 98%;
-        --card: 224 71.4% 4.1%;
-        --card-foreground: 210 20% 98%;
-        --popover: 224 71.4% 4.1%;
-        --popover-foreground: 210 20% 98%;
-        --primary-foreground: 210 20% 98%;
-        --secondary: 215 27.9% 25%;
-        --secondary-foreground: 210 20% 98%;
-        --muted: 215 27.9% 25%;
-        --muted-foreground: 217.9 10.6% 80%;
-        --accent: 215 27.9% 25%;
-        --accent-foreground: 210 20% 98%;
+        /* Material You - Purple Seed - Dark Mode (Mapped approximation) */
+        --background: 270 7% 12%;
+        /* #1C1B1F */
+        --foreground: 268 23% 91%;
+        /* #E6E1E5 */
+
+        --card: 272 16% 23%;
+        /* #4A4458 - Surface Container High approximation */
+        --card-foreground: 268 23% 91%;
+
+        --popover: 270 7% 12%;
+        --popover-foreground: 268 23% 91%;
+
+        --primary: 266 79% 82%;
+        /* #D0BCFF - Primary 80 */
+        --primary-foreground: 258 52% 23%;
+        /* #381E72 - Primary 20 */
+
+        --secondary: 265 24% 30%;
+        /* #4A4458 - Secondary Container */
+        --secondary-foreground: 263 56% 92%;
+        /* #E8DEF8 - On Secondary Container */
+
+        --muted: 270 4% 28%;
+        /* #49454F - Surface Variant */
+        --muted-foreground: 271 4% 80%;
+        /* #CAC4D0 - On Surface Variant */
+
+        --accent: 265 24% 30%;
+        --accent-foreground: 263 56% 92%;
+
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 210 20% 98%;
-        --border: 215 27.9% 25%;
-        --input: 215 27.9% 25%;
+
+        --border: 270 5% 58%;
+        /* #938F99 - Outline */
+        --input: 270 4% 28%;
+        /* Surface Variant */
+        --ring: 266 79% 82%;
+        /* Primary 80 */
     }
 }
 

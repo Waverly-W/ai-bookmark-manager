@@ -404,5 +404,15 @@
   "configExportFailed": "导出失败",
   "configImportSuccess": "配置已导入",
   "configImportSuccessDesc": "设置恢复成功。正在刷新...",
-  "configImportFailed": "导入失败"
+  "configImportFailed": "导入失败",
+  "managementTools": "管理工具",
+  "duplicateManager": "重复书签管理",
+  "duplicateManagerDesc": "查找并合并重复的书签，清理您的书签库。",
+  "manageDuplicates": "管理重复项",
+  "validityCheck": "链接有效性检查",
+  "validityCheckDesc": "扫描失效链接，更新或移除无法访问的书签。",
+  "checkLinks": "检查链接",
+  "emptyFoldersDesc": "识别并移除空文件夹，整理您的文件夹结构。",
+  "manageFolders": "管理文件夹",
+  "emptyFolders": "空文件夹"
 }

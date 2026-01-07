@@ -406,5 +406,15 @@
   "configExportFailed": "Export Failed",
   "configImportSuccess": "Configuration Imported",
   "configImportSuccessDesc": "Settings restored successfully. Reloading...",
-  "configImportFailed": "Import Failed"
+  "configImportFailed": "Import Failed",
+  "managementTools": "Management Tools",
+  "duplicateManager": "Duplicate Manager",
+  "duplicateManagerDesc": "Find and merge duplicate bookmarks to clean up your library.",
+  "manageDuplicates": "Manage Duplicates",
+  "validityCheck": "Link Validity Check",
+  "validityCheckDesc": "Scan for broken links and update or remove inaccessible bookmarks.",
+  "checkLinks": "Check Links",
+  "emptyFoldersDesc": "Identify and remove empty folders to organize your structure.",
+  "manageFolders": "Manage Folders",
+  "emptyFolders": "Empty Folders"
 }

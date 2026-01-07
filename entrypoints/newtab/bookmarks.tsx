@@ -1077,27 +1077,29 @@ export const Bookmarks: React.FC = () => {
                 </div>
 
                 {/* 搜索框 */}
-                <div className="flex justify-start">
-                    <div className="relative w-full md:w-64 lg:w-80">
+                <div className="flex justify-start w-full max-w-lg">
+                    <div className="relative w-full">
                         <form onSubmit={handleSearchSubmit}>
-                            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                            <Input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder={t('searchPlaceholder')}
-                                className="pl-9 w-full bg-background/50 backdrop-blur-sm focus:bg-background transition-all"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                onFocus={() => setShowSearchHistory(true)}
-                                onBlur={() => setTimeout(() => setShowSearchHistory(false), 200)}
-                            />
+                            <div className="relative group">
+                                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors h-4 w-4" />
+                                <Input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    placeholder={t('searchPlaceholder')}
+                                    className="pl-11 h-12 w-full rounded-full bg-secondary/30 hover:bg-secondary/50 focus:bg-surface-container-high border-0 shadow-sm hover:shadow-md transition-all duration-300 ease-md-emphasized text-base placeholder:text-muted-foreground/70"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onFocus={() => setShowSearchHistory(true)}
+                                    onBlur={() => setTimeout(() => setShowSearchHistory(false), 200)}
+                                />
+                            </div>
                         </form>
 
                         {/* 搜索历史下拉面板 */}
                         {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
-                            <Card className="absolute top-full left-0 right-0 mt-1 z-50 shadow-lg animate-in fade-in zoom-in-95 duration-100">
-                                <CardContent className="p-1">
-                                    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
+                            <Card className="absolute top-full left-0 right-0 mt-2 z-50 shadow-2xl border-none rounded-[1.5rem] bg-surface-container overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <CardContent className="p-2 space-y-1">
+                                    <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground">
                                         <span>{t('searchHistory')}</span>
                                         <button
                                             onClick={clearSearchHistory}
@@ -1109,22 +1111,22 @@ export const Bookmarks: React.FC = () => {
                                     {searchHistory.map((term, index) => (
                                         <div
                                             key={index}
-                                            className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer group"
+                                            className="flex items-center justify-between px-4 py-3 hover:bg-on-surface/5 rounded-full cursor-pointer group transition-colors duration-200"
                                             onClick={() => {
                                                 setSearchTerm(term);
                                                 setShowSearchHistory(false);
                                             }}
                                         >
-                                            <div className="flex items-center gap-2 overflow-hidden">
-                                                <FaSearch className="h-3 w-3 text-muted-foreground/50" />
-                                                <span className="text-sm truncate">{term}</span>
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <FaHistory className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                                <span className="text-sm truncate text-foreground/90">{term}</span>
                                             </div>
                                             <button
                                                 onClick={(e) => removeHistoryItem(e, term)}
-                                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-background rounded-full text-muted-foreground hover:text-destructive transition-all"
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-all"
                                             >
                                                 <span className="sr-only">{t('delete')}</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                                                <FaTimes className="w-3 h-3" />
                                             </button>
                                         </div>
                                     ))}
@@ -1265,36 +1267,46 @@ export const Bookmarks: React.FC = () => {
             {/* 批量操作栏 */}
             {
                 isSelectionMode && (
-                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary border shadow-lg rounded-full px-6 py-3 flex items-center space-x-4 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-                        <span className="text-sm font-medium mr-2">
+                    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary/90 backdrop-blur-md border-0 shadow-2xl rounded-full px-6 py-2.5 flex items-center space-x-2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300 ease-md-emphasized ring-1 ring-white/10">
+                        <span className="text-sm font-medium mr-2 text-secondary-foreground">
                             {t('selectedCount', { count: selectedItems.size })}
                         </span>
 
-                        <div className="h-4 w-px bg-border mx-2" />
+                        <div className="h-4 w-px bg-secondary-foreground/10 mx-2" />
 
-                        <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSelectAll}
+                            className="hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4"
+                        >
                             <CheckSquare className="w-4 h-4 mr-2" />
                             {selectedItems.size === displayItems.length ? t('deselectAll') : t('selectAll')}
                         </Button>
+
+                        <div className="h-4 w-px bg-secondary-foreground/10 mx-2" />
 
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={handleAIClassify}
                             disabled={isClassifying}
+                            className="hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4"
                         >
                             {isClassifying ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             ) : (
-                                <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                                <Sparkles className="w-4 h-4 mr-2 text-primary" />
                             )}
                             {t('aiBatchClassification')}
                         </Button>
 
+                        <div className="h-4 w-px bg-secondary-foreground/10 mx-2" />
+
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-100/50 rounded-full px-4"
                             onClick={() => setShowBatchDeleteDialog(true)}
                             disabled={selectedItems.size === 0}
                         >
@@ -1302,9 +1314,14 @@ export const Bookmarks: React.FC = () => {
                             {t('delete')}
                         </Button>
 
-                        <div className="h-4 w-px bg-border mx-2" />
+                        <div className="h-4 w-px bg-secondary-foreground/10 mx-2" />
 
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={toggleSelectionMode}>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full hover:bg-secondary-foreground/10 text-secondary-foreground"
+                            onClick={toggleSelectionMode}
+                        >
                             <X className="w-4 h-4" />
                         </Button>
                     </div>

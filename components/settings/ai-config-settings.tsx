@@ -190,6 +190,7 @@ export function AIConfigSettings() {
                     placeholder={t('apiUrlPlaceholder')}
                     value={config.apiUrl}
                     onChange={(e) => handleInputChange('apiUrl', e.target.value)}
+                    className="rounded-full border-0 bg-secondary/10 focus-visible:bg-secondary/20 h-12"
                 />
             </div>
 
@@ -202,6 +203,7 @@ export function AIConfigSettings() {
                     placeholder={t('apiKeyPlaceholder')}
                     value={config.apiKey}
                     onChange={(e) => handleInputChange('apiKey', e.target.value)}
+                    className="rounded-full border-0 bg-secondary/10 focus-visible:bg-secondary/20 h-12"
                 />
                 <p className="text-xs text-muted-foreground">
                     {t('apiKeySecureStorage')}
@@ -217,6 +219,7 @@ export function AIConfigSettings() {
                     placeholder={t('modelIdPlaceholder')}
                     value={config.modelId}
                     onChange={(e) => handleInputChange('modelId', e.target.value)}
+                    className="rounded-full border-0 bg-secondary/10 focus-visible:bg-secondary/20 h-12"
                 />
             </div>
 

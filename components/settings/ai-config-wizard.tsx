@@ -205,8 +205,8 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                         <Card
                             key={option.id}
                             className={`cursor-pointer transition-all hover:border-primary ${selectedPreset === option.id
-                                    ? 'border-primary ring-2 ring-primary ring-opacity-50'
-                                    : ''
+                                ? 'border-primary ring-2 ring-primary ring-opacity-50'
+                                : ''
                                 }`}
                             onClick={() => handlePresetSelect(option.id)}
                         >
@@ -247,6 +247,7 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                             placeholder={t('apiKeyPlaceholder')}
                             value={config.apiKey}
                             onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                            className="rounded-full border-0 bg-secondary/10 focus-visible:bg-secondary/20 h-12"
                         />
                         {preset && (
                             <div className="flex items-center gap-2 text-sm">
@@ -288,6 +289,7 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                                     placeholder={t('apiUrlPlaceholder')}
                                     value={config.apiUrl}
                                     onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
+                                    className="rounded-full border-0 bg-secondary/10 focus-visible:bg-secondary/20 h-12"
                                 />
                             </div>
 
@@ -299,6 +301,7 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                                     placeholder={t('modelIdPlaceholder')}
                                     value={config.modelId}
                                     onChange={(e) => setConfig({ ...config, modelId: e.target.value })}
+                                    className="rounded-full border-0 bg-secondary/10 focus-visible:bg-secondary/20 h-12"
                                 />
                             </div>
                         </>
@@ -341,8 +344,8 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                 {testResult && (
                     <div
                         className={`flex items-center gap-2 p-4 rounded-md ${testResult.success
-                                ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
-                                : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
+                            ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+                            : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
                             }`}
                     >
                         {testResult.success ? (

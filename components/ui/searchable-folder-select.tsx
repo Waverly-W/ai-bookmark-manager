@@ -53,7 +53,7 @@ const flattenFolders = (folders: BookmarkFolder[], level: number = 0, parentPath
             }
         }
     });
-    
+
     return result;
 };
 
@@ -89,7 +89,7 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
 
     // 扁平化文件夹列表
     const flattenedFolders = useMemo(() => flattenFolders(folders), [folders]);
-    
+
     // 获取当前选中的文件夹信息
     const selectedFolder = useMemo(() => findFolderById(folders, selectedId), [folders, selectedId]);
 
@@ -102,8 +102,8 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
         const query = searchQuery.toLowerCase().trim();
         return flattenedFolders.filter(folder => {
             // 搜索标题或完整路径
-            return folder.title.toLowerCase().includes(query) || 
-                   folder.path.toLowerCase().includes(query);
+            return folder.title.toLowerCase().includes(query) ||
+                folder.path.toLowerCase().includes(query);
         });
     }, [flattenedFolders, searchQuery]);
 
@@ -129,65 +129,74 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     role="combobox"
                     aria-expanded={isOpen}
-                    className={cn("w-full justify-between", className)}
+                    className={cn(
+                        "w-full justify-between rounded-full bg-secondary/30 hover:bg-secondary/50 border-0 transition-all duration-300 ease-md-emphasized h-12 px-4 shadow-sm hover:shadow-md",
+                        className
+                    )}
                 >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-3 min-w-0 flex-1 text-on-surface">
                         {selectedFolder && (
                             <>
                                 {selectedFolder.id === 'all' ? (
-                                    <FaBookmark className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                    <FaBookmark className="h-4 w-4 text-primary flex-shrink-0" />
                                 ) : (
-                                    <FaFolder className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                                    <FaFolder className="h-4 w-4 text-primary flex-shrink-0" />
                                 )}
                             </>
                         )}
-                        <span className="truncate">{getDisplayValue()}</span>
+                        <span className="truncate font-normal text-base text-foreground/80">
+                            {getDisplayValue()}
+                        </span>
                     </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 text-muted-foreground" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                <div className="flex flex-col">
-                    {/* 搜索框 */}
-                    <div className="flex items-center border-b px-3 py-2">
-                        <FaSearch className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-[1.5rem] border-none shadow-xl bg-surface-container overflow-hidden" align="start">
+                <div className="flex flex-col bg-card">
+                    {/* 搜索框 - Material Filled Style */}
+                    <div className="flex items-center px-4 py-3 bg-surface-container-high border-b border-white/5">
+                        <FaSearch className="mr-3 h-4 w-4 shrink-0 text-muted-foreground" />
                         <Input
                             placeholder="搜索文件夹..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-8 border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            className="h-10 border-none bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/70"
                         />
                     </div>
 
                     {/* 文件夹列表 */}
-                    <div className="max-h-64 overflow-y-auto">
+                    <div className="max-h-64 overflow-y-auto p-2 space-y-1">
                         {filteredFolders.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
+                            <div className="py-8 text-center text-sm text-muted-foreground">
                                 未找到匹配的文件夹
                             </div>
                         ) : (
-                            <div className="p-1">
+                            <>
                                 {filteredFolders.map((folder) => (
                                     <div
                                         key={folder.id}
                                         onClick={() => handleSelect(folder.id)}
                                         className={cn(
-                                            "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-                                            "hover:bg-accent hover:text-accent-foreground",
-                                            selectedId === folder.id && "bg-accent/50"
+                                            "relative flex cursor-pointer items-center gap-3 rounded-full px-4 py-3 text-sm outline-none transition-all duration-200 ease-md-emphasized",
+                                            "hover:bg-on-surface/5", // State Layer
+                                            selectedId === folder.id
+                                                ? "bg-secondary-container text-on-secondary-container font-medium"
+                                                : "text-foreground/90"
                                         )}
                                     >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4 flex-shrink-0",
-                                                selectedId === folder.id ? "opacity-100" : "opacity-0"
+                                        <div className="flex items-center justify-center w-5 h-5">
+                                            {selectedId === folder.id ? (
+                                                <Check className="h-4 w-4 text-primary" />
+                                            ) : (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
                                             )}
-                                        />
+                                        </div>
+
                                         {getFolderIcon(folder)}
-                                        <span 
+                                        <span
                                             className="truncate flex-1"
                                             title={folder.path}
                                         >
@@ -195,7 +204,7 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
                                         </span>
                                     </div>
                                 ))}
-                            </div>
+                            </>
                         )}
                     </div>
                 </div>

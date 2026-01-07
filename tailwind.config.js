@@ -40,6 +40,13 @@ module.exports = {
             },
         },
         extend: {
+            transitionTimingFunction: {
+                'md-emphasized': 'cubic-bezier(0.2, 0, 0, 1)',
+            },
+            transitionDuration: {
+                '1500': '1500ms',
+                '2000': '2000ms',
+            },
             fontSize: {
                 base: '16px',
             },
@@ -85,12 +92,12 @@ module.exports = {
             },
             keyframes: {
                 "accordion-down": {
-                    from: {height: "0"},
-                    to: {height: "var(--radix-accordion-content-height)"},
+                    from: { height: "0" },
+                    to: { height: "var(--radix-accordion-content-height)" },
                 },
                 "accordion-up": {
-                    from: {height: "var(--radix-accordion-content-height)"},
-                    to: {height: "0"},
+                    from: { height: "var(--radix-accordion-content-height)" },
+                    to: { height: "0" },
                 },
             },
             animation: {

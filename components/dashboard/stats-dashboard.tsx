@@ -12,14 +12,11 @@ import { useTranslation } from 'react-i18next';
 
 interface StatsDashboardProps {
     stats: BookmarkStats;
-    onDuplicateClick?: () => void;
-    onValidityClick?: () => void;
-    onEmptyFolderClick?: () => void;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats, onDuplicateClick, onValidityClick, onEmptyFolderClick }) => {
+export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
     const { t } = useTranslation();
 
     // Filter out empty dates for cleaner chart if needed, or keep them for continuity
@@ -34,17 +31,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats, onDuplica
                     value={stats.totalBookmarks}
                     icon={BookOpen}
                     description={t('totalBookmarksDesc')}
-                    onClick={onValidityClick}
-                    tooltip={t('bookmarkValidityScan')}
-                    actionLabel={t('checkValidity')}
                 />
                 <StatCard
                     title={t('totalFolders')}
                     value={stats.totalFolders}
                     icon={Folder}
-                    onClick={onEmptyFolderClick}
-                    tooltip={t('emptyFolderScan')}
-                    actionLabel={t('cleanEmpty')}
                 />
                 <StatCard
                     title={t('recentAdditions')}
@@ -61,9 +52,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats, onDuplica
                     description={t('duplicatesDesc')}
                     trend={stats.duplicateCount > 0 ? `${stats.duplicateCount}` : undefined}
                     trendUp={false}
-                    onClick={onDuplicateClick}
-                    tooltip={t('duplicateOrganization')}
-                    actionLabel={stats.duplicateCount > 0 ? t('cleanDuplicates') : undefined}
                 />
             </div>
 

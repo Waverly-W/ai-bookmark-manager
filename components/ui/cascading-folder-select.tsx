@@ -128,41 +128,42 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
             <PopoverTrigger asChild>
                 <div
                     className={cn(
-                        "flex items-center justify-between gap-2 px-3 py-2 text-sm",
-                        "border border-input rounded-md bg-background cursor-pointer",
-                        "hover:bg-accent hover:text-accent-foreground",
-                        "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                        "flex items-center justify-between gap-3 px-4 py-2 text-sm",
+                        "border-0 rounded-full bg-secondary/30 cursor-pointer",
+                        "hover:bg-secondary/50 hover:shadow-md transition-all duration-300 ease-md-emphasized",
                         "disabled:cursor-not-allowed disabled:opacity-50",
-                        "h-10 transition-colors",
+                        "h-12 shadow-sm",
                         className
                     )}
                     role="combobox"
                     aria-expanded={isOpen}
                     aria-haspopup="tree"
                 >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 text-on-surface">
                         {selectedFolder && (
                             <>
                                 {selectedFolder.id === 'all' ? (
-                                    <FaBookmark className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                    <FaBookmark className="h-4 w-4 text-primary flex-shrink-0" />
                                 ) : (
-                                    <FaFolder className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                                    <FaFolder className="h-4 w-4 text-primary flex-shrink-0" />
                                 )}
                             </>
                         )}
-                        <span className={cn("truncate", !selectedFolder && "text-muted-foreground")}>{getDisplayValue()}</span>
+                        <span className={cn("truncate font-normal text-base", !selectedFolder ? "text-muted-foreground" : "text-foreground/90")}>
+                            {getDisplayValue()}
+                        </span>
                     </div>
                     <FaChevronDown className={cn(
-                        "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200",
+                        "h-4 w-4 text-muted-foreground transition-transform duration-300 ease-md-emphasized",
                         isOpen && "rotate-180"
                     )} />
                 </div>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0 max-w-none shadow-xl border-border/50"
+                className="w-auto p-0 max-w-none shadow-2xl border-none rounded-[1.5rem] bg-popover z-50 overflow-hidden"
                 align="start"
                 side="bottom"
-                sideOffset={4}
+                sideOffset={8}
             >
                 <div
                     className="flex max-h-80 overflow-hidden bg-popover"
@@ -173,13 +174,13 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                         <div
                             key={panel.level}
                             className={cn(
-                                "w-48 border-r border-border/50 last:border-r-0",
-                                "flex-shrink-0 flex flex-col"
+                                "w-52 border-r border-border/10 last:border-r-0",
+                                "flex-shrink-0 flex flex-col py-2"
                             )}
                             style={{ maxHeight: '320px' }}
                         >
                             <ScrollArea className="h-full w-full">
-                                <div className="p-1">
+                                <div className="px-2 space-y-1">
                                     {panel.folders.map((folder) => {
                                         const isSelected = folder.id === selectedId;
                                         const isActive = activePath.includes(folder.id);
@@ -189,12 +190,12 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                                             <div
                                                 key={folder.id}
                                                 className={cn(
-                                                    "flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-all text-sm mx-1 rounded-md mb-0.5",
+                                                    "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200 ease-md-emphasized text-sm rounded-full",
                                                     isSelected
                                                         ? "bg-primary text-primary-foreground font-medium shadow-sm"
                                                         : isActive
-                                                            ? "bg-muted text-foreground"
-                                                            : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                                            ? "bg-secondary-container text-on-secondary-container font-medium"
+                                                            : "hover:bg-on-surface/5 text-foreground/80 hover:text-foreground"
                                                 )}
                                                 onClick={() => handleFolderClick(folder.id)}
                                                 role="treeitem"
@@ -202,13 +203,19 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                                                 aria-expanded={hasChildren ? isActive : undefined}
                                             >
                                                 {folder.id === 'all' ? (
-                                                    <FaBookmark className={cn("h-3.5 w-3.5 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-amber-500")} />
+                                                    <FaBookmark className={cn("h-4 w-4 flex-shrink-0 transition-colors",
+                                                        isSelected ? "text-primary-foreground" :
+                                                            isActive ? "text-primary" : "text-amber-500")} />
                                                 ) : (
-                                                    <FaFolder className={cn("h-3.5 w-3.5 flex-shrink-0", isSelected ? "text-primary-foreground" : "text-blue-500")} />
+                                                    <FaFolder className={cn("h-4 w-4 flex-shrink-0 transition-colors",
+                                                        isSelected ? "text-primary-foreground" :
+                                                            isActive ? "text-primary" : "text-blue-500")} />
                                                 )}
                                                 <span className="flex-1 truncate">{folder.title}</span>
                                                 {hasChildren && (
-                                                    <FaChevronRight className={cn("h-3 w-3 flex-shrink-0", isSelected ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
+                                                    <FaChevronRight className={cn("h-3 w-3 flex-shrink-0 transition-colors",
+                                                        isSelected ? "text-primary-foreground/80" :
+                                                            isActive ? "text-on-secondary-container/60" : "text-muted-foreground/40")} />
                                                 )}
                                             </div>
                                         );

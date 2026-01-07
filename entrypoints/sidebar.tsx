@@ -27,16 +27,16 @@ const Sidebar = (
     return (
         <>
             {/* Desktop Sidebar - Left vertical */}
-            <aside className="hidden md:flex fixed inset-y-0 left-0 z-10 flex-col border-r border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 w-16 transition-all duration-300 shadow-sm">
+            <aside className="hidden md:flex fixed inset-y-0 left-0 z-10 flex-col bg-secondary/15 backdrop-blur-sm w-20 transition-all duration-300">
                 {/* Close button */}
                 {closeContent && (
-                    <div className="flex h-14 items-center justify-center border-b border-border/40">
+                    <div className="flex h-14 items-center justify-center">
                         <button
                             onClick={closeContent}
                             className={cn(
-                                "inline-flex items-center justify-center rounded-md",
+                                "inline-flex items-center justify-center rounded-full",
                                 "h-9 w-9 text-muted-foreground",
-                                "transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:scale-105",
+                                "transition-all duration-200 hover:bg-secondary/20 hover:text-secondary-foreground",
                                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             )}
                             aria-label="Close sidebar"
@@ -47,7 +47,7 @@ const Sidebar = (
                 )}
 
                 {/* Main navigation */}
-                <nav className="flex flex-col items-center gap-3 px-2 py-6">
+                <nav className="flex flex-col items-center gap-4 py-8">
                     <TooltipProvider delayDuration={0}>
                         {/* Home */}
                         <Tooltip>
@@ -55,16 +55,16 @@ const Sidebar = (
                                 <button
                                     onClick={() => handleNavClick(SidebarType.home)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-xl",
-                                        "h-10 w-10 transition-all duration-300 ease-out",
+                                        "inline-flex items-center justify-center rounded-2xl",
+                                        "h-12 w-12 transition-all duration-300 ease-spring",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.home
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
+                                            ? "bg-primary text-primary-foreground shadow-md scale-105"
+                                            : "text-muted-foreground/80 hover:bg-secondary/20 hover:text-foreground hover:scale-105"
                                     )}
                                     aria-label={t('home')}
                                 >
-                                    <Home className="h-5 w-5" />
+                                    <Home className="h-6 w-6" />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="font-medium">
@@ -78,16 +78,16 @@ const Sidebar = (
                                 <button
                                     onClick={() => handleNavClick(SidebarType.batchRename)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-xl",
-                                        "h-10 w-10 transition-all duration-300 ease-out",
+                                        "inline-flex items-center justify-center rounded-2xl",
+                                        "h-12 w-12 transition-all duration-300 ease-spring",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.batchRename
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
+                                            ? "bg-primary text-primary-foreground shadow-md scale-105"
+                                            : "text-muted-foreground/80 hover:bg-secondary/20 hover:text-foreground hover:scale-105"
                                     )}
                                     aria-label={t('batchRenameTitle')}
                                 >
-                                    <Sparkles className="h-5 w-5" />
+                                    <Sparkles className="h-6 w-6" />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="font-medium">
@@ -101,16 +101,16 @@ const Sidebar = (
                                 <button
                                     onClick={() => handleNavClick(SidebarType.tools)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-xl",
-                                        "h-10 w-10 transition-all duration-300 ease-out",
+                                        "inline-flex items-center justify-center rounded-2xl",
+                                        "h-12 w-12 transition-all duration-300 ease-spring",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.tools
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
+                                            ? "bg-primary text-primary-foreground shadow-md scale-105"
+                                            : "text-muted-foreground/80 hover:bg-secondary/20 hover:text-foreground hover:scale-105"
                                     )}
                                     aria-label={t('tools')}
                                 >
-                                    <Wrench className="h-5 w-5" />
+                                    <Wrench className="h-6 w-6" />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="font-medium">
@@ -121,23 +121,23 @@ const Sidebar = (
                 </nav>
 
                 {/* Bottom navigation - Settings */}
-                <nav className="mt-auto flex flex-col items-center gap-3 px-2 py-6 border-t border-border/40">
+                <nav className="mt-auto flex flex-col items-center gap-4 py-8">
                     <TooltipProvider delayDuration={0}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
                                     onClick={() => handleNavClick(SidebarType.settings)}
                                     className={cn(
-                                        "inline-flex items-center justify-center rounded-xl",
-                                        "h-10 w-10 transition-all duration-300 ease-out",
+                                        "inline-flex items-center justify-center rounded-2xl",
+                                        "h-12 w-12 transition-all duration-300 ease-spring",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         sidebarType === SidebarType.settings
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110"
-                                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-105"
+                                            ? "bg-primary text-primary-foreground shadow-md scale-105"
+                                            : "text-muted-foreground/80 hover:bg-secondary/20 hover:text-foreground hover:scale-105"
                                     )}
                                     aria-label={t('settings')}
                                 >
-                                    <Settings className="h-5 w-5" />
+                                    <Settings className="h-6 w-6" />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="font-medium">
