@@ -1,9 +1,6 @@
 import './App.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Label } from "@/components/ui/label.tsx";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { browser } from "wxt/browser";
 import {
@@ -15,426 +12,354 @@ import {
     getBookmarkTitlesInFolder,
     getBookmarkFolders
 } from "@/lib/bookmarkUtils";
-import { Loader2, Plus, Wand2, Folder as FolderIcon, Check, Sparkles, Globe, LayoutGrid } from "lucide-react";
-import { CascadingFolderSelect } from "@/components/ui/cascading-folder-select";
+import { Loader2, Check } from "lucide-react";
+import { getRecentFolders, addRecentFolder, saveDomainMapping, getFolderForDomain } from "@/lib/recommendationStorage";
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
-import { recommendFolderWithAI, renameBookmarkContextuallyWithAI } from "@/lib/aiService";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { recommendFolderWithAI, renameBookmarkContextuallyWithAI, autoTagBookmark } from "@/lib/aiService";
+
+// New Components
+import { PopupLayout } from './components/PopupLayout';
+// import { PopupHeader } from './components/PopupHeader'; // Removed
+import { UrlPreviewCard } from './components/UrlPreviewCard';
+import { SmartInput } from './components/SmartInput';
+import { SmartTagInput } from './components/SmartTagInput';
+import { SmartLocationSelector } from './components/SmartLocationSelector';
 
 function App() {
     const { toast } = useToast();
     const { t, i18n } = useTranslation('popup');
+
+    // Core Data
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
-    const [isCreating, setIsCreating] = useState(false);
     const [folders, setFolders] = useState<BookmarkFolder[]>([]);
-    const [selectedFolder, setSelectedFolder] = useState('1'); // 默认选择书签栏
-
-    // AI States
-    const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
-    const [isRenaming, setIsRenaming] = useState(false);
-    const [isRenameSuccess, setIsRenameSuccess] = useState(false);
-    const [isRecommending, setIsRecommending] = useState(false);
-    const [recommendations, setRecommendations] = useState<Array<{ folderId: string; folderPath: string; reason?: string }>>([]);
-    const [recommendationOpen, setRecommendationOpen] = useState(false);
     const [allFlatFolders, setAllFlatFolders] = useState<BookmarkFolder[]>([]);
+    const [selectedFolder, setSelectedFolder] = useState('1'); // Default: Bookmarks Bar
+    const [tags, setTags] = useState<string[]>([]);
 
-    // 组件加载时，获取当前标签页的信息和文件夹列表
+    // UI States
+    const [isInitializing, setIsInitializing] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
+
+    // AI & Smart Features States
+    const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
+    const [recentFolders, setRecentFolders] = useState<BookmarkFolder[]>([]);
+    const [aiRecommendations, setAiRecommendations] = useState<Array<{ folderId: string; folderPath: string; reason?: string }>>([]);
+
+    // Loading States
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [isRecommending, setIsRecommending] = useState(false);
+    const [isAutoTagging, setIsAutoTagging] = useState(false);
+
+    // Automation Ref
+    const hasRanAutomation = useRef(false);
+
+    // Initialization & Automation Orchestrator
     useEffect(() => {
-        const initialize = async () => {
+        const initializeAndAutomate = async () => {
             try {
-                // 获取当前标签页信息
+                // 1. Get Current Tab
                 const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+                let currentUrl = '';
+                let currentTitle = '';
 
                 if (tabs && tabs.length > 0 && tabs[0].url && tabs[0].title) {
+                    currentUrl = tabs[0].url;
+                    currentTitle = tabs[0].title;
                     setUrl(tabs[0].url);
                     setTitle(tabs[0].title);
+                } else {
+                    // If no valid tab, stop
+                    setIsInitializing(false);
+                    return;
                 }
 
-                // 获取文件夹列表
+                // 2. Load Folder Data
                 const folderTree = await getBookmarkFolderTree();
-                // 过滤掉"全部书签"选项
-                const filteredFolders = folderTree.filter(f => f.id !== 'all');
-                setFolders(filteredFolders);
+                setFolders(folderTree.filter(f => f.id !== 'all'));
 
-                // 获取平铺的文件夹列表用于查找
                 const flatFolders = await getBookmarkFolders();
                 setAllFlatFolders(flatFolders);
 
-                // 加载AI配置
+                // 3. Load AI Config
                 const config = await getAIConfig();
                 setAiConfig(config);
+
+                // 4. Load Recents
+                const recentIds = await getRecentFolders(3);
+                const recents = recentIds.map(id => flatFolders.find(f => f.id === id)).filter((f): f is BookmarkFolder => !!f);
+                setRecentFolders(recents);
+
+                setIsInitializing(false);
+
+                // --- AI Automation Workflow ---
+                if (config && config.apiKey && !hasRanAutomation.current) {
+                    hasRanAutomation.current = true;
+                    runAIWorkflow(config, currentUrl, currentTitle, flatFolders);
+                }
+
             } catch (error) {
-                console.error('Error initializing popup:', error);
+                console.error('Popup init failed:', error);
+                setIsInitializing(false);
             }
         };
 
-        initialize();
+        initializeAndAutomate();
     }, []);
 
-    // 处理AI重命名
-    const handleAIRename = async () => {
-        if (!aiConfig || !aiConfig.apiKey) {
-            toast({
-                title: i18n.language.startsWith('zh') ? "AI未配置" : "AI Not Configured",
-                description: i18n.language.startsWith('zh') ? "请先在设置中配置AI API Key" : "Please configure AI API Key in settings first",
-                variant: "destructive"
-            });
-            return;
+    const runAIWorkflow = async (
+        config: AIConfig,
+        currentUrl: string,
+        initialTitle: string,
+        flatFolders: BookmarkFolder[]
+    ) => {
+        console.log('[AI Workflow] Starting...');
+
+        // --- Step 1: Smart Location (Recommendation) ---
+        let targetFolderId = '1'; // Default to Bookmarks Bar
+        setIsRecommending(true);
+
+        try {
+            // A. Check Domain Rule first (Fastest)
+            const boundFolderId = await getFolderForDomain(currentUrl);
+            if (boundFolderId && flatFolders.some(f => f.id === boundFolderId)) {
+                console.log('[AI Workflow] Matched Domain Rule');
+                targetFolderId = boundFolderId;
+                setSelectedFolder(targetFolderId);
+            } else {
+                // B. Ask AI for Recommendation
+                console.log('[AI Workflow] Requesting Recommendation...');
+                // Limited context for speed
+                const folderList = flatFolders
+                    .filter(f => f.id !== 'all')
+                    .map(f => `[ID: ${f.id}] ${f.path}`);
+
+                const recResult = await recommendFolderWithAI(
+                    config, currentUrl, initialTitle, folderList, i18n.language
+                );
+
+                if (recResult.success && recResult.recommendations && recResult.recommendations.length > 0) {
+                    const bestRec = recResult.recommendations[0];
+                    if (flatFolders.some(f => f.id === bestRec.folderId)) {
+                        targetFolderId = bestRec.folderId;
+                        setSelectedFolder(targetFolderId);
+                        setAiRecommendations(recResult.recommendations);
+                        console.log('[AI Workflow] AI Recommended:', bestRec.folderPath);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[AI Workflow] Recommendation Step failed', e);
+        } finally {
+            setIsRecommending(false);
         }
 
+        // --- Step 2: Contextual Rename ---
+        let optimizedTitle = initialTitle;
         setIsRenaming(true);
-        setIsRenameSuccess(false);
-        try {
-            // 获取当前选中文件夹中的其他书签标题
-            const otherTitles = await getBookmarkTitlesInFolder(selectedFolder);
 
-            // 获取当前文件夹名称
+        try {
+            console.log('[AI Workflow] Renaming in context of folder:', targetFolderId);
+            const otherTitles = await getBookmarkTitlesInFolder(targetFolderId);
+            const targetFolderName = flatFolders.find(f => f.id === targetFolderId)?.title || 'Unknown';
+
+            const renameResult = await renameBookmarkContextuallyWithAI(
+                config, currentUrl, initialTitle, targetFolderName, otherTitles, i18n.language
+            );
+
+            if (renameResult.success && renameResult.newTitle) {
+                optimizedTitle = renameResult.newTitle;
+                setTitle(optimizedTitle);
+                console.log('[AI Workflow] Renamed to:', optimizedTitle);
+            }
+        } catch (e) {
+            console.error('[AI Workflow] Rename Step failed', e);
+        } finally {
+            setIsRenaming(false);
+        }
+
+        // --- Step 3: Auto Tagging ---
+        setIsAutoTagging(true);
+        try {
+            console.log('[AI Workflow] Auto Tagging...');
+            const tagResult = await autoTagBookmark(config, currentUrl, optimizedTitle, i18n.language);
+
+            if (tagResult.success && tagResult.tags) {
+                setTags(tagResult.tags);
+                console.log('[AI Workflow] Tags generated:', tagResult.tags);
+            }
+        } catch (e) {
+            console.error('[AI Workflow] Tagging Step failed', e);
+        } finally {
+            setIsAutoTagging(false);
+        }
+    };
+
+    // --- Manual Actions (kept for user overrides) ---
+
+    const handleAIRename = async () => {
+        if (!aiConfig?.apiKey) return showConfigError();
+        setIsRenaming(true);
+        try {
+            const otherTitles = await getBookmarkTitlesInFolder(selectedFolder);
             const currentFolderName = allFlatFolders.find(f => f.id === selectedFolder)?.title || 'Unknown';
 
             const result = await renameBookmarkContextuallyWithAI(
-                aiConfig,
-                url,
-                title,
-                currentFolderName,
-                otherTitles,
-                i18n.language
+                aiConfig, url, title, currentFolderName, otherTitles, i18n.language
             );
 
             if (result.success && result.newTitle) {
                 setTitle(result.newTitle);
-                setIsRenameSuccess(true);
-                // 2秒后重置成功状态
-                setTimeout(() => setIsRenameSuccess(false), 2000);
+                toast({ title: t('aiRenameSuccess', "Renamed by AI"), duration: 1500 });
             } else {
-                throw new Error(result.error || "Unknown error");
+                toast({ title: t('aiRenameFailed'), description: result.error, variant: "destructive" });
             }
-        } catch (error) {
-            console.error('AI rename failed:', error);
-            toast({
-                title: t('aiRenameFailed'),
-                description: error instanceof Error ? error.message : "Unknown error",
-                variant: "destructive"
-            });
+        } catch (e) {
+            console.error(e);
         } finally {
             setIsRenaming(false);
         }
     };
 
-    // 处理AI推荐文件夹
     const handleAIRecommend = async () => {
-        if (!aiConfig || !aiConfig.apiKey) {
-            toast({
-                title: i18n.language.startsWith('zh') ? "AI未配置" : "AI Not Configured",
-                description: i18n.language.startsWith('zh') ? "请先在设置中配置AI API Key" : "Please configure AI API Key in settings first",
-                variant: "destructive"
-            });
-            return;
-        }
-
+        if (!aiConfig?.apiKey) return showConfigError();
         setIsRecommending(true);
         try {
-            // 准备文件夹路径列表 (格式: [ID: id] path)
-            const folderList = allFlatFolders
-                .filter(f => f.id !== 'all')
-                .map(f => `[ID: ${f.id}] ${f.path}`);
-
+            const folderList = allFlatFolders.filter(f => f.id !== 'all').map(f => `[ID: ${f.id}] ${f.path}`);
             const result = await recommendFolderWithAI(
-                aiConfig,
-                url,
-                title,
-                folderList,
-                i18n.language
+                aiConfig, url, title, folderList, i18n.language
             );
 
-            if (result.success && result.recommendations && result.recommendations.length > 0) {
-                setRecommendations(result.recommendations);
-                setRecommendationOpen(true);
-            } else {
-                toast({
-                    title: t('noRecommendations'),
-                });
+            if (result.success && result.recommendations) {
+                setAiRecommendations(result.recommendations);
+                if (result.recommendations.length > 0) {
+                    const bestId = result.recommendations[0].folderId;
+                    if (allFlatFolders.some(f => f.id === bestId)) {
+                        setSelectedFolder(bestId);
+                        toast({ title: t('aiRecommendSuccess', "Folder suggested"), duration: 1500 });
+                    }
+                }
             }
-        } catch (error) {
-            console.error('AI recommend failed:', error);
-            toast({
-                title: t('aiRecommendFailed'),
-                description: error instanceof Error ? error.message : "Unknown error",
-                variant: "destructive"
-            });
+        } catch (e) {
+            console.error(e);
         } finally {
             setIsRecommending(false);
         }
     };
 
-    // 选择推荐的文件夹
-    const handleSelectRecommendation = (rec: any) => {
-        // 直接使用返回的 folderId
-        const folderId = rec.folderId;
-        const folder = allFlatFolders.find(f => f.id === folderId);
-
-        if (folder) {
-            setSelectedFolder(folder.id);
-            setRecommendationOpen(false);
-        } else {
-            // Fallback: try path matching if ID fails
-            const folderByPath = allFlatFolders.find(f => f.path === rec.folderPath);
-            if (folderByPath) {
-                setSelectedFolder(folderByPath.id);
-                setRecommendationOpen(false);
-            } else {
-                toast({
-                    title: t('cannotLocateFolder'),
-                    description: rec.folderPath,
-                    variant: "destructive"
-                });
+    const handleAutoTag = async () => {
+        if (!aiConfig?.apiKey) return showConfigError();
+        setIsAutoTagging(true);
+        try {
+            const result = await autoTagBookmark(aiConfig, url, title, i18n.language);
+            if (result.success && result.tags) {
+                const uniqueTags = [...new Set([...tags, ...result.tags])];
+                setTags(uniqueTags);
+                toast({ title: t('autoTagSuccess'), description: `Added ${result.tags.length} tags` });
             }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsAutoTagging(false);
         }
     };
 
-    // 处理添加书签
-    const handleAddBookmark = async () => {
-        // 验证输入
-        if (!validateBookmarkTitle(title)) {
-            toast({
-                title: t('validationError'),
-                description: t('titleValidationError'),
-                variant: "destructive"
-            });
-            return;
-        }
-
-        if (!validateBookmarkUrl(url)) {
-            toast({
-                title: t('validationError'),
-                description: t('urlValidationError'),
-                variant: "destructive"
-            });
+    const handleSave = async () => {
+        if (!validateBookmarkTitle(title) || !validateBookmarkUrl(url)) {
+            toast({ title: t('validationError'), variant: "destructive" });
             return;
         }
 
         setIsCreating(true);
         try {
             await createChromeBookmark(title, url, selectedFolder);
+            // Hybrid Learning
+            Promise.all([
+                saveDomainMapping(url, selectedFolder),
+                addRecentFolder(selectedFolder)
+            ]).catch(console.error);
 
-            // 获取选中文件夹的名称用于提示
-            const folderName = folders.find(f => f.id === selectedFolder)?.title || '书签栏';
-
-            toast({
-                title: t('success'),
-                description: t('bookmarkAdded', { folderName }),
-            });
-
-            // 清空表单
-            setTitle('');
-            setUrl('');
-
-            // 延迟关闭popup，让用户看到成功提示
-            setTimeout(() => {
-                window.close();
-            }, 800);
+            // Success & Close
+            toast({ title: t('success'), description: t('bookmarkAdded') });
+            setTimeout(() => window.close(), 600);
         } catch (error) {
-            console.error('Failed to create bookmark:', error);
-            toast({
-                title: t('addFailed'),
-                description: error instanceof Error ? error.message : t('cannotAddBookmark'),
-                variant: "destructive"
-            });
+            toast({ title: t('addFailed'), description: String(error), variant: "destructive" });
         } finally {
             setIsCreating(false);
         }
     };
 
+    const showConfigError = () => {
+        toast({
+            title: "AI Not Configured",
+            description: "Please set API Key in Options page.",
+            variant: "destructive"
+        });
+    };
+
+    if (isInitializing) {
+        return (
+            <PopupLayout>
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground animate-pulse">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
+                    <p className="text-sm">Initializing Smart Manager...</p>
+                </div>
+            </PopupLayout>
+        );
+    }
+
     return (
-        <TooltipProvider>
-            <div className="w-[400px] bg-background font-sans text-foreground">
-                <Card className="border-none shadow-none rounded-none">
-                    <CardHeader className="px-6 py-4 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-base font-semibold flex items-center gap-2">
-                                <div className="p-1.5 bg-primary/10 rounded-md">
-                                    <Sparkles className="w-4 h-4 text-primary" />
-                                </div>
-                                <span className="text-foreground/90">
-                                    AI Bookmark
-                                </span>
-                            </CardTitle>
-                        </div>
-                    </CardHeader>
+        <PopupLayout>
+            {/* Header Removed */}
 
-                    <CardContent className="p-6 space-y-6">
-                        {/* 书签标题 */}
-                        <div className="space-y-2.5">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="bookmark-title" className="text-sm font-medium text-foreground/80">
-                                    {t('title')}
-                                </Label>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={handleAIRename}
-                                            disabled={isRenaming || !url || !title}
-                                            className={`h-6 w-6 hover:bg-primary/10 ${isRenameSuccess ? "text-green-600" : "text-primary/70 hover:text-primary"}`}
-                                        >
-                                            {isRenaming ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            ) : isRenameSuccess ? (
-                                                <Check className="h-3.5 w-3.5" />
-                                            ) : (
-                                                <Wand2 className="h-3.5 w-3.5" />
-                                            )}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{t('aiRename')}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
-                            <Input
-                                id="bookmark-title"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder={t('enterTitle')}
-                                disabled={isCreating}
-                                className="h-10 bg-background focus-visible:ring-primary/20 transition-all"
-                            />
-                        </div>
+            <UrlPreviewCard url={url} title={title} />
 
-                        {/* 书签URL */}
-                        <div className="space-y-2.5">
-                            <Label htmlFor="bookmark-url" className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                                URL
-                            </Label>
-                            <Input
-                                id="bookmark-url"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://example.com"
-                                type="url"
-                                disabled={isCreating}
-                                className="h-10 font-mono text-xs text-muted-foreground bg-muted/30 focus-visible:ring-primary/20"
-                            />
-                        </div>
+            <div className="space-y-2.5">
+                <SmartInput
+                    id="title"
+                    label={t('title')}
+                    value={title}
+                    onChange={setTitle}
+                    onAiRegenerate={handleAIRename}
+                    isAiLoading={isRenaming}
+                    autoFocus
+                />
 
-                        {/* 文件夹选择 */}
-                        <div className="space-y-2.5">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="bookmark-folder" className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                                    <LayoutGrid className="w-3.5 h-3.5 text-muted-foreground" />
-                                    {t('location')}
-                                </Label>
-                                <Popover open={recommendationOpen} onOpenChange={setRecommendationOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={handleAIRecommend}
-                                            disabled={isRecommending || !url || !title}
-                                            className="h-6 px-2 text-xs gap-1.5 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-                                        >
-                                            {isRecommending ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                            ) : (
-                                                <Sparkles className="h-3 w-3" />
-                                            )}
-                                            <span>{t('aiRecommend')}</span>
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[340px] p-0 shadow-xl border-border/50 rounded-lg overflow-hidden" align="end" sideOffset={8}>
-                                        <div className="px-4 py-3 bg-muted/30 border-b flex items-center justify-between backdrop-blur-sm">
-                                            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-                                                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                                                {t('aiRecommendations')}
-                                            </h4>
-                                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-medium bg-background/80">
-                                                {recommendations.length}
-                                            </Badge>
-                                        </div>
-                                        <div className="p-1.5 max-h-[300px] overflow-y-auto custom-scrollbar bg-background/95">
-                                            {recommendations.map((rec, index) => {
-                                                // Split path to highlight the target folder
-                                                const pathParts = rec.folderPath.split('/');
-                                                const targetFolder = pathParts.pop();
-                                                const parentPath = pathParts.join(' / ');
+                <SmartLocationSelector
+                    folders={folders}
+                    recentFolders={recentFolders}
+                    selectedFolder={selectedFolder}
+                    onSelect={setSelectedFolder}
+                    aiRecommendations={aiRecommendations}
+                    onAiRecommend={handleAIRecommend}
+                    isAiLoading={isRecommending}
+                />
 
-                                                return (
-                                                    <div key={index}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="w-full justify-start h-auto py-3 px-3 text-left flex flex-col items-start gap-1.5 hover:bg-accent/50 group transition-all rounded-md mb-0.5"
-                                                            onClick={() => handleSelectRecommendation(rec)}
-                                                        >
-                                                            <div className="flex items-start gap-3 w-full">
-                                                                <div className="mt-0.5 p-1.5 rounded-md bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors shrink-0">
-                                                                    <FolderIcon className="h-4 w-4" />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-sm font-semibold text-foreground/90 group-hover:text-primary transition-colors truncate">
-                                                                            {targetFolder}
-                                                                        </span>
-                                                                        {parentPath && (
-                                                                            <span className="text-[10px] text-muted-foreground truncate font-mono opacity-70">
-                                                                                {parentPath}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    {rec.reason && (
-                                                                        <div className="mt-1.5 text-xs text-muted-foreground/80 leading-relaxed bg-muted/30 p-2 rounded-sm border border-border/30">
-                                                                            {rec.reason}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </Button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <CascadingFolderSelect
-                                folders={folders}
-                                selectedId={selectedFolder}
-                                onSelect={setSelectedFolder}
-                                placeholder={t('selectFolder')}
-                                className="w-full"
-                            />
-                        </div>
-                    </CardContent>
-
-                    <CardFooter className="p-6 pt-2 pb-6 bg-background">
-                        <Button
-                            onClick={handleAddBookmark}
-                            disabled={isCreating || !title.trim() || !url.trim()}
-                            className="w-full h-11 text-sm font-medium shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90"
-                            size="lg"
-                        >
-                            {isCreating ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {t('adding')}
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    {t('addBookmark')}
-                                </>
-                            )}
-                        </Button>
-                    </CardFooter>
-                </Card>
+                <SmartTagInput
+                    tags={tags}
+                    onAddTag={(tag) => setTags([...tags, tag])}
+                    onRemoveTag={(tag) => setTags(tags.filter(t => t !== tag))}
+                    onAiGenerate={handleAutoTag}
+                    isAiLoading={isAutoTagging}
+                />
             </div>
-        </TooltipProvider>
+
+            <div className="mt-auto pt-1.5">
+                <Button
+                    className="w-full h-8 rounded-full text-xs font-medium shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                    onClick={handleSave}
+                    disabled={isCreating}
+                >
+                    {isCreating ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    {t('addBookmark')}
+                </Button>
+            </div>
+        </PopupLayout>
     );
 }
 

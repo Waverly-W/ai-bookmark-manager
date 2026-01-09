@@ -1,10 +1,17 @@
 #root {
   margin: 0;
-  width: 400px;
-  min-height: auto;
+  width: 320px;
+  /* Don't force min-height too aggressively, let content dictate, but set standard */
+  min-height: fit-content;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  width: 320px !important;
+  height: auto !important;
+  background-color: hsl(var(--background));
 }
 
 /* Custom scrollbar for the recommendation list */

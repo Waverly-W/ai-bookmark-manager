@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, FolderOpen, ArrowLeft, AlertTriangle, CheckCircle, XCircle, RotateCcw, Loader2 } from 'lucide-react';
+import { Sparkles, FolderOpen, ArrowLeft, AlertTriangle, CheckCircle, XCircle, RotateCcw, Loader2, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CascadingFolderSelect } from '@/components/ui/cascading-folder-select';
 import { getBookmarksInFolder, getBookmarkFolderTree, BookmarkFolder } from '@/lib/bookmarkUtils';
@@ -45,12 +45,30 @@ export const BatchRenamePage: React.FC = () => {
     const [currentStep, setCurrentStep] = useState<BatchRenameStep>(BatchRenameStep.FolderSelection);
     const [selectedFolderId, setSelectedFolderId] = useState<string>('');
     const [selectedFolderName, setSelectedFolderName] = useState<string>('');
-    const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
+    const [rawBookmarks, setRawBookmarks] = useState<BookmarkItem[]>([]);
+    const [filterMode, setFilterMode] = useState<'all' | 'short'>('all');
+
+    const bookmarks = React.useMemo(() => {
+        if (filterMode === 'all') return rawBookmarks;
+        if (filterMode === 'short') {
+            // Filter: Length < 10 OR purely numeric/dates OR default names
+            return rawBookmarks.filter(b => {
+                const title = b.title.trim();
+                return title.length < 10 ||
+                    /^\d+$/.test(title) ||
+                    /^\d{4}-\d{2}-\d{2}$/.test(title) ||
+                    title.toLowerCase() === 'new bookmark' ||
+                    title.toLowerCase() === 'untitled';
+            });
+        }
+        return rawBookmarks;
+    }, [rawBookmarks, filterMode]);
+
     const [renameResults, setRenameResults] = useState<RenameResult[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [folders, setFolders] = useState<BookmarkFolder[]>([]);
-    const [useIndividualRequests, setUseIndividualRequests] = useState(true);
+    // Removed legacy useIndividualRequests state
     const [consistencyCheck, setConsistencyCheck] = useState<{
         isConsistent: boolean;
         issues: string[];
@@ -82,7 +100,8 @@ export const BatchRenamePage: React.FC = () => {
 
             // 获取文件夹中的书签
             const folderBookmarks = await getBookmarksInFolder(folderId);
-            setBookmarks(folderBookmarks);
+            setRawBookmarks(folderBookmarks);
+            setFilterMode('all'); // Reset filter on folder change
 
             if (folderBookmarks.length === 0) {
                 setErrorMessage({
@@ -158,7 +177,7 @@ export const BatchRenamePage: React.FC = () => {
                         });
                     }
                 },
-                useIndividualRequests,
+                false, // _deprecated_useIndividualRequests: Ignored by new smart logic
                 { signal: abortControllerRef.current.signal }
             );
 
@@ -294,7 +313,8 @@ export const BatchRenamePage: React.FC = () => {
 
             // 重置状态
             setCurrentStep(BatchRenameStep.FolderSelection);
-            setBookmarks([]);
+            setRawBookmarks([]);
+            // bookmarks derived from rawBookmarks will clear auto
             setRenameResults([]);
             setConsistencyCheck(null);
             setSelectedFolderId('');
@@ -393,6 +413,7 @@ export const BatchRenamePage: React.FC = () => {
                                 <CardDescription>{t('selectFolderDescription')}</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
+
                                 <CascadingFolderSelect
                                     folders={folders}
                                     selectedId={selectedFolderId}
@@ -413,37 +434,47 @@ export const BatchRenamePage: React.FC = () => {
                                     placeholder={t('chooseFolderPlaceholder')}
                                 />
 
-                                {bookmarks.length > 0 && (
+                                {rawBookmarks.length > 0 && (
                                     <div className="space-y-6 pt-4 border-t">
-                                        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 text-primary border border-primary/10">
-                                            <CheckCircle className="h-5 w-5 flex-shrink-0" />
-                                            <span className="font-medium">
-                                                {t('foundText')} {bookmarks.length} {t('bookmarksText')}
-                                            </span>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="flex items-start gap-3">
-                                                <Checkbox
-                                                    id="individual-requests"
-                                                    checked={useIndividualRequests}
-                                                    onCheckedChange={(checked) => setUseIndividualRequests(checked as boolean)}
-                                                    className="mt-1"
-                                                />
-                                                <div className="space-y-1">
-                                                    <label
-                                                        htmlFor="individual-requests"
-                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                                    >
-                                                        {t('useIndividualRequests')}
-                                                    </label>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {useIndividualRequests
-                                                            ? t('individualRequestsDescription')
-                                                            : t('batchRequestsDescription')
-                                                        }
-                                                    </p>
+                                        <div className="flex flex-col gap-4">
+                                            {/* Status Badge */}
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 text-secondary-foreground border border-border/50">
+                                                    <FolderOpen className="h-5 w-5 flex-shrink-0" />
+                                                    <span className="font-medium text-sm">
+                                                        {t('totalInFolder')}: {rawBookmarks.length}
+                                                    </span>
                                                 </div>
+
+                                                {/* Filter Controls "Safety Lock" */}
+                                                <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/30">
+                                                    <Button
+                                                        variant={filterMode === 'all' ? 'secondary' : 'ghost'}
+                                                        size="sm"
+                                                        onClick={() => setFilterMode('all')}
+                                                        className="text-xs h-8"
+                                                    >
+                                                        {t('allBookmarks')}
+                                                    </Button>
+                                                    <Button
+                                                        variant={filterMode === 'short' ? 'secondary' : 'ghost'}
+                                                        size="sm"
+                                                        onClick={() => setFilterMode('short')}
+                                                        className="text-xs h-8 gap-1.5"
+                                                        title={t('filterShortDesc', 'Only rename items with short or numeric titles')}
+                                                    >
+                                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                                        {t('shortTitlesOnly')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Filter Result Info */}
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+                                                <Sparkles className="h-4 w-4 text-primary" />
+                                                <span>
+                                                    {t('willProcess')}: <span className="font-bold text-foreground">{bookmarks.length}</span> {t('items')}
+                                                </span>
                                             </div>
                                         </div>
 
@@ -473,7 +504,7 @@ export const BatchRenamePage: React.FC = () => {
                                 </div>
                                 <CardTitle className="text-xl">{t('processingProgress')}</CardTitle>
                                 <CardDescription>
-                                    {useIndividualRequests ? t('individualProcessingDescription') : t('batchProcessingDescription')}
+                                    {t('smartBatchProcessingDescription')}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-8 pt-6">
@@ -485,13 +516,7 @@ export const BatchRenamePage: React.FC = () => {
                                     <Progress value={progress} className="h-3" />
                                 </div>
 
-                                {useIndividualRequests && (
-                                    <div className="text-center p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-                                        {t('individualProcessingNote')}
-                                    </div>
-                                )}
-
-                                <div className="flex justify-center">
+                                <div className="space-y-2">
                                     {isProcessing ? (
                                         <Button variant="destructive" onClick={handleCancelBatchRename}>
                                             {t('cancel')}

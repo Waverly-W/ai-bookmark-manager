@@ -26,18 +26,39 @@ async function initApp() {
       }
     }
   } catch (error) {
-    console.error('Failed to get language preference:', error);
+    console.warn('Failed to get language preference:', error);
   }
 
-  // 初始化国际化
-  await initTranslations(locale, ["common", "popup"]);
+  try {
+    // 初始化国际化
+    await initTranslations(locale, ["common", "popup"]);
+  } catch (error) {
+    console.error('Failed to initialize translations:', error);
+    // Fallback? Try initializing with default locale if standard locale failed
+    try {
+      await initTranslations(i18nConfig.defaultLocale, ["common", "popup"]);
+    } catch (e) {
+      console.error('Critical: Failed to initialize fallback translations', e);
+    }
+  }
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App />
-      <Toaster />
+      <React.Suspense fallback={<div className="flex items-center justify-center min-h-[600px] text-muted-foreground">Loading...</div>}>
+        <App />
+        <Toaster />
+      </React.Suspense>
     </React.StrictMode>,
   );
 }
 
-initApp().catch(console.error);
+initApp().catch(e => {
+  console.error('Critical failure in initApp:', e);
+  // Ensure we render SOMETHING even if everything blew up
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <div style={{ padding: 20 }}>
+      <h1>Fatal Error</h1>
+      <p>Failed to initialize popup.</p>
+    </div>
+  );
+});

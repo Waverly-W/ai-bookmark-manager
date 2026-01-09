@@ -2,18 +2,20 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StatsDashboard } from '@/components/dashboard/stats-dashboard';
 import { useBookmarks } from '@/hooks/use-bookmarks';
-import { calculateBookmarkStats } from '@/lib/statsUtils';
 import { Sparkles, ShieldCheck, Construction, Copy, Folder } from 'lucide-react';
 import { DuplicateManager } from '@/components/tools/duplicate-manager';
 import { ValidityManager } from '@/components/tools/validity-manager';
 import { EmptyFolderManager } from '@/components/tools/empty-folder-manager';
+import { SidebarType } from '@/entrypoints/sidebar';
 
-export const ToolsPage: React.FC = () => {
+interface ToolsPageProps {
+    navigateTo?: (type: SidebarType) => void;
+}
+
+export const ToolsPage: React.FC<ToolsPageProps> = ({ navigateTo }) => {
     const { t } = useTranslation('common');
     const { bookmarks, refresh } = useBookmarks();
-    const statsData = React.useMemo(() => calculateBookmarkStats(bookmarks), [bookmarks]);
     const [view, setView] = React.useState<'dashboard' | 'duplicate-manager' | 'validity-manager' | 'empty-folder-manager'>('dashboard');
 
     if (view === 'duplicate-manager') {
@@ -61,23 +63,6 @@ export const ToolsPage: React.FC = () => {
                 </p>
             </div>
 
-            {/* Statistics Section */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    {t('statistics')}
-                </h2>
-                {statsData ? (
-                    <StatsDashboard stats={statsData} />
-                ) : (
-                    <div className="h-[200px] flex items-center justify-center border rounded-lg bg-muted/20">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            <span>{t('loadingStatistics', 'Loading statistics...')}</span>
-                        </div>
-                    </div>
-                )}
-            </div>
 
             {/* Tools Grid */}
             <div className="space-y-4">
@@ -86,6 +71,29 @@ export const ToolsPage: React.FC = () => {
                     {t('managementTools')}
                 </h2>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+                    {/* Batch Rename Card */}
+                    <Card className="flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                        <CardHeader>
+                            <div className="p-2 w-fit rounded-lg bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400 mb-2">
+                                <Sparkles className="h-6 w-6" />
+                            </div>
+                            <CardTitle>{t('batchRenameTitle')}</CardTitle>
+                            <CardDescription>
+                                {t('batchRenameDescription')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="mt-auto pt-0">
+                            <Button
+                                onClick={() => navigateTo?.(SidebarType.batchRename)}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                {t('openTool')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
                     {/* Duplicate Manager Card */}
                     <Card className="flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-1">
                         <CardHeader>

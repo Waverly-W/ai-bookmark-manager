@@ -1,9 +1,12 @@
 import { AIConfig, decodeApiKey } from './aiConfigUtils';
 import { getCurrentPrompt, formatPrompt, enhancePromptForBatch, formatBatchPrompt, parseBatchRenameResponse, getDefaultPrompt } from './aiPromptUtils';
+import { getFolderForDomain } from './recommendationStorage'; // Import storage utils
 import { AIScenario } from './ai/types';
 import { bookmarkRenameScenario, formatBookmarkRenameSystemPrompt, BookmarkRenameInput, BookmarkRenameOutput } from "./ai/scenarios/bookmarkRename";
 import { folderRecommendationScenario, formatFolderRecommendationSystemPrompt } from "./ai/scenarios/folderRecommendation";
 import { contextualBookmarkRenameScenario, formatContextualBookmarkRenameSystemPrompt } from "./ai/scenarios/contextualBookmarkRename";
+import { autoTaggingScenario, formatAutoTaggingSystemPrompt } from "./ai/scenarios/autoTagging";
+import { getTopTags } from './tagStorage';
 
 /**
  * AI API响应接口
@@ -145,7 +148,7 @@ const callAIAPI = async (
     systemPrompt?: string,
     maxTokens: number = 1000, // Increased default for JSON
     options?: AIRequestOptions,
-    responseFormat?: { type: "json_schema"; json_schema: any }
+    responseFormat?: { type: "text" | "json_object" | "json_schema"; json_schema?: any }
 ): Promise<string> => {
     const { apiUrl, apiKey, modelId } = config;
 
@@ -238,8 +241,7 @@ export const executeScenario = async <InputType, OutputType>(
         1000,
         undefined,
         {
-            type: "json_schema",
-            json_schema: scenario.responseSchema
+            type: "json_object"
         }
     );
 
@@ -466,7 +468,7 @@ export const batchRenameBookmarksWithConsistency = async (
         success: boolean;
         error?: string;
     }) => void,
-    useIndividualRequests: boolean = false,
+    _deprecated_useIndividualRequests: boolean = false, // Ignored, kept for signature compatibility temporarily
     options?: AIRequestOptions
 ): Promise<Array<{
     id: string;
@@ -475,135 +477,138 @@ export const batchRenameBookmarksWithConsistency = async (
     success: boolean;
     error?: string;
 }>> => {
-    // 如果选择逐个请求模式，使用原有的逐个处理逻辑
-    if (useIndividualRequests) {
+    // Strategy:
+    // 1. If <= 5 bookmarks, use concurrent individual requests (fast enough, robust).
+    // 2. If > 5 bookmarks, use Micro-Batching (chunks of 5) to save tokens/requests while maintaining progress updates.
+
+    // Mode 1: Small Batch (Concurrent Individual)
+    if (bookmarks.length <= 5) {
         return await batchRenameBookmarks(
             config,
             bookmarks,
             locale,
             onProgress,
             options?.signal,
-            options?.maxConcurrency ?? 1
+            5 // Max concurrency
         );
     }
 
+    // Mode 2: Large Batch (Micro-Chunking)
     try {
-        // 检查是否已被中止
         if (options?.signal?.aborted) {
             throw new Error('Batch rename cancelled');
         }
 
-        // 获取用户配置的Prompt模板
-        const userPrompt = await getCurrentPrompt(locale);
+        const CHUNK_SIZE = 5;
+        const results: Array<any> = [];
+        const total = bookmarks.length;
 
-        // 增强Prompt以支持批量一致性
+        // Helper to chunk array
+        const chunks = [];
+        for (let i = 0; i < total; i += CHUNK_SIZE) {
+            chunks.push(bookmarks.slice(i, i + CHUNK_SIZE));
+        }
+
+        let processedCount = 0;
+
+        // Get basic prompt once
+        const userPrompt = await getCurrentPrompt(locale);
         const enhancedTemplate = enhancePromptForBatch(userPrompt, locale);
 
-        // 格式化最终的批量Prompt
-        const batchPrompt = formatBatchPrompt(
-            enhancedTemplate,
-            bookmarks.map(b => ({ url: b.url, title: b.title })),
-            locale
-        );
+        for (const chunk of chunks) {
+            if (options?.signal?.aborted) throw new Error('Batch rename cancelled');
 
-        let parsedResults: Array<{ index: number; newTitle?: string }> = [];
+            try {
+                // Prepare prompt for this chunk
+                const batchPrompt = formatBatchPrompt(
+                    enhancedTemplate,
+                    chunk.map(b => ({ url: b.url, title: b.title })),
+                    locale
+                );
 
-        // 调用进度回调（开始处理）
-        if (onProgress) {
-            onProgress(0, bookmarks.length);
+                // Call AI
+                const endpoint = buildEndpoint(config.apiUrl);
+                const response = await fetchWithRetry(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${config.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: config.modelId,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: batchPrompt
+                            }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 1500 // 5 items * ~300 tokens
+                    })
+                }, options);
+
+                if (!response.ok) {
+                    throw new Error(`AI API request failed: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const aiResponse = data.choices?.[0]?.message?.content || '';
+
+                // Parse results for this chunk
+                // Note: parseBatchRenameResponse expects 1-based indexes relative to the batch
+                // We need to map them back to the original items
+                const parsedChunkResults = parseBatchRenameResponse(aiResponse);
+
+                // Map chunk results to full results
+                chunk.forEach((bookmark, localIndex) => {
+                    const aiResult = parsedChunkResults.find(r => r.index === localIndex + 1);
+                    const newTitle = aiResult?.newTitle
+                        ? aiResult.newTitle.replace(/^["']|["']$/g, '').replace(/\n/g, ' ').trim()
+                        : undefined;
+
+                    const resultObj = {
+                        id: bookmark.id,
+                        originalTitle: bookmark.title,
+                        newTitle: newTitle,
+                        success: !!newTitle,
+                        error: !newTitle ? 'AI returned empty title' : undefined
+                    };
+
+                    results.push(resultObj);
+
+                    // Notify progress for each item (simulated burst)
+                    if (onProgress) {
+                        onProgress(processedCount + localIndex + 1, total, resultObj);
+                    }
+                });
+
+            } catch (chunkError) {
+                console.error('Micro-batch failed:', chunkError);
+                // Mark entire chunk as failed
+                chunk.forEach(bookmark => {
+                    const failResult = {
+                        id: bookmark.id,
+                        originalTitle: bookmark.title,
+                        success: false,
+                        error: chunkError instanceof Error ? chunkError.message : 'Batch failed'
+                    };
+                    results.push(failResult);
+                    if (onProgress) onProgress(results.length, total, failResult);
+                });
+            }
+
+            processedCount += chunk.length;
+
+            // Small delay between chunks
+            if (processedCount < total) {
+                await sleep(300);
+            }
         }
-
-        // 模拟渐进式进度更新
-        const progressInterval = setInterval(() => {
-            if (onProgress) {
-                // 在0-90%之间随机增长，为最终结果留出10%
-                const currentProgress = Math.min(90, Math.random() * 20 + 10);
-                onProgress(Math.floor(currentProgress * bookmarks.length / 100), bookmarks.length);
-            }
-        }, 200);
-
-        try {
-            // 调用AI API进行批量处理
-            const endpoint = buildEndpoint(config.apiUrl);
-            const response = await fetchWithRetry(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${config.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: config.modelId,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: batchPrompt
-                        }
-                    ],
-                    temperature: 0.3, // 降低温度以提高一致性
-                    max_tokens: Math.min(4000, bookmarks.length * 50) // 根据书签数量动态调整
-                })
-            }, options);
-
-            // 清除进度模拟
-            clearInterval(progressInterval);
-
-            if (!response.ok) {
-                throw new Error(`AI API request failed: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            const aiResponse = data.choices?.[0]?.message?.content;
-
-            if (!aiResponse) {
-                throw new Error('AI API returned empty response');
-            }
-
-            // 解析AI返回的批量结果
-            parsedResults = parseBatchRenameResponse(aiResponse);
-
-            // 调用进度回调（处理完成）
-            if (onProgress) {
-                onProgress(bookmarks.length, bookmarks.length);
-            }
-        } catch (error) {
-            // 确保清除进度模拟
-            clearInterval(progressInterval);
-            throw error;
-        }
-
-        // 构建最终结果
-        const results = bookmarks.map((bookmark, index) => {
-            const aiResult = parsedResults.find(r => r.index === index + 1);
-
-            if (aiResult && aiResult.newTitle) {
-                // 清理AI返回的标题
-                const cleanedTitle = aiResult.newTitle
-                    .replace(/^["']|["']$/g, '')  // 移除首尾引号
-                    .replace(/\n/g, ' ')           // 替换换行为空格
-                    .trim();
-
-                return {
-                    id: bookmark.id,
-                    originalTitle: bookmark.title,
-                    newTitle: cleanedTitle.length > 0 ? cleanedTitle : undefined,
-                    success: cleanedTitle.length > 0,
-                    error: cleanedTitle.length === 0 ? 'AI returned empty title' : undefined
-                };
-            } else {
-                return {
-                    id: bookmark.id,
-                    originalTitle: bookmark.title,
-                    success: false,
-                    error: 'AI did not return a title for this bookmark'
-                };
-            }
-        });
 
         return results;
-    } catch (error) {
-        console.error('Batch rename with consistency failed:', error);
 
-        // 如果批量处理失败，返回所有书签的失败结果
+    } catch (error) {
+        console.error('Smart batch rename failed:', error);
         return bookmarks.map(bookmark => ({
             id: bookmark.id,
             originalTitle: bookmark.title,
@@ -710,6 +715,30 @@ export const recommendFolderWithAI = async (
     locale: string = 'zh_CN'
 ): Promise<{ success: boolean; recommendations?: Array<{ folderId: string; folderPath: string; reason?: string }>; error?: string }> => {
     try {
+        // 1. [Hybrid] Check Domain Rule first
+        const boundFolderId = await getFolderForDomain(url);
+        if (boundFolderId) {
+            // Find path in allFolders string list: "[ID: <id>] <path>"
+            const idTag = `[ID: ${boundFolderId}]`;
+            const matchedString = allFolders.find(s => s.includes(idTag));
+
+            if (matchedString) {
+                // Extract path: remove "[ID: ...]" prefix
+                // Format is usually "[ID: 123] Path/To/Folder"
+                // Let's rely on the fact that the path is everything after the tag (and maybe a space)
+                const folderPath = matchedString.replace(idTag, '').trim();
+
+                return {
+                    success: true,
+                    recommendations: [{
+                        folderId: boundFolderId,
+                        folderPath: folderPath,
+                        reason: 'Matched domain rule (you saved this site here before)'
+                    }]
+                };
+            }
+        }
+
         // 获取 User Prompt (通常是默认的，或者从配置获取)
         // 这里简化处理，直接使用场景默认的，后续可以接入配置
         const userPromptTemplate = folderRecommendationScenario.defaultUserPrompt;
@@ -781,6 +810,46 @@ export const renameBookmarkContextuallyWithAI = async (
         };
     } catch (error) {
         console.error('AI contextual rename failed:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+};
+
+/**
+ * Automatically generate tags for a bookmark
+ */
+export const autoTagBookmark = async (
+    config: AIConfig,
+    url: string,
+    title: string,
+    locale: string = 'en'
+): Promise<{ success: boolean; tags?: string[]; error?: string }> => {
+    try {
+        // 1. Get existing tags for context
+        const topTags = await getTopTags(50);
+
+        // 2. Prepare Prompts
+        const userPromptTemplate = autoTaggingScenario.defaultUserPrompt;
+        const systemPrompt = formatAutoTaggingSystemPrompt(url, title, topTags, locale);
+
+        // 3. Execute Scenario
+        const result = await executeScenario(
+            config,
+            autoTaggingScenario,
+            { url, title, existingTags: topTags },
+            userPromptTemplate,
+            systemPrompt,
+            locale
+        );
+
+        return {
+            success: true,
+            tags: result.tags
+        };
+    } catch (error) {
+        console.error('AI auto-tagging failed:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'

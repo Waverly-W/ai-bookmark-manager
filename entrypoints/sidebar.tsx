@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { X, Settings, Home, Sparkles, Wrench } from "lucide-react";
+import { X, Settings, Home, Sparkles, Wrench, PieChart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 export enum SidebarType {
     'home' = 'home',
+    'statistics' = 'statistics',
     'batchRename' = 'batchRename',
     'settings' = 'settings',
     'tools' = 'tools'
@@ -72,28 +73,30 @@ const Sidebar = (
                             </TooltipContent>
                         </Tooltip>
 
-                        {/* Batch Rename */}
+                        {/* Statistics */}
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
-                                    onClick={() => handleNavClick(SidebarType.batchRename)}
+                                    onClick={() => handleNavClick(SidebarType.statistics)}
                                     className={cn(
                                         "inline-flex items-center justify-center rounded-2xl",
                                         "h-12 w-12 transition-all duration-300 ease-spring",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                        sidebarType === SidebarType.batchRename
+                                        sidebarType === SidebarType.statistics
                                             ? "bg-primary text-primary-foreground shadow-md scale-105"
                                             : "text-muted-foreground/80 hover:bg-secondary/20 hover:text-foreground hover:scale-105"
                                     )}
-                                    aria-label={t('batchRenameTitle')}
+                                    aria-label={t('statistics')}
                                 >
-                                    <Sparkles className="h-6 w-6" />
+                                    <PieChart className="h-6 w-6" />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="font-medium">
-                                {t('batchRenameTitle')}
+                                {t('statistics')}
                             </TooltipContent>
                         </Tooltip>
+
+
 
                         {/* Tools */}
                         <Tooltip>
@@ -179,33 +182,35 @@ const Sidebar = (
                         </span>
                     </button>
 
-                    {/* Batch Rename */}
+                    {/* Statistics */}
                     <button
-                        onClick={() => handleNavClick(SidebarType.batchRename)}
+                        onClick={() => handleNavClick(SidebarType.statistics)}
                         className={cn(
                             "flex flex-col items-center justify-center gap-1 flex-1 h-full",
                             "transition-colors duration-200",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset rounded-lg"
                         )}
-                        aria-label={t('batchRenameTitle')}
+                        aria-label={t('statistics')}
                     >
                         <div className={cn(
                             "flex items-center justify-center rounded-lg h-10 w-10 transition-all duration-200",
-                            sidebarType === SidebarType.batchRename
+                            sidebarType === SidebarType.statistics
                                 ? "bg-primary text-primary-foreground"
                                 : "text-muted-foreground"
                         )}>
-                            <Sparkles className="h-5 w-5" />
+                            <PieChart className="h-5 w-5" />
                         </div>
                         <span className={cn(
-                            "text-xs font-medium truncate max-w-[80px] transition-colors",
-                            sidebarType === SidebarType.batchRename
+                            "text-xs font-medium transition-colors",
+                            sidebarType === SidebarType.statistics
                                 ? "text-foreground"
                                 : "text-muted-foreground"
                         )}>
-                            {t('batchRenameTitle')}
+                            {t('statistics')}
                         </span>
                     </button>
+
+
 
                     {/* Tools */}
                     <button
