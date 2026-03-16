@@ -1,7 +1,6 @@
 #root {
   margin: 0;
-  width: 320px;
-  /* Don't force min-height too aggressively, let content dictate, but set standard */
+  width: 100%;
   min-height: fit-content;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -9,8 +8,6 @@
 }
 
 body {
-  width: 320px !important;
-  height: auto !important;
   background-color: hsl(var(--background));
 }
 

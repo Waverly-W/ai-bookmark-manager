@@ -17,6 +17,7 @@ import { getRecentFolders, addRecentFolder, saveDomainMapping, getFolderForDomai
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
 import { recommendFolderWithAI, renameBookmarkContextuallyWithAI, autoTagBookmark } from "@/lib/aiService";
+import { getAllTags, saveTagsForBookmark } from "@/lib/tagStorage";
 
 // New Components
 import { PopupLayout } from './components/PopupLayout';
@@ -37,6 +38,7 @@ function App() {
     const [allFlatFolders, setAllFlatFolders] = useState<BookmarkFolder[]>([]);
     const [selectedFolder, setSelectedFolder] = useState('1'); // Default: Bookmarks Bar
     const [tags, setTags] = useState<string[]>([]);
+    const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
     // UI States
     const [isInitializing, setIsInitializing] = useState(true);
@@ -85,6 +87,9 @@ function App() {
                 // 3. Load AI Config
                 const config = await getAIConfig();
                 setAiConfig(config);
+
+                const knownTags = await getAllTags();
+                setSuggestedTags(knownTags);
 
                 // 4. Load Recents
                 const recentIds = await getRecentFolders(3);
@@ -187,6 +192,7 @@ function App() {
 
             if (tagResult.success && tagResult.tags) {
                 setTags(tagResult.tags);
+                setSuggestedTags((prev) => [...new Set([...prev, ...tagResult.tags!])]);
                 console.log('[AI Workflow] Tags generated:', tagResult.tags);
             }
         } catch (e) {
@@ -256,6 +262,7 @@ function App() {
             if (result.success && result.tags) {
                 const uniqueTags = [...new Set([...tags, ...result.tags])];
                 setTags(uniqueTags);
+                setSuggestedTags((prev) => [...new Set([...prev, ...result.tags!])]);
                 toast({ title: t('autoTagSuccess'), description: `Added ${result.tags.length} tags` });
             }
         } catch (e) {
@@ -263,6 +270,52 @@ function App() {
         } finally {
             setIsAutoTagging(false);
         }
+    };
+
+    const shouldAutoClosePopup = async () => {
+        try {
+            // If popup is opened as a standalone tab (debug scenario), getCurrent returns a Tab.
+            // In action popup context, it returns undefined.
+            const currentExtensionTab = await browser.tabs.getCurrent();
+            return !currentExtensionTab;
+        } catch {
+            // Keep current UX as fallback when context detection fails.
+            return true;
+        }
+    };
+
+    const showSaveSuccessToast = (savedTitle: string, folderId: string, autoClose: boolean) => {
+        const savedFolder = allFlatFolders.find((folder) => folder.id === folderId);
+        const folderName = savedFolder?.title || t('location');
+        const folderPath = savedFolder?.path || folderName;
+        const displayTitle = savedTitle.trim() || url;
+
+        toast({
+            duration: autoClose ? 1200 : 2200,
+            className: "border-emerald-500/25 bg-gradient-to-br from-emerald-500/12 via-background to-background shadow-[0_10px_24px_-18px_rgba(16,185,129,0.85)]",
+            title: (
+                <span className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                        <Check className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="tracking-tight">{t('success')}</span>
+                </span>
+            ),
+            description: (
+                <div className="space-y-1 text-xs">
+                    <p className="text-foreground/80">
+                        {t('bookmarkAdded', { folderName })}
+                    </p>
+                    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
+                        <span className="max-w-[170px] truncate">{displayTitle}</span>
+                        <span className="opacity-60">-&gt;</span>
+                        <span className="max-w-[120px] truncate text-emerald-700/80 dark:text-emerald-300/80">
+                            {folderPath}
+                        </span>
+                    </p>
+                </div>
+            )
+        });
     };
 
     const handleSave = async () => {
@@ -273,7 +326,8 @@ function App() {
 
         setIsCreating(true);
         try {
-            await createChromeBookmark(title, url, selectedFolder);
+            const bookmark = await createChromeBookmark(title, url, selectedFolder);
+            await saveTagsForBookmark(bookmark.id, tags);
             // Hybrid Learning
             Promise.all([
                 saveDomainMapping(url, selectedFolder),
@@ -281,8 +335,11 @@ function App() {
             ]).catch(console.error);
 
             // Success & Close
-            toast({ title: t('success'), description: t('bookmarkAdded') });
-            setTimeout(() => window.close(), 600);
+            const autoClose = await shouldAutoClosePopup();
+            showSaveSuccessToast(title, selectedFolder, autoClose);
+            if (autoClose) {
+                setTimeout(() => window.close(), 950);
+            }
         } catch (error) {
             toast({ title: t('addFailed'), description: String(error), variant: "destructive" });
         } finally {
@@ -340,6 +397,7 @@ function App() {
                     tags={tags}
                     onAddTag={(tag) => setTags([...tags, tag])}
                     onRemoveTag={(tag) => setTags(tags.filter(t => t !== tag))}
+                    suggestedTags={suggestedTags}
                     onAiGenerate={handleAutoTag}
                     isAiLoading={isAutoTagging}
                 />

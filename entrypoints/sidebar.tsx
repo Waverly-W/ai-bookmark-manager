@@ -8,6 +8,7 @@ export enum SidebarType {
     'home' = 'home',
     'statistics' = 'statistics',
     'batchRename' = 'batchRename',
+    'batchTag' = 'batchTag',
     'settings' = 'settings',
     'tools' = 'tools'
 }

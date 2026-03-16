@@ -15,13 +15,15 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { BookmarkCardItem } from './bookmark-card';
 import { getAIConfig, isAIConfigured } from '@/lib/aiConfigUtils';
-import { renameBookmarkWithAI } from '@/lib/aiService';
+import { autoTagBookmark, renameBookmarkWithAI } from '@/lib/aiService';
+import { TagEditor } from '@/components/ui/tag-editor';
+import { getAllTags, getTagsForBookmark } from '@/lib/tagStorage';
 
 interface BookmarkEditDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     bookmark: BookmarkCardItem | null;
-    onSave: (id: string, title: string, url: string) => Promise<void>;
+    onSave: (id: string, title: string, url: string, tags: string[]) => Promise<void>;
 }
 
 export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
@@ -35,23 +37,39 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
 
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
+    const [tags, setTags] = useState<string[]>([]);
+    const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
     const [isRenaming, setIsRenaming] = useState(false);
+    const [isTagging, setIsTagging] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // 当弹窗打开时，初始化表单数据
     useEffect(() => {
-        if (open && bookmark) {
+        const loadDialogData = async () => {
+            if (!open || !bookmark) {
+                return;
+            }
+
             setTitle(bookmark.title);
             setUrl(bookmark.url || '');
             setIsRenaming(false);
             setIsSaving(false);
-        }
+            setIsTagging(false);
+
+            const [bookmarkTags, allTags] = await Promise.all([
+                getTagsForBookmark(bookmark.id),
+                getAllTags()
+            ]);
+            setTags(bookmarkTags);
+            setSuggestedTags(allTags);
+        };
+
+        loadDialogData();
     }, [open, bookmark]);
 
-    // 当弹窗关闭时，重置所有状态
     useEffect(() => {
         if (!open) {
             setIsRenaming(false);
+            setIsTagging(false);
             setIsSaving(false);
         }
     }, [open]);
@@ -113,6 +131,53 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
         }
     };
 
+    const handleAITag = async () => {
+        if (!bookmark?.url) {
+            return;
+        }
+
+        const aiConfigured = await isAIConfigured();
+        if (!aiConfigured) {
+            toast({
+                title: t('aiNotConfigured'),
+                description: t('pleaseConfigureAI'),
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsTagging(true);
+        try {
+            const config = await getAIConfig();
+            if (!config) {
+                throw new Error('AI configuration not found');
+            }
+
+            const result = await autoTagBookmark(config, url, title, i18n.language);
+
+            if (result.success && result.tags) {
+                const merged = [...new Set([...tags, ...result.tags])];
+                setTags(merged);
+                setSuggestedTags((prev) => [...new Set([...prev, ...result.tags!])]);
+                toast({
+                    title: t('autoTagSuccess'),
+                    description: t('autoTagSuccessDesc', { count: result.tags.length })
+                });
+            } else {
+                throw new Error(result.error || t('unknownError'));
+            }
+        } catch (error) {
+            console.error('AI tagging error:', error);
+            toast({
+                title: t('autoTagFailed'),
+                description: error instanceof Error ? error.message : t('unknownError'),
+                variant: "destructive"
+            });
+        } finally {
+            setIsTagging(false);
+        }
+    };
+
     // 处理保存
     const handleSave = async () => {
         if (!bookmark) return;
@@ -137,7 +202,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
 
         setIsSaving(true);
         try {
-            await onSave(bookmark.id, title.trim(), url.trim());
+            await onSave(bookmark.id, title.trim(), url.trim(), tags);
             console.log('Bookmark saved successfully');
             toast({
                 title: t('save'),
@@ -169,6 +234,7 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
             setUrl(bookmark.url || '');
         }
         setIsRenaming(false);
+        setIsTagging(false);
         setIsSaving(false);
         onOpenChange(false);
     };
@@ -233,6 +299,19 @@ export const BookmarkEditDialog: React.FC<BookmarkEditDialogProps> = ({
                             type="url"
                         />
                     </div>
+
+                    <TagEditor
+                        label={t('tags')}
+                        tags={tags}
+                        onAddTag={(tag) => setTags((prev) => [...prev, tag])}
+                        onRemoveTag={(tag) => setTags((prev) => prev.filter((item) => item !== tag))}
+                        suggestedTags={suggestedTags}
+                        onAiGenerate={handleAITag}
+                        isAiLoading={isTagging}
+                        placeholder={t('addTagsPlaceholder')}
+                        aiButtonLabel={t('autoTag')}
+                        suggestionMode="match"
+                    />
                 </div>
 
                 <DialogFooter>

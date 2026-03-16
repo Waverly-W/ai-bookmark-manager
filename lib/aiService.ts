@@ -1,5 +1,14 @@
 import { AIConfig, decodeApiKey } from './aiConfigUtils';
-import { getCurrentPrompt, formatPrompt, enhancePromptForBatch, formatBatchPrompt, parseBatchRenameResponse, getDefaultPrompt } from './aiPromptUtils';
+import {
+    getCurrentPrompt,
+    formatPrompt,
+    enhancePromptForBatch,
+    formatBatchPrompt,
+    parseBatchRenameResponse,
+    getDefaultPrompt,
+    getCurrentAutoTagPrompt,
+    formatAutoTagPrompt
+} from './aiPromptUtils';
 import { getFolderForDomain } from './recommendationStorage'; // Import storage utils
 import { AIScenario } from './ai/types';
 import { bookmarkRenameScenario, formatBookmarkRenameSystemPrompt, BookmarkRenameInput, BookmarkRenameOutput } from "./ai/scenarios/bookmarkRename";
@@ -827,19 +836,15 @@ export const autoTagBookmark = async (
     locale: string = 'en'
 ): Promise<{ success: boolean; tags?: string[]; error?: string }> => {
     try {
-        // 1. Get existing tags for context
         const topTags = await getTopTags(50);
-
-        // 2. Prepare Prompts
-        const userPromptTemplate = autoTaggingScenario.defaultUserPrompt;
+        const userPromptTemplate = await getCurrentAutoTagPrompt(locale);
         const systemPrompt = formatAutoTaggingSystemPrompt(url, title, topTags, locale);
 
-        // 3. Execute Scenario
         const result = await executeScenario(
             config,
             autoTaggingScenario,
             { url, title, existingTags: topTags },
-            userPromptTemplate,
+            formatAutoTagPrompt(userPromptTemplate, url, title),
             systemPrompt,
             locale
         );
@@ -854,6 +859,89 @@ export const autoTagBookmark = async (
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
         };
+    }
+};
+
+export interface BatchTaggingItem {
+    id: string;
+    title: string;
+    url: string;
+    existingTags?: string[];
+}
+
+export interface BatchTaggingResult {
+    id: string;
+    title: string;
+    url: string;
+    existingTags: string[];
+    suggestedTags?: string[];
+    success: boolean;
+    error?: string;
+}
+
+export const batchTagBookmarks = async (
+    config: AIConfig,
+    bookmarks: BatchTaggingItem[],
+    locale: string = 'en',
+    onProgress?: (current: number, total: number, result?: BatchTaggingResult) => void,
+    options?: { signal?: AbortSignal; maxConcurrency?: number }
+): Promise<BatchTaggingResult[]> => {
+    const total = bookmarks.length;
+    const maxConcurrency = options?.maxConcurrency ?? 4;
+    const controller = new ConcurrencyController(maxConcurrency);
+    let processed = 0;
+
+    const toResult = (bookmark: BatchTaggingItem, payload: Partial<BatchTaggingResult>): BatchTaggingResult => ({
+        id: bookmark.id,
+        title: bookmark.title,
+        url: bookmark.url,
+        existingTags: bookmark.existingTags || [],
+        success: false,
+        ...payload
+    });
+
+    try {
+        const results = await Promise.all(
+            bookmarks.map((bookmark) =>
+                controller.run(async () => {
+                    if (options?.signal?.aborted) {
+                        throw new Error('Batch tagging cancelled');
+                    }
+
+                    let result: BatchTaggingResult;
+                    try {
+                        const response = await autoTagBookmark(config, bookmark.url, bookmark.title, locale);
+                        result = toResult(bookmark, {
+                            suggestedTags: response.tags || [],
+                            success: response.success && !!response.tags?.length,
+                            error: response.success ? undefined : response.error
+                        });
+                    } catch (error) {
+                        result = toResult(bookmark, {
+                            success: false,
+                            error: error instanceof Error ? error.message : 'Unknown error'
+                        });
+                    }
+
+                    processed += 1;
+                    if (onProgress) {
+                        onProgress(processed, total, result);
+                    }
+
+                    return result;
+                })
+            )
+        );
+
+        return results;
+    } catch (error) {
+        console.error('AI batch tagging failed:', error);
+        return bookmarks.map((bookmark) =>
+            toResult(bookmark, {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
+        );
     }
 };
 

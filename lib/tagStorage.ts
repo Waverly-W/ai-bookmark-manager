@@ -8,6 +8,15 @@ interface BookmarkTagsMap {
     [key: string]: string[];
 }
 
+const normalizeTags = (tags: string[]): string[] =>
+    Array.from(
+        new Set(
+            tags
+                .map((tag) => tag.trim())
+                .filter((tag) => tag.length > 0)
+        )
+    );
+
 /**
  * Get tags for a specific bookmark
  */
@@ -17,19 +26,84 @@ export const getTagsForBookmark = async (bookmarkId: string): Promise<string[]> 
 };
 
 /**
+ * Get a subset of bookmark tags keyed by bookmark id
+ */
+export const getTagsMapForBookmarks = async (bookmarkIds: string[]): Promise<BookmarkTagsMap> => {
+    const map = await storage.getItem<BookmarkTagsMap>(TAGS_STORAGE_KEY) || {};
+    const result: BookmarkTagsMap = {};
+
+    bookmarkIds.forEach((bookmarkId) => {
+        result[bookmarkId] = map[bookmarkId] || [];
+    });
+
+    return result;
+};
+
+/**
  * Save tags for a bookmark and update global index
  */
 export const saveTagsForBookmark = async (bookmarkId: string, tags: string[]): Promise<void> => {
-    // 1. Update bookmark-tag map
     const map = await storage.getItem<BookmarkTagsMap>(TAGS_STORAGE_KEY) || {};
-    // Filter empty tags and duplicates
-    const uniqueTags = Array.from(new Set(tags.filter(t => t.trim().length > 0)));
+    const uniqueTags = normalizeTags(tags);
 
     map[bookmarkId] = uniqueTags;
     await storage.setItem(TAGS_STORAGE_KEY, map);
 
-    // 2. Update global tag index
     await addTagsToGlobalIndex(uniqueTags);
+};
+
+/**
+ * Save tags for multiple bookmarks and update the global index
+ */
+export const saveTagsForBookmarks = async (bookmarkTags: BookmarkTagsMap): Promise<void> => {
+    const map = await storage.getItem<BookmarkTagsMap>(TAGS_STORAGE_KEY) || {};
+    const allTags: string[] = [];
+
+    Object.entries(bookmarkTags).forEach(([bookmarkId, tags]) => {
+        const uniqueTags = normalizeTags(tags);
+        map[bookmarkId] = uniqueTags;
+        allTags.push(...uniqueTags);
+    });
+
+    await storage.setItem(TAGS_STORAGE_KEY, map);
+    await addTagsToGlobalIndex(allTags);
+};
+
+/**
+ * Remove tags for a specific bookmark
+ */
+export const removeTagsForBookmark = async (bookmarkId: string): Promise<void> => {
+    const map = await storage.getItem<BookmarkTagsMap>(TAGS_STORAGE_KEY) || {};
+
+    if (!(bookmarkId in map)) {
+        return;
+    }
+
+    delete map[bookmarkId];
+    await storage.setItem(TAGS_STORAGE_KEY, map);
+};
+
+/**
+ * Remove tags for multiple bookmarks
+ */
+export const removeTagsForBookmarks = async (bookmarkIds: string[]): Promise<void> => {
+    if (bookmarkIds.length === 0) {
+        return;
+    }
+
+    const map = await storage.getItem<BookmarkTagsMap>(TAGS_STORAGE_KEY) || {};
+    let changed = false;
+
+    bookmarkIds.forEach((bookmarkId) => {
+        if (bookmarkId in map) {
+            delete map[bookmarkId];
+            changed = true;
+        }
+    });
+
+    if (changed) {
+        await storage.setItem(TAGS_STORAGE_KEY, map);
+    }
 };
 
 /**
@@ -45,9 +119,10 @@ export const getAllTags = async (): Promise<string[]> => {
 export const addTagsToGlobalIndex = async (newTags: string[]): Promise<void> => {
     const existingTags = await getAllTags();
     const tagSet = new Set(existingTags);
+    const normalizedTags = normalizeTags(newTags);
 
     let changed = false;
-    newTags.forEach(tag => {
+    normalizedTags.forEach(tag => {
         if (tag && !tagSet.has(tag)) {
             tagSet.add(tag);
             changed = true;
@@ -68,3 +143,6 @@ export const getTopTags = async (limit: number = 50): Promise<string[]> => {
     const tags = await getAllTags();
     return tags.slice(0, limit);
 };
+
+export const mergeTags = (existingTags: string[], incomingTags: string[]): string[] =>
+    normalizeTags([...existingTags, ...incomingTags]);

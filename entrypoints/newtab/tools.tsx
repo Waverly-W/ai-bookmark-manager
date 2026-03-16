@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useBookmarks } from '@/hooks/use-bookmarks';
-import { Sparkles, ShieldCheck, Construction, Copy, Folder } from 'lucide-react';
+import { Sparkles, ShieldCheck, Construction, Copy, Folder, Tags } from 'lucide-react';
 import { DuplicateManager } from '@/components/tools/duplicate-manager';
 import { ValidityManager } from '@/components/tools/validity-manager';
 import { EmptyFolderManager } from '@/components/tools/empty-folder-manager';
@@ -86,6 +86,27 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({ navigateTo }) => {
                         <CardContent className="mt-auto pt-0">
                             <Button
                                 onClick={() => navigateTo?.(SidebarType.batchRename)}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                {t('openTool')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                        <CardHeader>
+                            <div className="p-2 w-fit rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 mb-2">
+                                <Tags className="h-6 w-6" />
+                            </div>
+                            <CardTitle>{t('batchTagTitle')}</CardTitle>
+                            <CardDescription>
+                                {t('batchTagDescription')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="mt-auto pt-0">
+                            <Button
+                                onClick={() => navigateTo?.(SidebarType.batchTag)}
                                 className="w-full"
                                 variant="outline"
                             >

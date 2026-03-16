@@ -40,6 +40,7 @@ import { batchClassifyBookmarks } from '@/lib/aiService';
 import { getAIConfig } from '@/lib/aiConfigUtils';
 import { getBookmarkFolders, moveChromeBookmark } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
+import { getTagsMapForBookmarks, removeTagsForBookmark, removeTagsForBookmarks, saveTagsForBookmark } from '@/lib/tagStorage';
 
 // 书签节点类型定义 - 使用 entrypoints/types.ts 中的定义
 // interface BookmarkNode {
@@ -77,6 +78,30 @@ const searchBookmarks = (nodes: BookmarkNode[], searchTerm: string): BookmarkNod
         if (node.children) {
             const childResults = searchBookmarks(node.children, searchTerm);
             results.push(...childResults);
+        }
+    }
+
+    return results;
+};
+
+const searchBookmarksByTag = (
+    nodes: BookmarkNode[],
+    searchTag: string,
+    tagsMap: Record<string, string[]>
+): BookmarkNode[] => {
+    const normalizedTag = searchTag.trim().toLowerCase();
+    const results: BookmarkNode[] = [];
+
+    for (const node of nodes) {
+        if (node.url) {
+            const nodeTags = tagsMap[node.id] || [];
+            if (nodeTags.some((tag) => tag.toLowerCase() === normalizedTag)) {
+                results.push(node);
+            }
+        }
+
+        if (node.children) {
+            results.push(...searchBookmarksByTag(node.children, normalizedTag, tagsMap));
         }
     }
 
@@ -141,8 +166,36 @@ const collectBookmarkUrls = (nodes: BookmarkNode[]): string[] => {
     return urls;
 };
 
+const collectBookmarkIds = (nodes: BookmarkNode[]): string[] => {
+    const ids: string[] = [];
+
+    for (const node of nodes) {
+        if (node.url) {
+            ids.push(node.id);
+        }
+        if (node.children) {
+            ids.push(...collectBookmarkIds(node.children));
+        }
+    }
+
+    return ids;
+};
+
+const collectBookmarkIdsForNode = (node: BookmarkNode | null): string[] => {
+    if (!node) {
+        return [];
+    }
+
+    if (node.url) {
+        return [node.id];
+    }
+
+    return collectBookmarkIds(node.children || []);
+};
+
 export const Bookmarks: React.FC = () => {
     const [allBookmarks, setAllBookmarks] = useState<BookmarkNode[]>([]);
+    const [tagsMap, setTagsMap] = useState<Record<string, string[]>>({});
     const [currentItems, setCurrentItems] = useState<BookmarkCardItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -281,8 +334,11 @@ export const Bookmarks: React.FC = () => {
 
             // 根据设置过滤书签
             const filteredBookmarks = filterBookmarksByRoot(rootNodes, rootFolderId);
+            const bookmarkIds = collectBookmarkIds(filteredBookmarks);
+            const bookmarkTagsMap = await getTagsMapForBookmarks(bookmarkIds);
 
             setAllBookmarks(filteredBookmarks);
+            setTagsMap(bookmarkTagsMap);
 
 
 
@@ -379,12 +435,10 @@ export const Bookmarks: React.FC = () => {
     };
 
     // 处理书签保存
-    const handleBookmarkSave = async (id: string, title: string, url: string) => {
+    const handleBookmarkSave = async (id: string, title: string, url: string, tags: string[]) => {
         try {
-            // 更新Chrome书签
             await updateChromeBookmark(id, title, url);
-
-            // 广播更新消息
+            await saveTagsForBookmark(id, tags);
             await broadcastBookmarkUpdate(id, title, url);
 
             // 更新本地状态
@@ -423,6 +477,7 @@ export const Bookmarks: React.FC = () => {
             };
 
             setCurrentItems(updateCurrentItems(currentItems));
+            setTagsMap(prev => ({ ...prev, [id]: tags }));
         } catch (error) {
             console.error('Failed to save bookmark:', error);
             throw error; // 重新抛出错误，让Dialog组件处理
@@ -449,8 +504,8 @@ export const Bookmarks: React.FC = () => {
 
         setIsDeleting(true);
         try {
-            // 删除Chrome书签
             await deleteChromeBookmark(deletingBookmark.id);
+            await removeTagsForBookmark(deletingBookmark.id);
 
             // 从本地状态中移除书签
             const removeBookmarkFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
@@ -486,6 +541,11 @@ export const Bookmarks: React.FC = () => {
             };
 
             setCurrentItems(removeFromCurrentItems(currentItems));
+            setTagsMap(prev => {
+                const next = { ...prev };
+                delete next[deletingBookmark.id];
+                return next;
+            });
 
             // 显示成功消息
             toast({
@@ -649,8 +709,9 @@ export const Bookmarks: React.FC = () => {
 
         setIsDeletingFolder(true);
         try {
-            // 删除Chrome书签文件夹
+            const bookmarkIdsToRemove = collectBookmarkIdsForNode(findNodeById(allBookmarks, deletingFolder.id));
             await deleteChromeBookmark(deletingFolder.id);
+            await removeTagsForBookmarks(bookmarkIdsToRemove);
 
             // 从本地状态中移除文件夹
             const removeFolderFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
@@ -686,6 +747,13 @@ export const Bookmarks: React.FC = () => {
             };
 
             setCurrentItems(removeFromCurrentItems(currentItems));
+            setTagsMap(prev => {
+                const next = { ...prev };
+                bookmarkIdsToRemove.forEach(id => {
+                    delete next[id];
+                });
+                return next;
+            });
 
             // 如果删除的是当前所在的文件夹，返回上一级
             const isCurrentFolder = navigationHistory.some(item => item.id === deletingFolder.id);
@@ -796,12 +864,15 @@ export const Bookmarks: React.FC = () => {
 
     // 处理搜索
     const getDisplayItems = (): BookmarkCardItem[] => {
-        if (searchTerm.trim() === '') {
+        const trimmedSearchTerm = searchTerm.trim();
+        if (trimmedSearchTerm === '') {
             return currentItems;
         }
 
-        // 搜索时显示所有匹配的结果，不受层级限制
-        const searchResults = searchBookmarks(allBookmarks, searchTerm);
+        const searchResults = trimmedSearchTerm.startsWith('#')
+            ? searchBookmarksByTag(allBookmarks, trimmedSearchTerm.slice(1), tagsMap)
+            : searchBookmarks(allBookmarks, trimmedSearchTerm);
+
         return convertToCardItems(searchResults);
     };
 
@@ -844,9 +915,12 @@ export const Bookmarks: React.FC = () => {
         setIsBatchDeleting(true);
         try {
             const idsToDelete = Array.from(selectedItems);
+            const bookmarkIdsToRemove = Array.from(new Set(
+                idsToDelete.flatMap(id => collectBookmarkIdsForNode(findNodeById(allBookmarks, id)))
+            ));
 
-            // 批量删除Chrome书签
             await Promise.all(idsToDelete.map(id => deleteChromeBookmark(id)));
+            await removeTagsForBookmarks(bookmarkIdsToRemove);
 
             // 更新本地状态
             const removeBookmarksFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
@@ -878,6 +952,13 @@ export const Bookmarks: React.FC = () => {
             setSelectedItems(new Set());
             setIsSelectionMode(false);
             setShowBatchDeleteDialog(false);
+            setTagsMap(prev => {
+                const next = { ...prev };
+                bookmarkIdsToRemove.forEach(id => {
+                    delete next[id];
+                });
+                return next;
+            });
         } catch (error) {
             console.error('Batch delete failed:', error);
             toast({

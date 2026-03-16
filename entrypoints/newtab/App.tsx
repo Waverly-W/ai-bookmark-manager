@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card.tsx";
 import { Home } from "@/entrypoints/newtab/home.tsx";
 import { SettingsPage } from "@/entrypoints/newtab/settings.tsx";
 import { BatchRenamePage } from "@/entrypoints/newtab/batch-rename.tsx";
+import { BatchTagPage } from "@/entrypoints/newtab/batch-tag.tsx";
 import { ToolsPage } from "@/entrypoints/newtab/tools.tsx";
 import { StatisticsPage } from "@/entrypoints/newtab/statistics.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
@@ -111,6 +112,7 @@ export default () => {
                                 {sidebarType === SidebarType.home && <Home />}
                                 {sidebarType === SidebarType.statistics && <StatisticsPage />}
                                 {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
+                                {sidebarType === SidebarType.batchTag && <BatchTagPage />}
                                 {sidebarType === SidebarType.tools && <ToolsPage navigateTo={setSidebarType} />}
                                 {sidebarType === SidebarType.settings && <SettingsPage />}
                             </div>
@@ -120,6 +122,7 @@ export default () => {
                             {sidebarType === SidebarType.home && <Home />}
                             {sidebarType === SidebarType.statistics && <StatisticsPage />}
                             {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
+                            {sidebarType === SidebarType.batchTag && <BatchTagPage />}
                             {sidebarType === SidebarType.tools && <ToolsPage navigateTo={setSidebarType} />}
                             {sidebarType === SidebarType.settings && <SettingsPage />}
                         </div>

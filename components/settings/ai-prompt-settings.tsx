@@ -20,13 +20,19 @@ import {
     saveCustomContextualRenamePrompt,
     restoreDefaultContextualRenamePrompt,
     isUsingCustomContextualRenamePrompt,
-    getDefaultContextualRenamePrompt
+    getDefaultContextualRenamePrompt,
+    getCurrentAutoTagPrompt,
+    saveCustomAutoTagPrompt,
+    restoreDefaultAutoTagPrompt,
+    isUsingCustomAutoTagPrompt,
+    getDefaultAutoTagPrompt
 } from "@/lib/aiPromptUtils";
 import { Loader2, RotateCcw, Save, Info } from "lucide-react";
 
 import { bookmarkRenameScenario } from "@/lib/ai/scenarios/bookmarkRename";
 import { folderRecommendationScenario } from "@/lib/ai/scenarios/folderRecommendation";
 import { contextualBookmarkRenameScenario } from "@/lib/ai/scenarios/contextualBookmarkRename";
+import { autoTaggingScenario } from "@/lib/ai/scenarios/autoTagging";
 
 export function AIPromptSettings() {
     const { t, i18n } = useTranslation();
@@ -56,6 +62,9 @@ export function AIPromptSettings() {
                 } else if (activeTab === 'folder') {
                     currentPrompt = await getCurrentFolderRecommendationPrompt(i18n.language);
                     usingCustom = await isUsingCustomFolderRecommendationPrompt();
+                } else if (activeTab === 'tagging') {
+                    currentPrompt = await getCurrentAutoTagPrompt(i18n.language);
+                    usingCustom = await isUsingCustomAutoTagPrompt();
                 }
 
                 setPrompt(currentPrompt);
@@ -102,6 +111,8 @@ export function AIPromptSettings() {
                 await saveCustomContextualRenamePrompt(prompt);
             } else if (activeTab === 'folder') {
                 await saveCustomFolderRecommendationPrompt(prompt);
+            } else if (activeTab === 'tagging') {
+                await saveCustomAutoTagPrompt(prompt);
             }
 
             setIsCustom(true);
@@ -136,6 +147,9 @@ export function AIPromptSettings() {
             } else if (activeTab === 'folder') {
                 await restoreDefaultFolderRecommendationPrompt();
                 defaultPrompt = getDefaultFolderRecommendationPrompt(i18n.language);
+            } else if (activeTab === 'tagging') {
+                await restoreDefaultAutoTagPrompt();
+                defaultPrompt = getDefaultAutoTagPrompt(i18n.language);
             }
 
             setPrompt(defaultPrompt);
@@ -163,6 +177,8 @@ export function AIPromptSettings() {
             return contextualBookmarkRenameScenario.getSystemPrompt(i18n.language);
         } else if (activeTab === 'folder') {
             return folderRecommendationScenario.getSystemPrompt(i18n.language);
+        } else if (activeTab === 'tagging') {
+            return autoTaggingScenario.getSystemPrompt(i18n.language);
         }
         return '';
     };
@@ -181,10 +197,11 @@ export function AIPromptSettings() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="basic">{t('basicRename')}</TabsTrigger>
                     <TabsTrigger value="contextual">{t('contextualRename')}</TabsTrigger>
                     <TabsTrigger value="folder">{t('folderRecommendation')}</TabsTrigger>
+                    <TabsTrigger value="tagging">{t('autoTagging')}</TabsTrigger>
                 </TabsList>
 
                 <div className="mt-4 space-y-6">

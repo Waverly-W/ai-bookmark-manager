@@ -6,7 +6,7 @@ interface PopupLayoutProps {
 
 export function PopupLayout({ children }: PopupLayoutProps) {
     return (
-        <div className="w-[320px] h-auto min-h-[fit-content] bg-background text-foreground font-sans antialiased overflow-hidden flex flex-col relative tracking-normal">
+        <div className="w-full max-w-full h-auto min-h-[fit-content] bg-background text-foreground font-sans antialiased overflow-hidden flex flex-col relative tracking-normal">
             {/* MD3 Surface Container Low as subtle background tint if desired, but sticking to clean background for now */}
 
             {/* Content Container */}

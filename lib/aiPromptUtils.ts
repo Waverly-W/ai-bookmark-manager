@@ -218,6 +218,34 @@ export const DEFAULT_CONTEXTUAL_RENAME_PROMPT_EN = `Requirements:
 5. Return only the new title`;
 
 /**
+ * 默认的自动标签 Prompt 模板（中文）
+ */
+export const DEFAULT_AUTO_TAG_PROMPT_ZH = `请为这个书签生成 3-5 个标签。
+
+输入信息：
+- 标题：{title}
+- URL：{url}
+
+要求：
+1. 标签简短明确，优先 1-2 个词
+2. 优先复用现有标签风格，避免同义词泛滥
+3. 只返回 JSON 中的 tags 数组，不要补充解释`;
+
+/**
+ * 默认的自动标签 Prompt 模板（英文）
+ */
+export const DEFAULT_AUTO_TAG_PROMPT_EN = `Generate 3-5 tags for this bookmark.
+
+Input:
+- Title: {title}
+- URL: {url}
+
+Requirements:
+1. Keep tags short and specific, ideally 1-2 words
+2. Prefer reusing existing tag vocabulary when relevant
+3. Return only the JSON tags array with no extra explanation`;
+
+/**
  * 存储键名
  */
 export const STORAGE_KEYS = {
@@ -226,7 +254,9 @@ export const STORAGE_KEYS = {
     CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiFolderRecommendationPrompt',
     USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT: 'aiUseCustomFolderRecommendationPrompt',
     CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiContextualRenamePrompt',
-    USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiUseCustomContextualRenamePrompt'
+    USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiUseCustomContextualRenamePrompt',
+    CUSTOM_AUTO_TAG_PROMPT: 'aiAutoTagPrompt',
+    USE_CUSTOM_AUTO_TAG_PROMPT: 'aiUseCustomAutoTagPrompt'
 };
 
 /**
@@ -321,6 +351,76 @@ export const clearCustomPrompt = async (): Promise<void> => {
 };
 
 /**
+ * 获取默认自动标签 Prompt 模板
+ */
+export const getDefaultAutoTagPrompt = (locale: string = 'zh_CN'): string => {
+    return locale.startsWith('zh') ? DEFAULT_AUTO_TAG_PROMPT_ZH : DEFAULT_AUTO_TAG_PROMPT_EN;
+};
+
+/**
+ * 获取当前使用的自动标签 Prompt 模板
+ */
+export const getCurrentAutoTagPrompt = async (locale: string = 'zh_CN'): Promise<string> => {
+    try {
+        const result = await browser.storage.local.get([
+            STORAGE_KEYS.USE_CUSTOM_AUTO_TAG_PROMPT,
+            STORAGE_KEYS.CUSTOM_AUTO_TAG_PROMPT
+        ]);
+        const useCustom = result[STORAGE_KEYS.USE_CUSTOM_AUTO_TAG_PROMPT];
+        const customPrompt = result[STORAGE_KEYS.CUSTOM_AUTO_TAG_PROMPT];
+
+        if (useCustom && customPrompt) {
+            return customPrompt;
+        }
+
+        return getDefaultAutoTagPrompt(locale);
+    } catch (error) {
+        console.error('Failed to get current auto tag prompt:', error);
+        return getDefaultAutoTagPrompt(locale);
+    }
+};
+
+/**
+ * 保存自定义自动标签 Prompt 模板
+ */
+export const saveCustomAutoTagPrompt = async (prompt: string): Promise<void> => {
+    try {
+        await browser.storage.local.set({
+            [STORAGE_KEYS.CUSTOM_AUTO_TAG_PROMPT]: prompt,
+            [STORAGE_KEYS.USE_CUSTOM_AUTO_TAG_PROMPT]: true
+        });
+    } catch (error) {
+        console.error('Failed to save custom auto tag prompt:', error);
+        throw new Error('Failed to save custom auto tag prompt template');
+    }
+};
+
+/**
+ * 恢复默认自动标签 Prompt 模板
+ */
+export const restoreDefaultAutoTagPrompt = async (): Promise<void> => {
+    try {
+        await browser.storage.local.set({ [STORAGE_KEYS.USE_CUSTOM_AUTO_TAG_PROMPT]: false });
+    } catch (error) {
+        console.error('Failed to restore default auto tag prompt:', error);
+        throw new Error('Failed to restore default auto tag prompt template');
+    }
+};
+
+/**
+ * 检查是否使用自定义自动标签 Prompt
+ */
+export const isUsingCustomAutoTagPrompt = async (): Promise<boolean> => {
+    try {
+        const result = await browser.storage.local.get(STORAGE_KEYS.USE_CUSTOM_AUTO_TAG_PROMPT);
+        return result[STORAGE_KEYS.USE_CUSTOM_AUTO_TAG_PROMPT] || false;
+    } catch (error) {
+        console.error('Failed to check custom auto tag prompt status:', error);
+        return false;
+    }
+};
+
+/**
  * 格式化Prompt模板（替换占位符）
  * @param template Prompt模板
  * @param url 书签URL
@@ -386,6 +486,17 @@ export const validatePrompt = (prompt: string): {
         errors
     };
 };
+
+/**
+ * 格式化自动标签 Prompt（替换占位符）
+ */
+export const formatAutoTagPrompt = (
+    template: string,
+    url: string,
+    title: string
+): string => template
+    .replace(/{url}/g, url)
+    .replace(/{title}/g, title);
 
 /**
  * 为批量重命名增强Prompt模板

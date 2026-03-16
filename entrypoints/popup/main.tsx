@@ -44,7 +44,7 @@ async function initApp() {
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <React.Suspense fallback={<div className="flex items-center justify-center min-h-[600px] text-muted-foreground">Loading...</div>}>
+      <React.Suspense fallback={<div className="flex items-center justify-center min-h-[140px] text-muted-foreground text-sm">Loading...</div>}>
         <App />
         <Toaster />
       </React.Suspense>
