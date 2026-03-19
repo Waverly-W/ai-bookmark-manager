@@ -11,10 +11,13 @@ export const StatisticsPage: React.FC = () => {
     const statsData = React.useMemo(() => calculateBookmarkStats(bookmarks), [bookmarks]);
 
     return (
-        <div className="space-y-6 container mx-auto p-6 md:p-8 max-w-7xl animate-in fade-in duration-500">
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">{t('statistics')}</h1>
-                <p className="text-muted-foreground">
+        <div className="container mx-auto max-w-7xl space-y-6 p-6 md:p-8 animate-in fade-in duration-500">
+            <div className="space-y-2 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                    {t('statistics')}
+                </span>
+                <h1 className="font-display text-3xl font-semibold tracking-tight">{t('statistics')}</h1>
+                <p className="max-w-2xl text-muted-foreground">
                     {t('statisticsDescription', 'Visualize and analyze your bookmark data.')}
                 </p>
             </div>

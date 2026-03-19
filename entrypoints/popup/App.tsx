@@ -13,7 +13,7 @@ import {
     getBookmarkFolders
 } from "@/lib/bookmarkUtils";
 import { Loader2, Check } from "lucide-react";
-import { getRecentFolders, addRecentFolder, saveDomainMapping, getFolderForDomain } from "@/lib/recommendationStorage";
+import { addRecentFolder, saveDomainMapping, getFolderForDomain } from "@/lib/recommendationStorage";
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
 import { recommendFolderWithAI, renameBookmarkContextuallyWithAI, autoTagBookmark } from "@/lib/aiService";
@@ -21,8 +21,6 @@ import { getAllTags, saveTagsForBookmark } from "@/lib/tagStorage";
 
 // New Components
 import { PopupLayout } from './components/PopupLayout';
-// import { PopupHeader } from './components/PopupHeader'; // Removed
-import { UrlPreviewCard } from './components/UrlPreviewCard';
 import { SmartInput } from './components/SmartInput';
 import { SmartTagInput } from './components/SmartTagInput';
 import { SmartLocationSelector } from './components/SmartLocationSelector';
@@ -46,8 +44,6 @@ function App() {
 
     // AI & Smart Features States
     const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
-    const [recentFolders, setRecentFolders] = useState<BookmarkFolder[]>([]);
-    const [aiRecommendations, setAiRecommendations] = useState<Array<{ folderId: string; folderPath: string; reason?: string }>>([]);
 
     // Loading States
     const [isRenaming, setIsRenaming] = useState(false);
@@ -91,11 +87,6 @@ function App() {
                 const knownTags = await getAllTags();
                 setSuggestedTags(knownTags);
 
-                // 4. Load Recents
-                const recentIds = await getRecentFolders(3);
-                const recents = recentIds.map(id => flatFolders.find(f => f.id === id)).filter((f): f is BookmarkFolder => !!f);
-                setRecentFolders(recents);
-
                 setIsInitializing(false);
 
                 // --- AI Automation Workflow ---
@@ -113,97 +104,6 @@ function App() {
         initializeAndAutomate();
     }, []);
 
-    const runAIWorkflow = async (
-        config: AIConfig,
-        currentUrl: string,
-        initialTitle: string,
-        flatFolders: BookmarkFolder[]
-    ) => {
-        console.log('[AI Workflow] Starting...');
-
-        // --- Step 1: Smart Location (Recommendation) ---
-        let targetFolderId = '1'; // Default to Bookmarks Bar
-        setIsRecommending(true);
-
-        try {
-            // A. Check Domain Rule first (Fastest)
-            const boundFolderId = await getFolderForDomain(currentUrl);
-            if (boundFolderId && flatFolders.some(f => f.id === boundFolderId)) {
-                console.log('[AI Workflow] Matched Domain Rule');
-                targetFolderId = boundFolderId;
-                setSelectedFolder(targetFolderId);
-            } else {
-                // B. Ask AI for Recommendation
-                console.log('[AI Workflow] Requesting Recommendation...');
-                // Limited context for speed
-                const folderList = flatFolders
-                    .filter(f => f.id !== 'all')
-                    .map(f => `[ID: ${f.id}] ${f.path}`);
-
-                const recResult = await recommendFolderWithAI(
-                    config, currentUrl, initialTitle, folderList, i18n.language
-                );
-
-                if (recResult.success && recResult.recommendations && recResult.recommendations.length > 0) {
-                    const bestRec = recResult.recommendations[0];
-                    if (flatFolders.some(f => f.id === bestRec.folderId)) {
-                        targetFolderId = bestRec.folderId;
-                        setSelectedFolder(targetFolderId);
-                        setAiRecommendations(recResult.recommendations);
-                        console.log('[AI Workflow] AI Recommended:', bestRec.folderPath);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('[AI Workflow] Recommendation Step failed', e);
-        } finally {
-            setIsRecommending(false);
-        }
-
-        // --- Step 2: Contextual Rename ---
-        let optimizedTitle = initialTitle;
-        setIsRenaming(true);
-
-        try {
-            console.log('[AI Workflow] Renaming in context of folder:', targetFolderId);
-            const otherTitles = await getBookmarkTitlesInFolder(targetFolderId);
-            const targetFolderName = flatFolders.find(f => f.id === targetFolderId)?.title || 'Unknown';
-
-            const renameResult = await renameBookmarkContextuallyWithAI(
-                config, currentUrl, initialTitle, targetFolderName, otherTitles, i18n.language
-            );
-
-            if (renameResult.success && renameResult.newTitle) {
-                optimizedTitle = renameResult.newTitle;
-                setTitle(optimizedTitle);
-                console.log('[AI Workflow] Renamed to:', optimizedTitle);
-            }
-        } catch (e) {
-            console.error('[AI Workflow] Rename Step failed', e);
-        } finally {
-            setIsRenaming(false);
-        }
-
-        // --- Step 3: Auto Tagging ---
-        setIsAutoTagging(true);
-        try {
-            console.log('[AI Workflow] Auto Tagging...');
-            const tagResult = await autoTagBookmark(config, currentUrl, optimizedTitle, i18n.language);
-
-            if (tagResult.success && tagResult.tags) {
-                setTags(tagResult.tags);
-                setSuggestedTags((prev) => [...new Set([...prev, ...tagResult.tags!])]);
-                console.log('[AI Workflow] Tags generated:', tagResult.tags);
-            }
-        } catch (e) {
-            console.error('[AI Workflow] Tagging Step failed', e);
-        } finally {
-            setIsAutoTagging(false);
-        }
-    };
-
-    // --- Manual Actions (kept for user overrides) ---
-
     const handleAIRename = async () => {
         if (!aiConfig?.apiKey) return showConfigError();
         setIsRenaming(true);
@@ -217,7 +117,7 @@ function App() {
 
             if (result.success && result.newTitle) {
                 setTitle(result.newTitle);
-                toast({ title: t('aiRenameSuccess', "Renamed by AI"), duration: 1500 });
+                toast({ title: t('aiRenameSuccess'), duration: 1500 });
             } else {
                 toast({ title: t('aiRenameFailed'), description: result.error, variant: "destructive" });
             }
@@ -225,6 +125,81 @@ function App() {
             console.error(e);
         } finally {
             setIsRenaming(false);
+        }
+    };
+
+    const runAIWorkflow = async (
+        config: AIConfig,
+        currentUrl: string,
+        initialTitle: string,
+        flatFolders: BookmarkFolder[]
+    ) => {
+        // 自动选文件夹
+        let targetFolderId = '1'; // Default to Bookmarks Bar
+        setIsRecommending(true);
+
+        try {
+            const boundFolderId = await getFolderForDomain(currentUrl);
+            if (boundFolderId && flatFolders.some(f => f.id === boundFolderId)) {
+                targetFolderId = boundFolderId;
+                setSelectedFolder(targetFolderId);
+            } else {
+                const folderList = flatFolders
+                    .filter(f => f.id !== 'all')
+                    .map(f => `[ID: ${f.id}] ${f.path}`);
+
+                const recResult = await recommendFolderWithAI(
+                    config, currentUrl, initialTitle, folderList, i18n.language
+                );
+
+                if (recResult.success && recResult.recommendations && recResult.recommendations.length > 0) {
+                    const bestRec = recResult.recommendations[0];
+                    if (flatFolders.some(f => f.id === bestRec.folderId)) {
+                        targetFolderId = bestRec.folderId;
+                        setSelectedFolder(targetFolderId);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[AI Workflow] Recommendation failed', e);
+        } finally {
+            setIsRecommending(false);
+        }
+
+        // 自动优化标题
+        let optimizedTitle = initialTitle;
+        setIsRenaming(true);
+        try {
+            const otherTitles = await getBookmarkTitlesInFolder(targetFolderId);
+            const targetFolderName = flatFolders.find(f => f.id === targetFolderId)?.title || 'Unknown';
+
+            const renameResult = await renameBookmarkContextuallyWithAI(
+                config, currentUrl, initialTitle, targetFolderName, otherTitles, i18n.language
+            );
+
+            if (renameResult.success && renameResult.newTitle) {
+                optimizedTitle = renameResult.newTitle;
+                setTitle(optimizedTitle);
+            }
+        } catch (e) {
+            console.error('[AI Workflow] Rename failed', e);
+        } finally {
+            setIsRenaming(false);
+        }
+
+        // 自动生成标签
+        setIsAutoTagging(true);
+        try {
+            const tagResult = await autoTagBookmark(config, currentUrl, optimizedTitle, i18n.language);
+
+            if (tagResult.success && tagResult.tags) {
+                setTags(tagResult.tags);
+                setSuggestedTags((prev) => [...new Set([...prev, ...tagResult.tags!])]);
+            }
+        } catch (e) {
+            console.error('[AI Workflow] Tagging failed', e);
+        } finally {
+            setIsAutoTagging(false);
         }
     };
 
@@ -238,12 +213,11 @@ function App() {
             );
 
             if (result.success && result.recommendations) {
-                setAiRecommendations(result.recommendations);
                 if (result.recommendations.length > 0) {
                     const bestId = result.recommendations[0].folderId;
                     if (allFlatFolders.some(f => f.id === bestId)) {
                         setSelectedFolder(bestId);
-                        toast({ title: t('aiRecommendSuccess', "Folder suggested"), duration: 1500 });
+                        toast({ title: t('aiRecommendSuccess'), duration: 1500 });
                     }
                 }
             }
@@ -263,7 +237,7 @@ function App() {
                 const uniqueTags = [...new Set([...tags, ...result.tags])];
                 setTags(uniqueTags);
                 setSuggestedTags((prev) => [...new Set([...prev, ...result.tags!])]);
-                toast({ title: t('autoTagSuccess'), description: `Added ${result.tags.length} tags` });
+                toast({ title: t('autoTagSuccess'), description: t('autoTagSuccessDesc', { count: result.tags.length }) });
             }
         } catch (e) {
             console.error(e);
@@ -292,10 +266,10 @@ function App() {
 
         toast({
             duration: autoClose ? 1200 : 2200,
-            className: "border-emerald-500/25 bg-gradient-to-br from-emerald-500/12 via-background to-background shadow-[0_10px_24px_-18px_rgba(16,185,129,0.85)]",
+            className: "border-primary/20 bg-gradient-to-br from-primary/12 via-card to-card shadow-panel",
             title: (
-                <span className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
-                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                <span className="flex items-center gap-2 text-primary">
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15">
                         <Check className="h-3.5 w-3.5" />
                     </span>
                     <span className="tracking-tight">{t('success')}</span>
@@ -309,7 +283,7 @@ function App() {
                     <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
                         <span className="max-w-[170px] truncate">{displayTitle}</span>
                         <span className="opacity-60">-&gt;</span>
-                        <span className="max-w-[120px] truncate text-emerald-700/80 dark:text-emerald-300/80">
+                        <span className="max-w-[120px] truncate text-primary/85">
                             {folderPath}
                         </span>
                     </p>
@@ -349,8 +323,8 @@ function App() {
 
     const showConfigError = () => {
         toast({
-            title: "AI Not Configured",
-            description: "Please set API Key in Options page.",
+            title: t('aiNotConfigured'),
+            description: t('pleaseConfigureAI'),
             variant: "destructive"
         });
     };
@@ -358,9 +332,11 @@ function App() {
     if (isInitializing) {
         return (
             <PopupLayout>
-                <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground animate-pulse">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
-                    <p className="text-sm">Initializing Smart Manager...</p>
+                <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center text-muted-foreground">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                    <p className="font-display text-base font-semibold text-foreground">{t('initializing')}</p>
                 </div>
             </PopupLayout>
         );
@@ -368,55 +344,56 @@ function App() {
 
     return (
         <PopupLayout>
-            {/* Header Removed */}
+            <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">
+                {t('saveToLibrary')}
+            </h1>
+            <div className="space-y-3">
+                <section className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm">
+                    <SmartInput
+                        id="title"
+                        label={t('title')}
+                        value={title}
+                        onChange={setTitle}
+                        onAiRegenerate={handleAIRename}
+                        isAiLoading={isRenaming}
+                        autoFocus
+                    />
+                </section>
 
-            <UrlPreviewCard url={url} title={title} />
+                <section className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm">
+                    <SmartLocationSelector
+                        folders={folders}
+                        selectedFolder={selectedFolder}
+                        onSelect={setSelectedFolder}
+                        onAiRecommend={handleAIRecommend}
+                        isAiLoading={isRecommending}
+                    />
+                </section>
 
-            <div className="space-y-2.5">
-                <SmartInput
-                    id="title"
-                    label={t('title')}
-                    value={title}
-                    onChange={setTitle}
-                    onAiRegenerate={handleAIRename}
-                    isAiLoading={isRenaming}
-                    autoFocus
-                />
-
-                <SmartLocationSelector
-                    folders={folders}
-                    recentFolders={recentFolders}
-                    selectedFolder={selectedFolder}
-                    onSelect={setSelectedFolder}
-                    aiRecommendations={aiRecommendations}
-                    onAiRecommend={handleAIRecommend}
-                    isAiLoading={isRecommending}
-                />
-
-                <SmartTagInput
-                    tags={tags}
-                    onAddTag={(tag) => setTags([...tags, tag])}
-                    onRemoveTag={(tag) => setTags(tags.filter(t => t !== tag))}
-                    suggestedTags={suggestedTags}
-                    onAiGenerate={handleAutoTag}
-                    isAiLoading={isAutoTagging}
-                />
+                <section className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm">
+                    <SmartTagInput
+                        tags={tags}
+                        onAddTag={(tag) => setTags([...tags, tag])}
+                        onRemoveTag={(tag) => setTags(tags.filter(t => t !== tag))}
+                        suggestedTags={suggestedTags}
+                        onAiGenerate={handleAutoTag}
+                        isAiLoading={isAutoTagging}
+                    />
+                </section>
             </div>
 
-            <div className="mt-auto pt-1.5">
-                <Button
-                    className="w-full h-8 rounded-full text-xs font-medium shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-                    onClick={handleSave}
-                    disabled={isCreating}
-                >
-                    {isCreating ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                        <Check className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    {t('addBookmark')}
-                </Button>
-            </div>
+            <Button
+                className="mt-auto h-11 w-full rounded-full text-sm font-semibold shadow-md"
+                onClick={handleSave}
+                disabled={isCreating}
+            >
+                {isCreating ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                )}
+                {t('addBookmark')}
+            </Button>
         </PopupLayout>
     );
 }

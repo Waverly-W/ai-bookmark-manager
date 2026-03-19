@@ -8,6 +8,7 @@ import { AIConfig, saveAIConfig, getAIConfig, validateAIConfig } from "@/lib/aiC
 import { testAIConnection } from "@/lib/aiService";
 import { Loader2, CheckCircle2, XCircle, Wand2 } from "lucide-react";
 import { AIConfigWizard } from './ai-config-wizard';
+import { cn } from "@/lib/utils";
 
 export function AIConfigSettings() {
     const { t } = useTranslation();
@@ -225,10 +226,12 @@ export function AIConfigSettings() {
 
             {/* 测试结果显示 */}
             {testResult && (
-                <div className={`flex items-center gap-2 p-3 rounded-md ${testResult.success
-                    ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
-                    : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
-                    }`}>
+                <div className={cn(
+                    "flex items-center gap-2 rounded-[1.125rem] border px-4 py-3",
+                    testResult.success
+                        ? "border-accent/20 bg-accent/10 text-accent"
+                        : "border-destructive/20 bg-destructive/10 text-destructive"
+                )}>
                     {testResult.success ? (
                         <CheckCircle2 className="h-4 w-4" />
                     ) : (

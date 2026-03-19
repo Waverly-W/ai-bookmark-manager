@@ -8,6 +8,7 @@ import ExtMessage, {MessageType} from "@/entrypoints/types.ts";
 import {sendMessageToBackground} from "@/lib/messageUtils.ts";
 import {MdOpenInNew} from "react-icons/md";
 import {BiCodeBlock} from "react-icons/bi";
+import {cn} from "@/lib/utils.ts";
 
 export function Home() {
     const {t} = useTranslation();
@@ -98,7 +99,12 @@ export function Home() {
                             {isLoading ? "..." : t("openContentScript")}
                         </Button>
                         {message && (
-                            <p className={`text-xs mt-2 ${message.includes(t("contentScriptError")) || message.includes(t("unsupportedPage")) ? 'text-red-500' : 'text-green-500'}`}>
+                            <p className={cn(
+                                "mt-2 text-xs font-medium",
+                                message.includes(t("contentScriptError")) || message.includes(t("unsupportedPage"))
+                                    ? "text-destructive"
+                                    : "text-accent"
+                            )}>
                                 {message}
                             </p>
                         )}
@@ -123,14 +129,14 @@ export function Home() {
                     <h3 className="font-semibold leading-none tracking-tight text-base">{t("reference")}</h3>
                     <div className="flex flex-col gap-4 pt-2">
                         {
-                            references.map((reference, index, array) => {
+                            references.map((reference) => {
                                 return (
-                                    <div className="grid gap-1">
+                                    <div key={reference.url} className="grid gap-1">
                                         <p className="text-sm font-medium leading-none">
                                             {reference.name}
                                         </p>
                                         <a className="text-sm text-muted-foreground" href={reference.url}
-                                           target="_blank">{reference.url}</a>
+                                           target="_blank" rel="noreferrer">{reference.url}</a>
                                     </div>
                                 )
                             })

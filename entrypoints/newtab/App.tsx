@@ -41,8 +41,8 @@ export default () => {
             console.log(message)
             if (message.messageType == MessageType.changeLocale) {
                 i18n.changeLanguage(message.content)
-            } else if (message.messageType == MessageType.changeTheme) {
-                toggleTheme(message.content)
+            } else if (message.messageType == MessageType.changeTheme && message.content) {
+                toggleTheme(message.content as "light" | "dark" | "auto")
             }
         });
 
@@ -98,18 +98,21 @@ export default () => {
                     </div>
                 )}
 
-                <Sidebar sideNav={(sidebarType: SidebarType) => {
-                    setSidebarType(sidebarType);
-                }} />
+                <Sidebar
+                    activeType={sidebarType}
+                    sideNav={(sidebarType: SidebarType) => {
+                        setSidebarType(sidebarType);
+                    }}
+                />
                 {/* Main Content Area */}
-                <main className={`relative z-10 md:ml-16 mb-16 md:mb-0 min-h-screen transition-all duration-300 ${!isCustomBackground
+                <main className={`relative z-10 md:ml-24 mb-16 md:mb-0 min-h-screen transition-all duration-300 ${!isCustomBackground
                     ? 'bg-transparent' // Make transparent to show shapes
                     : 'bg-transparent p-4 md:p-6'
                     }`}>
                     {isCustomBackground ? (
                         <div className="h-full w-full max-w-[1600px] mx-auto animate-in fade-in zoom-in-[0.99] duration-500 slide-in-from-bottom-2">
-                            <div className="bg-background/85 backdrop-blur-md rounded-[2rem] border border-white/20 shadow-2xl h-full min-h-[calc(100vh-3rem)] md:min-h-[calc(100vh-3rem)] p-6 md:p-8 transition-all duration-300 hover:bg-background/90 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                                {sidebarType === SidebarType.home && <Home />}
+                            <div className="h-full min-h-[calc(100vh-3rem)] rounded-[2rem] border border-border/40 bg-background/88 p-6 shadow-panel backdrop-blur-md transition-all duration-300 hover:bg-background/92 md:min-h-[calc(100vh-3rem)] md:p-8">
+                                {sidebarType === SidebarType.home && <Home onNavigate={setSidebarType} />}
                                 {sidebarType === SidebarType.statistics && <StatisticsPage />}
                                 {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
                                 {sidebarType === SidebarType.batchTag && <BatchTagPage />}
@@ -119,7 +122,7 @@ export default () => {
                         </div>
                     ) : (
                         <div className="animate-in fade-in duration-300">
-                            {sidebarType === SidebarType.home && <Home />}
+                            {sidebarType === SidebarType.home && <Home onNavigate={setSidebarType} />}
                             {sidebarType === SidebarType.statistics && <StatisticsPage />}
                             {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
                             {sidebarType === SidebarType.batchTag && <BatchTagPage />}

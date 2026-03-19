@@ -43,7 +43,7 @@ const HighlightedText = ({ text, highlight }: { text: string; highlight?: string
             <span>
                 {parts.map((part, i) =>
                     part.toLowerCase() === highlight.toLowerCase() ?
-                        <span key={i} className="bg-yellow-200 dark:bg-yellow-900/50 text-foreground rounded-[2px] px-0.5">{part}</span> : part
+                        <span key={i} className="rounded-[4px] bg-primary/15 px-1 py-0.5 text-foreground">{part}</span> : part
                 )}
             </span>
         );
@@ -104,8 +104,8 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                 <div className={cn(
                     "flex items-center justify-center",
                     "w-8 h-8 rounded-lg",
-                    "bg-primary/10 dark:bg-primary/20",
-                    "border border-primary/20 dark:border-primary/30",
+                    "bg-primary/10",
+                    "border border-primary/20",
                     "shadow-sm"
                 )}>
                     <FaFolder className="h-5 w-5 text-primary" />
@@ -116,7 +116,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
             <Favicon
                 url={item.url}
                 size={20}
-                fallbackIcon={<FaBookmark className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
+                fallbackIcon={<FaBookmark className="h-5 w-5 text-primary" />}
             />
         );
     };
@@ -128,11 +128,26 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         return null;
     };
 
+    const getMeta = () => {
+        if (isFolder) {
+            return getItemCount() || t('folder');
+        }
+
+        if (!item.url) {
+            return null;
+        }
+
+        try {
+            return new URL(item.url).hostname.replace(/^www\./, '');
+        } catch (e) {
+            return item.url;
+        }
+    };
+
     const cardContent = (
-        <Card
-            className={cn(
-                "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02]",
-                "group border-border/50 hover:border-border relative",
+            <Card
+                className={cn(
+                "group relative cursor-pointer overflow-hidden border-border/60 bg-card/92 transition-all duration-200 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md",
                 selected && "ring-2 ring-primary border-primary bg-primary/5",
                 className
             )}
@@ -148,35 +163,34 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                     </div>
                 </div>
             )}
-            <CardContent className="p-3">
-                <div className="flex items-center gap-3">
+            <CardContent className="p-3.5">
+                <div className="flex items-start gap-3">
                     {/* 图标 */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 pt-0.5">
                         {getIcon()}
                     </div>
 
                     {/* 名称 */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 space-y-1">
                         <h3 className={cn(
-                            "font-medium text-sm truncate",
+                            "font-medium text-sm leading-5 line-clamp-2",
                             "group-hover:text-primary transition-colors"
                         )}
                             title={item.title}
                         >
                             <HighlightedText text={item.title} highlight={highlight} />
                         </h3>
+                        {getMeta() && (
+                            <p className="truncate text-[11px] text-muted-foreground">
+                                {getMeta()}
+                            </p>
+                        )}
                     </div>
 
                     {/* 文件夹项目数量 */}
-                    {isFolder && getItemCount() && (
-                        <div className="flex-shrink-0 text-xs text-muted-foreground">
-                            {getItemCount()}
-                        </div>
-                    )}
-
                     {/* 书签外链图标 */}
                     {!isFolder && (
-                        <FaExternalLinkAlt className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        <FaExternalLinkAlt className="mt-1 h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     )}
                 </div>
             </CardContent>

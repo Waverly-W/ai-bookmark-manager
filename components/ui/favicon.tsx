@@ -75,18 +75,19 @@ export const Favicon: React.FC<FaviconProps> = ({
         setHasError(true);
     };
 
+    const baseContainerClassName = "flex h-8 w-8 items-center justify-center rounded-[1rem] border shadow-sm";
+    const fallbackContainerClassName = "border-primary/20 bg-primary/10 text-primary";
+    const imageContainerClassName = "overflow-hidden border-border/60 bg-surface-2";
+
     // 如果没有URL，显示默认图标
     if (!url) {
         return (
             <div className={cn(
-                "flex items-center justify-center",
-                "w-8 h-8 rounded-lg",
-                "bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20",
-                "border border-amber-200/50 dark:border-amber-700/50",
-                "shadow-sm",
+                baseContainerClassName,
+                fallbackContainerClassName,
                 className
             )}>
-                {fallbackIcon || <FaBookmark className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
+                {fallbackIcon || <FaBookmark className="h-5 w-5 text-primary" />}
             </div>
         );
     }
@@ -95,11 +96,8 @@ export const Favicon: React.FC<FaviconProps> = ({
     if (faviconUrl && !hasError) {
         return (
             <div className={cn(
-                "flex items-center justify-center",
-                "w-8 h-8 rounded-lg overflow-hidden",
-                "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900",
-                "border border-gray-200/50 dark:border-gray-700/50",
-                "shadow-sm",
+                baseContainerClassName,
+                imageContainerClassName,
                 className
             )}>
                 <img
@@ -122,14 +120,11 @@ export const Favicon: React.FC<FaviconProps> = ({
     // 出错或没有favicon，显示默认图标
     return (
         <div className={cn(
-            "flex items-center justify-center",
-            "w-8 h-8 rounded-lg",
-            "bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20",
-            "border border-amber-200/50 dark:border-amber-700/50",
-            "shadow-sm",
+            baseContainerClassName,
+            fallbackContainerClassName,
             className
         )}>
-            {fallbackIcon || <FaBookmark className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
+            {fallbackIcon || <FaBookmark className="h-5 w-5 text-primary" />}
         </div>
     );
 };

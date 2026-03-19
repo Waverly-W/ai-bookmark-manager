@@ -338,7 +338,7 @@ export const BatchRenamePage: React.FC = () => {
     };
 
     return (
-        <div className="container mx-auto p-6 md:p-8 max-w-7xl space-y-8 pb-10">
+        <div className="container mx-auto max-w-7xl space-y-8 p-6 pb-10 md:p-8">
             {/* 固定位置的错误提示 */}
             {errorMessage && (
                 <div className="sticky top-4 z-50 px-4 animate-in slide-in-from-top-2">
@@ -359,10 +359,13 @@ export const BatchRenamePage: React.FC = () => {
             )}
 
             {/* 页面标题区域 */}
-            <div className="space-y-4 pb-4 border-b border-border/50">
+            <div className="space-y-4 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
                 <div className="space-y-2">
-                    <h1 className="text-3xl font-bold tracking-tight">{t('batchRenameTitle')}</h1>
-                    <p className="text-muted-foreground text-sm">
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                        {t('batchRenameTitle')}
+                    </span>
+                    <h1 className="font-display text-3xl font-semibold tracking-tight">{t('batchRenameTitle')}</h1>
+                    <p className="text-sm text-muted-foreground">
                         {t('batchRenameDescription')}
                     </p>
                 </div>
@@ -370,8 +373,8 @@ export const BatchRenamePage: React.FC = () => {
 
             {/* 步骤指示器 */}
             <div className="relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -z-10" />
-                <div className="flex justify-between max-w-3xl mx-auto">
+                <div className="absolute left-0 top-1/2 -z-10 h-0.5 w-full bg-border/70" />
+                <div className="mx-auto flex max-w-3xl justify-between">
                     {[
                         { step: BatchRenameStep.FolderSelection, label: t('selectFolder'), number: 1 },
                         { step: BatchRenameStep.Processing, label: t('processing'), number: 2 },
@@ -385,10 +388,10 @@ export const BatchRenamePage: React.FC = () => {
                         return (
                             <div key={item.step} className="flex flex-col items-center bg-background px-4">
                                 <div className={`
-                                    w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2
+                                    flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300
                                     ${isActive || isCompleted
-                                        ? 'border-primary bg-primary text-primary-foreground scale-110'
-                                        : 'border-muted bg-background text-muted-foreground'}
+                                        ? 'scale-110 border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background text-muted-foreground'}
                                 `}>
                                     {isCompleted ? <CheckCircle className="h-6 w-6" /> : item.number}
                                 </div>
@@ -407,7 +410,7 @@ export const BatchRenamePage: React.FC = () => {
                 {/* 步骤 1: 文件夹选择 */}
                 {currentStep === BatchRenameStep.FolderSelection && (
                     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <Card className="border-muted/60 shadow-sm">
+                        <Card className="border-border/70 bg-card/92 shadow-sm">
                             <CardHeader>
                                 <CardTitle>{t('selectFolderToRename')}</CardTitle>
                                 <CardDescription>{t('selectFolderDescription')}</CardDescription>
@@ -435,11 +438,11 @@ export const BatchRenamePage: React.FC = () => {
                                 />
 
                                 {rawBookmarks.length > 0 && (
-                                    <div className="space-y-6 pt-4 border-t">
+                                    <div className="space-y-6 border-t border-border/70 pt-4">
                                         <div className="flex flex-col gap-4">
                                             {/* Status Badge */}
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 text-secondary-foreground border border-border/50">
+                                                <div className="flex items-center gap-3 rounded-[1rem] border border-border/60 bg-surface-2/85 p-3 text-secondary-foreground">
                                                     <FolderOpen className="h-5 w-5 flex-shrink-0" />
                                                     <span className="font-medium text-sm">
                                                         {t('totalInFolder')}: {rawBookmarks.length}
@@ -447,7 +450,7 @@ export const BatchRenamePage: React.FC = () => {
                                                 </div>
 
                                                 {/* Filter Controls "Safety Lock" */}
-                                                <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/30">
+                                                <div className="flex items-center gap-2 rounded-[1rem] border border-border/60 bg-surface-2/85 p-1">
                                                     <Button
                                                         variant={filterMode === 'all' ? 'secondary' : 'ghost'}
                                                         size="sm"
@@ -470,7 +473,7 @@ export const BatchRenamePage: React.FC = () => {
                                             </div>
 
                                             {/* Filter Result Info */}
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+                                            <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
                                                 <Sparkles className="h-4 w-4 text-primary" />
                                                 <span>
                                                     {t('willProcess')}: <span className="font-bold text-foreground">{bookmarks.length}</span> {t('items')}
@@ -480,7 +483,7 @@ export const BatchRenamePage: React.FC = () => {
 
                                         <Button
                                             onClick={handleStartBatchRename}
-                                            className="w-full h-12 text-lg shadow-md hover:shadow-lg transition-all"
+                                            className="h-12 w-full text-lg shadow-md hover:shadow-lg transition-all"
                                             size="lg"
                                         >
                                             <Sparkles className="mr-2 h-5 w-5" />
@@ -496,10 +499,10 @@ export const BatchRenamePage: React.FC = () => {
                 {/* 步骤 2: 处理 */}
                 {currentStep === BatchRenameStep.Processing && (
                     <div className="max-w-xl mx-auto mt-12 animate-in fade-in zoom-in-95 duration-500 space-y-6">
-                        <Card className="border-primary/20 shadow-lg overflow-hidden">
+                        <Card className="overflow-hidden border-primary/20 bg-card/92 shadow-lg">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20 animate-pulse" />
                             <CardHeader className="text-center pb-2">
-                                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                                 </div>
                                 <CardTitle className="text-xl">{t('processingProgress')}</CardTitle>
@@ -541,11 +544,11 @@ export const BatchRenamePage: React.FC = () => {
                                     {[...renameResults].reverse().map((result) => (
                                         <div
                                             key={result.id}
-                                            className="bg-background border rounded-lg p-3 text-sm flex items-center justify-between shadow-sm animate-in slide-in-from-left-2 fade-in duration-300"
+                                            className="flex items-center justify-between rounded-[1rem] border border-border/70 bg-card/92 p-3 text-sm shadow-sm animate-in slide-in-from-left-2 fade-in duration-300"
                                         >
                                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 {result.success ? (
-                                                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                                    <CheckCircle className="h-4 w-4 text-accent flex-shrink-0" />
                                                 ) : (
                                                     <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />
                                                 )}
@@ -559,7 +562,7 @@ export const BatchRenamePage: React.FC = () => {
                                                 </div>
                                             </div>
                                             {result.success && (
-                                                <Badge variant="outline" className="ml-2 text-[10px] h-5">
+                                                <Badge variant="outline" className="ml-2 h-5 text-[10px]">
                                                     Done
                                                 </Badge>
                                             )}
@@ -604,10 +607,10 @@ export const BatchRenamePage: React.FC = () => {
                         )}
 
                         {/* 操作栏 - 粘性定位 */}
-                        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 border-b flex flex-wrap items-center gap-4 justify-between">
+                        <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                             <div className="flex items-center gap-2">
                                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
+                                    <CheckCircle className="h-5 w-5 text-accent" />
                                     {t('renameResults')}
                                     <Badge variant="secondary" className="ml-2">
                                         {(renameResults || []).filter(r => r.selected).length} / {renameResults.length}
@@ -635,11 +638,11 @@ export const BatchRenamePage: React.FC = () => {
 
                         {/* 结果列表 - 网格布局 */}
                         <div className="grid gap-4">
-                            {(renameResults || []).map((result, index) => (
+                            {(renameResults || []).map((result) => (
                                 <Card
                                     key={result.id}
                                     className={`
-                                        transition-all duration-200 border-l-4
+                                        border-l-4 transition-all duration-200 bg-card/92
                                         ${result.selected ? 'border-l-primary ring-1 ring-primary/20' : 'border-l-transparent hover:border-l-muted-foreground/30'}
                                     `}
                                 >

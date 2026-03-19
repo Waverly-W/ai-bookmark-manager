@@ -7,11 +7,11 @@ import { useTranslation } from "react-i18next";
 
 export function ThemeSettings() {
     const { theme, toggleTheme } = useTheme();
-    const themes = ["light", "dark"]
+    const themes = ["light", "dark", "auto"]
     const { t } = useTranslation();
 
     const handleThemeChange = async (newTheme: string) => {
-        toggleTheme(newTheme as "light" | "dark");
+        toggleTheme(newTheme as "light" | "dark" | "auto");
         await browser.runtime.sendMessage({
             messageType: MessageType.changeTheme,
             content: newTheme
@@ -26,7 +26,7 @@ export function ThemeSettings() {
                 <p className="text-xs text-muted-foreground">{t('themeSettingsDescription')}</p>
             </div>
             <Tabs defaultValue={theme} value={theme} onValueChange={handleThemeChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     {themes.map((themeItem) => (
                         <TabsTrigger key={themeItem} value={themeItem}>
                             {t(themeItem)}

@@ -65,21 +65,26 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({ bookmarks, o
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={onBack}>
+            <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                <Button variant="outline" size="icon" onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{t('duplicateOrganization', 'Duplicate Manager')}</h2>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                <div className="space-y-2">
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                        {t('duplicateManager')}
+                    </span>
+                    <h2 className="font-display text-3xl font-semibold tracking-tight">{t('duplicateOrganization', 'Duplicate Manager')}</h2>
+                    <p className="max-w-2xl text-sm text-muted-foreground">
                         {t('duplicateManagerCardDesc', 'Find and merge duplicate bookmarks to clean up your collection.')}
                     </p>
+                </div>
                 </div>
             </div>
 
             {!scanned ? (
-                <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl bg-muted/10 mt-8">
-                    <div className="mb-4 p-4 bg-primary/10 rounded-full">
+                <div className="mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12">
+                    <div className="mb-4 rounded-full bg-primary/10 p-4">
                         <AlertCircle className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{t('scanForDuplicates', 'Scan for Duplicates')}</h3>
@@ -99,7 +104,7 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({ bookmarks, o
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm">
                         <h3 className="text-lg font-medium">
                             {duplicates.length > 0
                                 ? t('duplicatesFound', { count: duplicates.length })
@@ -199,8 +204,8 @@ const DuplicateGroupItem: React.FC<DuplicateGroupItemProps> = ({ group, folders,
     };
 
     return (
-        <Card className="overflow-hidden border-l-4 border-l-primary">
-            <CardHeader className="bg-muted/30 p-3">
+        <Card className="overflow-hidden border-l-4 border-l-primary bg-card/92">
+            <CardHeader className="bg-surface-2/85 p-3">
                 <CardTitle className="text-sm font-medium break-all font-mono text-muted-foreground">
                     {group.url}
                 </CardTitle>
@@ -210,7 +215,7 @@ const DuplicateGroupItem: React.FC<DuplicateGroupItemProps> = ({ group, folders,
                     {group.bookmarks.map((bookmark) => (
                         <div
                             key={bookmark.id}
-                            className={`flex items-start space-x-3 p-2 rounded-lg border transition-all cursor-pointer ${selectedId === bookmark.id ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                            className={`flex cursor-pointer items-start space-x-3 rounded-[1rem] border p-3 transition-all ${selectedId === bookmark.id ? 'border-primary bg-primary/5 ring-1 ring-primary/25' : 'border-border/70 hover:bg-surface-2/70'}`}
                             onClick={() => handleSelectionChange(bookmark.id)}
                         >
                             <RadioGroupItem value={bookmark.id} id={`item-${bookmark.id}`} className="mt-1" />
@@ -230,7 +235,7 @@ const DuplicateGroupItem: React.FC<DuplicateGroupItemProps> = ({ group, folders,
                                 </div>
                             </div>
                             {selectedId === bookmark.id && (
-                                <div className="px-2 py-0.5 bg-primary text-primary-foreground text-[10px] rounded-full font-medium">
+                                <div className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
                                     {t('keep', 'Keep')}
                                 </div>
                             )}
@@ -239,7 +244,7 @@ const DuplicateGroupItem: React.FC<DuplicateGroupItemProps> = ({ group, folders,
                 </RadioGroup>
 
                 {/* Edit Area for Selected Item */}
-                <div className="mt-4 pt-4 border-t space-y-3 animate-in fade-in slide-in-from-top-2">
+                <div className="mt-4 space-y-3 border-t border-border/70 pt-4 animate-in fade-in slide-in-from-top-2">
                     <div className="grid gap-3 md:grid-cols-2">
                         <div className="space-y-1.5">
                             <Label className="text-xs">{t('title', 'Title')}</Label>

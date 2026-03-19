@@ -45,7 +45,7 @@ export const FolderDeleteDialog: React.FC<FolderDeleteDialogProps> = ({
                         <br />
                         {childrenCount > 0 && (
                             <>
-                                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                <span className="font-medium text-accent">
                                     {t('folderContains')} {childrenCount} {t('itemsText')}
                                 </span>
                                 <br />

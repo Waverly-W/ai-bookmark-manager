@@ -120,9 +120,9 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
 
     const getFolderIcon = (folder: FlattenedFolder) => {
         if (folder.isSpecial) {
-            return <FaBookmark className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />;
+            return <FaBookmark className="h-3.5 w-3.5 text-accent flex-shrink-0" />;
         }
-        return <FaFolder className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />;
+        return <FaFolder className="h-3.5 w-3.5 text-primary flex-shrink-0" />;
     };
 
     return (
@@ -154,10 +154,10 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
                     <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 text-muted-foreground" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-[1.5rem] border-none shadow-xl bg-surface-container overflow-hidden" align="start">
+            <PopoverContent className="w-[--radix-popover-trigger-width] overflow-hidden rounded-[1.5rem] border border-border/70 bg-popover/98 p-0 shadow-panel backdrop-blur-xl" align="start">
                 <div className="flex flex-col bg-card">
                     {/* 搜索框 - Material Filled Style */}
-                    <div className="flex items-center px-4 py-3 bg-surface-container-high border-b border-white/5">
+                    <div className="flex items-center border-b border-border/50 bg-surface-2/80 px-4 py-3">
                         <FaSearch className="mr-3 h-4 w-4 shrink-0 text-muted-foreground" />
                         <Input
                             placeholder="搜索文件夹..."
@@ -181,9 +181,9 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
                                         onClick={() => handleSelect(folder.id)}
                                         className={cn(
                                             "relative flex cursor-pointer items-center gap-3 rounded-full px-4 py-3 text-sm outline-none transition-all duration-200 ease-md-emphasized",
-                                            "hover:bg-on-surface/5", // State Layer
+                                            "hover:bg-surface-2", // State Layer
                                             selectedId === folder.id
-                                                ? "bg-secondary-container text-on-secondary-container font-medium"
+                                                ? "bg-primary-soft text-foreground font-medium"
                                                 : "text-foreground/90"
                                         )}
                                     >
@@ -212,4 +212,3 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
         </Popover>
     );
 };
-

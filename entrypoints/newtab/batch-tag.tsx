@@ -269,24 +269,24 @@ export const BatchTagPage: React.FC = () => {
 
     if (currentStep === BatchTagStep.Processing) {
         return (
-            <div className="container mx-auto p-6 md:p-8 max-w-5xl space-y-6 animate-in fade-in duration-300">
+            <div className="container mx-auto max-w-5xl space-y-6 p-6 md:p-8 animate-in fade-in duration-300">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={handleCancel}>
+                    <Button variant="outline" size="icon" onClick={handleCancel}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{t('batchTagTitle')}</h1>
+                        <h1 className="font-display text-3xl font-semibold tracking-tight">{t('batchTagTitle')}</h1>
                         <p className="text-muted-foreground">{t('batchTagProcessingDesc', { folder: selectedFolderName })}</p>
                     </div>
                 </div>
 
-                <Card>
+                <Card className="border-primary/20 bg-card/92">
                     <CardHeader>
                         <CardTitle>{t('processing')}</CardTitle>
                         <CardDescription>{t('batchTagInProgress')}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <Progress value={progress} />
+                        <Progress value={progress} className="h-3" />
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Loader2 className="h-4 w-4 animate-spin" />
                             {t('batchTagProgress', { progress: Math.round(progress) })}
@@ -304,10 +304,10 @@ export const BatchTagPage: React.FC = () => {
         const selectedCount = results.filter((result) => result.selected).length;
 
         return (
-            <div className="container mx-auto p-6 md:p-8 max-w-6xl space-y-6 animate-in fade-in duration-300">
+            <div className="container mx-auto max-w-6xl space-y-6 p-6 md:p-8 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-bold tracking-tight">{t('batchTagReviewTitle')}</h1>
+                        <h1 className="font-display text-3xl font-semibold tracking-tight">{t('batchTagReviewTitle')}</h1>
                         <p className="text-muted-foreground">{t('batchTagReviewDesc', { count: results.length, folder: selectedFolderName })}</p>
                     </div>
                     <Button variant="outline" onClick={() => setCurrentStep(BatchTagStep.FolderSelection)}>
@@ -316,7 +316,7 @@ export const BatchTagPage: React.FC = () => {
                     </Button>
                 </div>
 
-                <Card>
+                <Card className="border-border/70 bg-card/92">
                     <CardHeader>
                         <CardTitle>{t('reviewResults')}</CardTitle>
                         <CardDescription>{t('selectedCount', { count: selectedCount })}</CardDescription>
@@ -327,7 +327,7 @@ export const BatchTagPage: React.FC = () => {
                                 {results.map((result) => (
                                     <div
                                         key={result.id}
-                                        className={`rounded-xl border p-4 transition-colors ${result.selected ? 'border-primary/50 bg-primary/5' : 'border-border bg-card'}`}
+                                        className={`rounded-[1.25rem] border p-4 transition-colors ${result.selected ? 'border-primary/50 bg-primary/5' : 'border-border/70 bg-card/92'}`}
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -363,7 +363,7 @@ export const BatchTagPage: React.FC = () => {
                                                         </div>
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {result.finalTags.length > 0 ? result.finalTags.map((tag) => (
-                                                                <Badge key={`${result.id}-${tag}-final`} className="gap-1 pr-1">
+                                                                <Badge key={`${result.id}-${tag}-final`} className="gap-1 pr-1 rounded-full">
                                                                     {tag}
                                                                     {!result.existingTags.includes(tag) && (
                                                                         <button onClick={() => removeTagFromResult(result.id, tag)} className="rounded-full p-0.5 hover:bg-black/10">
@@ -402,14 +402,19 @@ export const BatchTagPage: React.FC = () => {
     }
 
     return (
-        <div className="container mx-auto p-6 md:p-8 max-w-5xl space-y-6 animate-in fade-in duration-300">
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">{t('batchTagTitle')}</h1>
-                <p className="text-muted-foreground">{t('batchTagDescription')}</p>
+        <div className="container mx-auto max-w-5xl space-y-6 p-6 md:p-8 animate-in fade-in duration-300">
+            <div className="space-y-4 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                <div className="space-y-2">
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                        {t('batchTagTitle')}
+                    </span>
+                    <h1 className="font-display text-3xl font-semibold tracking-tight">{t('batchTagTitle')}</h1>
+                    <p className="text-muted-foreground">{t('batchTagDescription')}</p>
+                </div>
             </div>
 
             {errorMessage && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="border-destructive/20 bg-destructive/5">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
                         <span className="font-medium">{errorMessage.title}</span>
@@ -418,7 +423,7 @@ export const BatchTagPage: React.FC = () => {
                 </Alert>
             )}
 
-            <Card>
+            <Card className="border-border/70 bg-card/92 shadow-sm">
                 <CardHeader>
                     <CardTitle>{t('selectFolder')}</CardTitle>
                     <CardDescription>{t('batchTagFolderHelp')}</CardDescription>
@@ -433,20 +438,20 @@ export const BatchTagPage: React.FC = () => {
                         placeholder={t('selectFolder')}
                     />
 
-                    <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                    <div className="rounded-[1.15rem] border border-dashed border-border/80 bg-surface-2/70 p-4 text-sm text-muted-foreground">
                         {selectedFolderName
                             ? t('batchTagFolderSummary', { folder: selectedFolderName, count: bookmarks.length })
                             : t('batchTagFolderEmpty')}
                     </div>
 
-                    <Button onClick={handleStartBatchTagging} disabled={!selectedFolderId || bookmarks.length === 0}>
+                    <Button onClick={handleStartBatchTagging} disabled={!selectedFolderId || bookmarks.length === 0} className="w-full sm:w-auto">
                         <WandSparkles className="mr-2 h-4 w-4" />
                         {t('startBatchTagging')}
                     </Button>
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border/70 bg-card/92 shadow-sm">
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <Tags className="h-5 w-5 text-primary" />

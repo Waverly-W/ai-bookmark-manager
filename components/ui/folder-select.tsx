@@ -65,9 +65,9 @@ const getIndentPrefix = (level: number): string => {
 // 获取文件夹图标
 const getFolderIcon = (folder: FlattenedFolder) => {
     if (folder.isSpecial) {
-        return <FaBookmark className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />;
+        return <FaBookmark className="h-3.5 w-3.5 text-accent flex-shrink-0" />;
     }
-    return <FaFolder className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />;
+    return <FaFolder className="h-3.5 w-3.5 text-primary flex-shrink-0" />;
 };
 
 // 根据ID查找文件夹信息
@@ -110,9 +110,9 @@ export const FolderSelect: React.FC<FolderSelectProps> = ({
                     {selectedFolder && (
                         <>
                             {selectedFolder.id === 'all' ? (
-                                <FaBookmark className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                <FaBookmark className="h-3.5 w-3.5 text-accent flex-shrink-0" />
                             ) : (
-                                <FaFolder className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                                <FaFolder className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                             )}
                         </>
                     )}

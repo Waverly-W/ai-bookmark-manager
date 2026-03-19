@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { browser } from "wxt/browser";
 import { i18nConfig } from "@/components/i18nConfig.ts";
 import initTranslations from "@/components/i18n.ts";
+import { ThemeProvider } from "@/components/theme-provider.tsx";
 
 async function initApp() {
   // 获取保存的语言设置，如果没有则使用浏览器语言
@@ -45,8 +46,10 @@ async function initApp() {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <React.Suspense fallback={<div className="flex items-center justify-center min-h-[140px] text-muted-foreground text-sm">Loading...</div>}>
-        <App />
-        <Toaster />
+        <ThemeProvider>
+          <App />
+          <Toaster />
+        </ThemeProvider>
       </React.Suspense>
     </React.StrictMode>,
   );

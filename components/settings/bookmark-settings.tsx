@@ -72,7 +72,7 @@ export function BookmarkSettings() {
                     <h3 className="font-semibold text-left text-base">{t('bookmarkSettings')}</h3>
                 </div>
                 <div className="text-center py-8">
-                    <p className="text-red-500 text-sm mb-2">{error}</p>
+                    <p className="mb-2 text-sm text-destructive">{error}</p>
                     <button
                         onClick={loadFoldersAndSettings}
                         className="text-sm text-primary hover:underline"

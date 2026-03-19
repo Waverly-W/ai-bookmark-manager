@@ -14,7 +14,7 @@ interface StatsDashboardProps {
     stats: BookmarkStats;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+const COLORS = ['#b68a2e', '#6f8a52', '#d1a458', '#8a5a31', '#8a7160'];
 
 export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
     const { t } = useTranslation();
@@ -55,10 +55,42 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                 />
             </div>
 
+            <Card className="overflow-hidden border-border/70 bg-card/92">
+                <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
+                    <div className="space-y-2">
+                        <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                            {t('statistics')}
+                        </span>
+                        <div className="space-y-1">
+                            <h3 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                                {stats.recentAdditions > 0
+                                    ? `${t('recentAdditions')}: ${stats.recentAdditions}`
+                                    : t('totalBookmarks')}
+                            </h3>
+                            <p className="max-w-2xl text-sm text-muted-foreground">
+                                {stats.duplicateCount > 0
+                                    ? `${t('duplicates')}: ${stats.duplicateCount} · ${t('activityTrend')}`
+                                    : `${t('activityTrend')} · ${t('topFolders')}`}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm md:min-w-[280px]">
+                        <div className="rounded-[1rem] border border-border/70 bg-surface-2 px-4 py-3">
+                            <div className="text-xs text-muted-foreground">{t('totalBookmarks')}</div>
+                            <div className="mt-1 font-display text-xl font-semibold">{stats.totalBookmarks}</div>
+                        </div>
+                        <div className="rounded-[1rem] border border-border/70 bg-surface-2 px-4 py-3">
+                            <div className="text-xs text-muted-foreground">{t('totalFolders')}</div>
+                            <div className="mt-1 font-display text-xl font-semibold">{stats.totalFolders}</div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Folder Distribution */}
-                <Card>
+                <Card className="border-border/70 bg-card/92">
                     <CardHeader>
                         <CardTitle className="text-base font-medium">{t('topFolders')}</CardTitle>
                     </CardHeader>
@@ -72,8 +104,8 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                                             cx="50%"
                                             cy="50%"
                                             labelLine={false}
-                                            outerRadius={80}
-                                            fill="#8884d8"
+                                            outerRadius={82}
+                                            fill="hsl(var(--primary))"
                                             dataKey="count"
                                             nameKey="name"
                                             label={({ name, percent }: { name?: string, percent?: number }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
@@ -95,7 +127,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                 </Card>
 
                 {/* Activity Trend */}
-                <Card>
+                <Card className="border-border/70 bg-card/92">
                     <CardHeader>
                         <CardTitle className="text-base font-medium">{t('activityTrend')}</CardTitle>
                     </CardHeader>
@@ -106,7 +138,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                                     data={stats.bookmarksByDate}
                                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                                 >
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                                     <XAxis
                                         dataKey="date"
                                         tickFormatter={(value) => {
@@ -121,10 +153,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                                         labelFormatter={(value) => new Date(value).toLocaleDateString()}
                                         contentStyle={{ borderRadius: '8px' }}
                                     />
-                                    <Bar dataKey="count" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[10, 10, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                     </CardContent>
                 </Card>
             </div>

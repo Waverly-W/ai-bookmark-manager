@@ -160,7 +160,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                 </div>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0 max-w-none shadow-2xl border-none rounded-[1.5rem] bg-popover z-50 overflow-hidden"
+                className="z-50 w-auto max-w-none overflow-hidden rounded-[1.5rem] border border-border/70 bg-popover/98 p-0 shadow-panel backdrop-blur-xl"
                 align="start"
                 side="bottom"
                 sideOffset={8}
@@ -174,7 +174,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                         <div
                             key={panel.level}
                             className={cn(
-                                "w-52 border-r border-border/10 last:border-r-0",
+                                "w-52 border-r border-border/40 last:border-r-0",
                                 "flex-shrink-0 flex flex-col py-2"
                             )}
                             style={{ maxHeight: '320px' }}
@@ -194,8 +194,8 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                                                     isSelected
                                                         ? "bg-primary text-primary-foreground font-medium shadow-sm"
                                                         : isActive
-                                                            ? "bg-secondary-container text-on-secondary-container font-medium"
-                                                            : "hover:bg-on-surface/5 text-foreground/80 hover:text-foreground"
+                                                            ? "bg-primary-soft text-foreground font-medium"
+                                                            : "hover:bg-surface-2 text-foreground/80 hover:text-foreground"
                                                 )}
                                                 onClick={() => handleFolderClick(folder.id)}
                                                 role="treeitem"
@@ -205,11 +205,11 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                                                 {folder.id === 'all' ? (
                                                     <FaBookmark className={cn("h-4 w-4 flex-shrink-0 transition-colors",
                                                         isSelected ? "text-primary-foreground" :
-                                                            isActive ? "text-primary" : "text-amber-500")} />
+                                                            isActive ? "text-accent" : "text-accent/80")} />
                                                 ) : (
                                                     <FaFolder className={cn("h-4 w-4 flex-shrink-0 transition-colors",
                                                         isSelected ? "text-primary-foreground" :
-                                                            isActive ? "text-primary" : "text-blue-500")} />
+                                                            isActive ? "text-primary" : "text-primary/80")} />
                                                 )}
                                                 <span className="flex-1 truncate">{folder.title}</span>
                                                 {hasChildren && (

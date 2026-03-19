@@ -1,7 +1,7 @@
 @import "../../assets/main.css";
 
 :root {
-  --popup-width: 360px;
+  --popup-width: 380px;
 }
 
 html,
@@ -13,6 +13,9 @@ body {
   max-width: var(--popup-width);
   min-height: 0;
   overflow-x: hidden;
+  background:
+    radial-gradient(circle at top left, hsl(var(--primary) / 0.18), transparent 42%),
+    linear-gradient(180deg, hsl(var(--background)), hsl(var(--surface-2)));
 }
 
 *,

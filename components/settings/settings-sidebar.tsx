@@ -43,22 +43,22 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
     ];
 
     return (
-        <nav className={cn("flex flex-col space-y-1", className)}>
+        <nav className={cn("rounded-[1.5rem] border border-border/70 bg-card/88 p-2 shadow-sm", className)}>
             {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                     <Button
                         key={item.id}
-                        variant={activeTab === item.id ? "secondary" : "ghost"}
+                        variant={activeTab === item.id ? "subtle" : "ghost"}
                         className={cn(
-                            "justify-start gap-2 px-4",
+                            "h-11 w-full justify-start gap-3 rounded-[1rem] px-4",
                             activeTab === item.id
-                                ? "bg-secondary text-secondary-foreground"
+                                ? "bg-primary-soft text-foreground"
                                 : "text-muted-foreground hover:text-foreground"
                         )}
                         onClick={() => onTabChange(item.id)}
                     >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="h-4 w-4 shrink-0" />
                         {item.label}
                     </Button>
                 );

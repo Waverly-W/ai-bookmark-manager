@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { scanBookmarkValidity, ValidityResult, updateChromeBookmark, deleteChromeBookmark, filterBookmarksByFolder } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
-import { Loader2, AlertTriangle, ArrowLeft, Trash2, ExternalLink, CheckCircle, XCircle, Edit, StopCircle } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, Trash2, ExternalLink, Edit, StopCircle } from 'lucide-react';
 import { CascadingFolderSelect } from '@/components/ui/cascading-folder-select';
 
 interface ValidityManagerProps {
@@ -150,20 +150,25 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={onBack}>
+            <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                <Button variant="outline" size="icon" onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{t('validityManager')}</h2>
-                    <p className="text-muted-foreground">
+                <div className="space-y-2">
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                        {t('validityManager')}
+                    </span>
+                    <h2 className="font-display text-3xl font-semibold tracking-tight">{t('validityManager')}</h2>
+                    <p className="max-w-2xl text-sm text-muted-foreground">
                         {t('validityManagerDesc')}
                     </p>
+                </div>
                 </div>
             </div>
 
             {isScanning ? (
-                <Card className="mt-8">
+                <Card className="mt-8 border-primary/20 bg-card/92">
                     <CardHeader>
                         <CardTitle>{t('scanProgress')}</CardTitle>
                     </CardHeader>
@@ -176,7 +181,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                             <Progress value={progress} className="h-2" />
                         </div>
 
-                        <div className="border rounded-md bg-muted/50 p-4 font-mono text-xs h-48 overflow-hidden flex flex-col">
+                        <div className="flex h-48 flex-col overflow-hidden rounded-[1rem] border border-border/70 bg-surface-2/70 p-4 font-mono text-xs">
                             <div className="flex-1 overflow-y-auto space-y-1">
                                 {logs.map((log, i) => (
                                     <div key={i} className="text-muted-foreground">{log}</div>
@@ -194,8 +199,8 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                     </CardContent>
                 </Card>
             ) : !scanned ? (
-                <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl bg-muted/10 mt-8">
-                    <div className="mb-4 p-4 bg-primary/10 rounded-full">
+                <div className="mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12">
+                    <div className="mb-4 rounded-full bg-primary/10 p-4">
                         <AlertTriangle className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{t('startValidityScan')}</h3>
@@ -203,7 +208,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                         {t('validityScanDesc')}
                     </p>
 
-                    <div className="w-full max-w-md space-y-4 mb-6">
+                    <div className="mb-6 w-full max-w-md space-y-4">
                         <div className="space-y-2">
                             <Label>{t('scanScope')}</Label>
                             <CascadingFolderSelect
@@ -226,7 +231,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm">
                         <h3 className="text-lg font-medium">
                             {invalidBookmarks.length > 0
                                 ? t('invalidBookmarksFound', { count: invalidBookmarks.length })
@@ -240,12 +245,12 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                     {invalidBookmarks.length > 0 && (
                         <div className="space-y-4">
                             {invalidBookmarks.map((bookmark) => (
-                                <Card key={bookmark.id} className="overflow-hidden">
+                                <Card key={bookmark.id} className="overflow-hidden border-border/70 bg-card/92">
                                     <CardContent className="p-4 flex items-center justify-between gap-4">
                                         <div className="flex-1 min-w-0 space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-medium truncate">{bookmark.title}</span>
-                                                <span className={`text-xs px-2 py-0.5 rounded-full ${bookmark.status === 'timeout' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${bookmark.status === 'timeout' ? 'bg-primary/12 text-primary' : 'bg-destructive/10 text-destructive'
                                                     }`}>
                                                     {t(bookmark.status)}
                                                 </span>
@@ -270,7 +275,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                                                 </p>
                                             )}
                                             {bookmark.error && (
-                                                <p className="text-xs text-red-500">{bookmark.error}</p>
+                                                <p className="text-xs text-destructive/85">{bookmark.error}</p>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">

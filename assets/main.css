@@ -2,116 +2,195 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
     :root {
-        /* Material You - Purple Seed (#6750A4) - Light Mode */
-        --background: 280 100% 99%;
-        /* #FFFBFE */
-        --foreground: 270 7% 12%;
-        /* #1C1B1F - On Surface */
+        color-scheme: light;
 
-        --card: 276 38% 95%;
-        /* #F3EDF7 - Surface Container */
-        --card-foreground: 270 7% 12%;
-        /* #1D192B - On Surface */
+        --font-sans: "Avenir Next", "Avenir", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+        --font-display: "Satoshi", "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        --font-mono: "JetBrains Mono", "SFMono-Regular", "SFMono", "Consolas", "Liberation Mono", monospace;
 
-        --popover: 280 100% 99%;
-        /* #FFFBFE - Surface */
-        --popover-foreground: 270 7% 12%;
+        --background: 36 38% 94%;
+        --foreground: 28 18% 12%;
 
-        --primary: 256 35% 48%;
-        /* #6750A4 */
-        --primary-foreground: 0 0% 100%;
-        /* #FFFFFF */
+        --card: 40 56% 98%;
+        --card-foreground: 28 18% 12%;
 
-        --secondary: 263 56% 92%;
-        /* #E8DEF8 - Secondary Container */
-        --secondary-foreground: 253 26% 13%;
-        /* #1D192B - On Secondary Container */
+        --popover: 40 56% 98%;
+        --popover-foreground: 28 18% 12%;
 
-        --muted: 268 23% 91%;
-        /* #E7E0EC - Surface Container Low */
-        --muted-foreground: 270 4% 47%;
-        /* #79747E - On Surface Variant (closest) */
+        --primary: 40 58% 45%;
+        --primary-foreground: 43 100% 98%;
+        --primary-soft: 40 62% 92%;
 
-        --accent: 263 56% 92%;
-        /* #E8DEF8 - Using Secondary Container for accent/hover */
-        --accent-foreground: 253 26% 13%;
+        --secondary: 34 30% 89%;
+        --secondary-foreground: 28 18% 18%;
 
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 210 20% 98%;
+        --muted: 35 25% 91%;
+        --muted-foreground: 28 10% 42%;
 
-        --border: 270 4% 47%;
-        /* #79747E - Outline */
-        --input: 268 23% 91%;
-        /* #E7E0EC - Surface Container Low (for filled input bg) */
-        --ring: 256 35% 48%;
-        /* Primary */
+        --accent: 103 18% 40%;
+        --accent-foreground: 96 24% 96%;
+
+        --destructive: 0 72% 56%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 35 24% 80%;
+        --input: 34 34% 92%;
+        --ring: 40 58% 45%;
+
+        --surface-1: 40 56% 98%;
+        --surface-2: 35 34% 94%;
+        --surface-3: 34 28% 89%;
+        --surface-inverse: 27 12% 18%;
+        --surface-overlay: 34 28% 12%;
+        --text-1: 28 18% 12%;
+        --text-2: 28 10% 42%;
+        --text-3: 30 8% 56%;
+
+        --surface-container: var(--surface-1);
+        --surface-container-high: var(--surface-2);
+        --secondary-container: 40 62% 92%;
+        --on-secondary-container: 32 28% 20%;
+        --on-surface: var(--text-1);
 
         --radius: 1.5rem;
-        /* 24px - Large radius */
+        --radius-md: 1.125rem;
+        --radius-sm: 0.875rem;
+
+        --shadow-sm: 0 10px 24px -18px rgba(73, 47, 16, 0.28);
+        --shadow-md: 0 20px 44px -28px rgba(73, 47, 16, 0.36);
+        --shadow-panel: 0 32px 80px -40px rgba(45, 29, 7, 0.42);
+        --shadow-focus: 0 0 0 4px hsl(var(--primary) / 0.16);
     }
 
     .dark {
-        /* Material You - Purple Seed - Dark Mode (Mapped approximation) */
-        --background: 270 7% 12%;
-        /* #1C1B1F */
-        --foreground: 268 23% 91%;
-        /* #E6E1E5 */
+        color-scheme: dark;
 
-        --card: 272 16% 23%;
-        /* #4A4458 - Surface Container High approximation */
-        --card-foreground: 268 23% 91%;
+        --background: 28 14% 10%;
+        --foreground: 40 26% 94%;
 
-        --popover: 270 7% 12%;
-        --popover-foreground: 268 23% 91%;
+        --card: 30 16% 14%;
+        --card-foreground: 40 26% 94%;
 
-        --primary: 266 79% 82%;
-        /* #D0BCFF - Primary 80 */
-        --primary-foreground: 258 52% 23%;
-        /* #381E72 - Primary 20 */
+        --popover: 30 16% 14%;
+        --popover-foreground: 40 26% 94%;
 
-        --secondary: 265 24% 30%;
-        /* #4A4458 - Secondary Container */
-        --secondary-foreground: 263 56% 92%;
-        /* #E8DEF8 - On Secondary Container */
+        --primary: 40 62% 66%;
+        --primary-foreground: 30 22% 11%;
+        --primary-soft: 38 34% 22%;
 
-        --muted: 270 4% 28%;
-        /* #49454F - Surface Variant */
-        --muted-foreground: 271 4% 80%;
-        /* #CAC4D0 - On Surface Variant */
+        --secondary: 26 12% 18%;
+        --secondary-foreground: 40 18% 90%;
 
-        --accent: 265 24% 30%;
-        --accent-foreground: 263 56% 92%;
+        --muted: 26 10% 18%;
+        --muted-foreground: 35 12% 68%;
 
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 210 20% 98%;
+        --accent: 108 18% 58%;
+        --accent-foreground: 102 20% 10%;
 
-        --border: 270 5% 58%;
-        /* #938F99 - Outline */
-        --input: 270 4% 28%;
-        /* Surface Variant */
-        --ring: 266 79% 82%;
-        /* Primary 80 */
+        --destructive: 0 70% 62%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 28 12% 24%;
+        --input: 28 11% 18%;
+        --ring: 40 62% 66%;
+
+        --surface-1: 30 16% 14%;
+        --surface-2: 28 12% 18%;
+        --surface-3: 29 11% 22%;
+        --surface-inverse: 40 30% 94%;
+        --surface-overlay: 28 12% 6%;
+        --text-1: 40 26% 94%;
+        --text-2: 35 12% 68%;
+        --text-3: 35 10% 54%;
+
+        --surface-container: var(--surface-1);
+        --surface-container-high: var(--surface-2);
+        --secondary-container: 37 24% 22%;
+        --on-secondary-container: 40 30% 90%;
+        --on-surface: var(--text-1);
+
+        --shadow-sm: 0 16px 28px -20px rgba(0, 0, 0, 0.5);
+        --shadow-md: 0 26px 56px -28px rgba(0, 0, 0, 0.56);
+        --shadow-panel: 0 36px 90px -42px rgba(0, 0, 0, 0.7);
+        --shadow-focus: 0 0 0 4px hsl(var(--primary) / 0.2);
     }
 }
-
 
 @layer base {
     * {
         @apply border-border;
     }
 
+    html {
+        font-family: var(--font-sans);
+        background-color: hsl(var(--background));
+    }
+
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground antialiased;
+        font-family: var(--font-sans);
+        text-rendering: optimizeLegibility;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: var(--font-display);
+        letter-spacing: -0.025em;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+        font: inherit;
+    }
+
+    ::selection {
+        background: hsl(var(--primary) / 0.18);
+        color: hsl(var(--foreground));
     }
 }
 
-/* 过渡动画 */
-@layer utilities {
+@layer components {
+    .panel-shell {
+        @apply border backdrop-blur-xl;
+        border-color: hsl(var(--border) / 0.7);
+        background-color: hsl(var(--card) / 0.92);
+        box-shadow: var(--shadow-panel);
+    }
 
-    /* 淡入动画 */
+    .surface-subtle {
+        background: linear-gradient(180deg, hsl(var(--surface-1) / 0.98), hsl(var(--surface-2) / 0.92));
+    }
+
+    .hairline-border {
+        border: 1px solid hsl(var(--border) / 0.65);
+    }
+}
+
+@layer utilities {
+    .font-display {
+        font-family: var(--font-display);
+    }
+
+    .font-sans {
+        font-family: var(--font-sans);
+    }
+
+    .font-mono {
+        font-family: var(--font-mono);
+    }
+
+    .text-balance {
+        text-wrap: balance;
+    }
+
     @keyframes fade-in {
         from {
             opacity: 0;
@@ -122,7 +201,6 @@
         }
     }
 
-    /* 从上方滑入 */
     @keyframes slide-in-from-top {
         from {
             transform: translateY(-10px);
@@ -135,7 +213,6 @@
         }
     }
 
-    /* 从下方滑入 */
     @keyframes slide-in-from-bottom {
         from {
             transform: translateY(10px);
@@ -148,7 +225,6 @@
         }
     }
 
-    /* 从左方滑入 */
     @keyframes slide-in-from-left {
         from {
             transform: translateX(-10px);
@@ -161,7 +237,6 @@
         }
     }
 
-    /* 从右方滑入 */
     @keyframes slide-in-from-right {
         from {
             transform: translateX(10px);
@@ -174,10 +249,9 @@
         }
     }
 
-    /* 缩放进入 */
     @keyframes scale-in {
         from {
-            transform: scale(0.95);
+            transform: scale(0.96);
             opacity: 0;
         }
 
@@ -187,58 +261,50 @@
         }
     }
 
-    /* 旋转进入 */
-    @keyframes rotate-in {
-        from {
-            transform: rotate(-5deg);
-            opacity: 0;
-        }
-
-        to {
-            transform: rotate(0);
-            opacity: 1;
-        }
-    }
-
-    /* 动画类 */
     .animate-fade-in {
-        animation: fade-in 0.3s ease-in-out;
+        animation: fade-in 0.28s ease-in-out;
     }
 
     .animate-slide-in-from-top {
-        animation: slide-in-from-top 0.3s ease-out;
+        animation: slide-in-from-top 0.28s ease-out;
     }
 
     .animate-slide-in-from-bottom {
-        animation: slide-in-from-bottom 0.3s ease-out;
+        animation: slide-in-from-bottom 0.28s ease-out;
     }
 
     .animate-slide-in-from-left {
-        animation: slide-in-from-left 0.3s ease-out;
+        animation: slide-in-from-left 0.28s ease-out;
     }
 
     .animate-slide-in-from-right {
-        animation: slide-in-from-right 0.3s ease-out;
+        animation: slide-in-from-right 0.28s ease-out;
     }
 
     .animate-scale-in {
-        animation: scale-in 0.3s ease-out;
+        animation: scale-in 0.28s ease-out;
     }
 
-    .animate-rotate-in {
-        animation: rotate-in 0.3s ease-out;
-    }
-
-    /* 平滑过渡 */
     .transition-smooth {
-        @apply transition-all duration-300 ease-in-out;
+        @apply transition-all duration-300 ease-md-emphasized;
     }
 
     .transition-fast {
-        @apply transition-all duration-150 ease-in-out;
+        @apply transition-all duration-150 ease-out;
     }
 
     .transition-slow {
-        @apply transition-all duration-500 ease-in-out;
+        @apply transition-all duration-500 ease-md-emphasized;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
     }
 }

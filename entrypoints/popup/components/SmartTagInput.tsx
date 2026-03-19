@@ -32,6 +32,7 @@ export function SmartTagInput({
             isAiLoading={isAiLoading}
             placeholder={t('addTagsPlaceholder')}
             aiButtonLabel={t('autoTag')}
+            suggestionMode="match"
         />
     );
 }

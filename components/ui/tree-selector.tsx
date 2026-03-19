@@ -36,14 +36,14 @@ const TreeNode: React.FC<TreeNodeProps> = ({ folder, selectedId, onSelect, level
 
     const getIcon = () => {
         if (folder.id === 'all') {
-            return <FaBookmark className="h-4 w-4 text-amber-500" />;
+            return <FaBookmark className="h-4 w-4 text-accent" />;
         }
         if (hasChildren) {
             return isExpanded ? 
-                <FaFolderOpen className="h-4 w-4 text-blue-500" /> : 
-                <FaFolder className="h-4 w-4 text-blue-500" />;
+                <FaFolderOpen className="h-4 w-4 text-primary" /> : 
+                <FaFolder className="h-4 w-4 text-primary" />;
         }
-        return <FaFolder className="h-4 w-4 text-blue-500" />;
+        return <FaFolder className="h-4 w-4 text-primary" />;
     };
 
     const getExpandIcon = () => {
@@ -57,9 +57,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({ folder, selectedId, onSelect, level
         <div>
             <div
                 className={cn(
-                    "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
-                    "hover:bg-muted",
-                    isSelected && "bg-primary/10 border border-primary/20",
+                    "flex cursor-pointer items-center gap-2 rounded-[1rem] border border-transparent p-2 transition-colors",
+                    "hover:bg-surface-2",
+                    isSelected && "border-primary/20 bg-primary-soft",
                     "group"
                 )}
                 style={{ paddingLeft: `${paddingLeft + 8}px` }}
@@ -79,7 +79,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ folder, selectedId, onSelect, level
                 {/* 文件夹名称 */}
                 <span className={cn(
                     "text-sm font-medium truncate flex-1",
-                    isSelected && "text-primary font-semibold"
+                    isSelected && "text-foreground font-semibold"
                 )}>
                     {folder.title}
                 </span>
@@ -116,7 +116,7 @@ export const TreeSelector: React.FC<TreeSelectorProps> = ({
 }) => {
     return (
         <div className={cn(
-            "border rounded-md bg-background",
+            "rounded-[1.25rem] border border-border/70 bg-card/92 shadow-sm",
             "max-h-64 overflow-y-auto",
             className
         )}>

@@ -10,6 +10,7 @@ import { AI_PRESETS, applyPreset, type AIPreset } from '@/lib/ai-presets';
 import { AIConfig, saveAIConfig } from '@/lib/aiConfigUtils';
 import { testAIConnection } from '@/lib/aiService';
 import { Loader2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AIConfigWizardProps {
     open: boolean;
@@ -155,22 +156,23 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                 {[1, 2, 3].map((step, index) => (
                     <React.Fragment key={step}>
                         <div
-                            className={`
-                w-10 h-10 rounded-full flex items-center justify-center font-semibold
-                transition-colors
-                ${step === currentStep
+                            className={cn(
+                                "flex h-10 w-10 items-center justify-center rounded-full font-semibold transition-colors",
+                                step === currentStep
                                     ? 'bg-primary text-primary-foreground'
                                     : step < currentStep
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-muted text-muted-foreground'}
-              `}
+                                        ? 'bg-accent text-accent-foreground'
+                                        : 'bg-muted text-muted-foreground'
+                            )}
                         >
                             {step < currentStep ? '✓' : step}
                         </div>
                         {index < 2 && (
                             <div
-                                className={`w-16 h-1 mx-2 transition-colors ${step < currentStep ? 'bg-green-500' : 'bg-muted'
-                                    }`}
+                                className={cn(
+                                    "mx-2 h-1 w-16 transition-colors",
+                                    step < currentStep ? 'bg-accent' : 'bg-muted'
+                                )}
                             />
                         )}
                     </React.Fragment>
@@ -204,10 +206,10 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                     {allOptions.map((option) => (
                         <Card
                             key={option.id}
-                            className={`cursor-pointer transition-all hover:border-primary ${selectedPreset === option.id
-                                ? 'border-primary ring-2 ring-primary ring-opacity-50'
-                                : ''
-                                }`}
+                            className={cn(
+                                "cursor-pointer border-border/70 bg-card/92 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
+                                selectedPreset === option.id && 'border-primary ring-2 ring-primary/20 shadow-sm'
+                            )}
                             onClick={() => handlePresetSelect(option.id)}
                         >
                             <CardContent className="p-6 text-center">
@@ -343,10 +345,12 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                 {/* 测试结果 */}
                 {testResult && (
                     <div
-                        className={`flex items-center gap-2 p-4 rounded-md ${testResult.success
-                            ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
-                            : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
-                            }`}
+                        className={cn(
+                            "flex items-center gap-2 rounded-[1.125rem] border px-4 py-4",
+                            testResult.success
+                                ? 'border-accent/20 bg-accent/10 text-accent'
+                                : 'border-destructive/20 bg-destructive/10 text-destructive'
+                        )}
                     >
                         {testResult.success ? (
                             <CheckCircle2 className="h-5 w-5" />

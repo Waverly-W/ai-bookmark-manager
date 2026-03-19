@@ -1112,13 +1112,13 @@ export const Bookmarks: React.FC = () => {
 
     if (error) {
         return (
-            <Card>
-                <CardContent className="p-8">
-                    <div className="text-center">
-                        <p className="text-red-500 mb-4">{error}</p>
-                        <Button onClick={loadBookmarks} variant="outline">
-                            {t('retry')}
-                        </Button>
+                <Card>
+                    <CardContent className="p-8">
+                        <div className="text-center">
+                            <p className="mb-4 text-sm text-destructive">{error}</p>
+                            <Button onClick={loadBookmarks} variant="outline">
+                                {t('retry')}
+                            </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -1128,17 +1128,32 @@ export const Bookmarks: React.FC = () => {
     return (
         <div className="space-y-6">
             {/* 页面标题区域 */}
-            <div className="space-y-4 pb-4 border-b border-border">
-                <div className="space-y-2 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{t('bookmarks')}</h1>
-                        <p className="text-muted-foreground text-sm">
-                            {t('bookmarksTotal')}: {countBookmarks(allBookmarks)}
-                        </p>
+            <div className="space-y-5 rounded-[1.75rem] border border-border/70 bg-card/86 p-5 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                                {t('allBookmarks')}
+                            </span>
+                            <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-muted-foreground">
+                                {countBookmarks(allBookmarks)} {t('bookmarksTotal')}
+                            </span>
+                            {isSelectionMode && (
+                                <span className="rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-primary">
+                                    {t('selectedCount', { count: selectedItems.size })}
+                                </span>
+                            )}
+                        </div>
+                        <div>
+                            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">{t('bookmarks')}</h1>
+                            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                                {t('searchPlaceholder')}
+                            </p>
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         <Button
-                            variant={isSelectionMode ? "secondary" : "outline"}
+                            variant={isSelectionMode ? "subtle" : "outline"}
                             onClick={toggleSelectionMode}
                             className="gap-2"
                         >
@@ -1158,16 +1173,17 @@ export const Bookmarks: React.FC = () => {
                 </div>
 
                 {/* 搜索框 */}
-                <div className="flex justify-start w-full max-w-lg">
+                <div className="flex justify-start w-full max-w-xl">
                     <div className="relative w-full">
                         <form onSubmit={handleSearchSubmit}>
                             <div className="relative group">
-                                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors h-4 w-4" />
+                                <FaSearch className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground transition-colors group-focus-within:text-primary" />
                                 <Input
                                     ref={searchInputRef}
                                     type="text"
                                     placeholder={t('searchPlaceholder')}
-                                    className="pl-11 h-12 w-full rounded-full bg-secondary/30 hover:bg-secondary/50 focus:bg-surface-container-high border-0 shadow-sm hover:shadow-md transition-all duration-300 ease-md-emphasized text-base placeholder:text-muted-foreground/70"
+                                    variant="filled"
+                                    className="h-12 w-full rounded-full border-transparent bg-surface-2 pl-11 text-base shadow-sm transition-all duration-300 ease-md-emphasized placeholder:text-muted-foreground/70 hover:bg-surface-2/88 focus-visible:border-border/80 focus-visible:bg-background"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     onFocus={() => setShowSearchHistory(true)}
@@ -1178,7 +1194,7 @@ export const Bookmarks: React.FC = () => {
 
                         {/* 搜索历史下拉面板 */}
                         {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
-                            <Card className="absolute top-full left-0 right-0 mt-2 z-50 shadow-2xl border-none rounded-[1.5rem] bg-surface-container overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                            <Card className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.5rem] border border-border/70 bg-surface-container shadow-panel animate-in fade-in zoom-in-95 duration-200">
                                 <CardContent className="p-2 space-y-1">
                                     <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground">
                                         <span>{t('searchHistory')}</span>
@@ -1192,7 +1208,7 @@ export const Bookmarks: React.FC = () => {
                                     {searchHistory.map((term, index) => (
                                         <div
                                             key={index}
-                                            className="flex items-center justify-between px-4 py-3 hover:bg-on-surface/5 rounded-full cursor-pointer group transition-colors duration-200"
+                                            className="group flex cursor-pointer items-center justify-between rounded-full px-4 py-3 transition-colors duration-200 hover:bg-on-surface/5"
                                             onClick={() => {
                                                 setSearchTerm(term);
                                                 setShowSearchHistory(false);
@@ -1262,7 +1278,7 @@ export const Bookmarks: React.FC = () => {
                         />
                     )
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                         {(displayItems || []).map((item) => (
                             <BookmarkCard
                                 key={item.id}
@@ -1348,7 +1364,7 @@ export const Bookmarks: React.FC = () => {
             {/* 批量操作栏 */}
             {
                 isSelectionMode && (
-                    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-secondary/90 backdrop-blur-md border-0 shadow-2xl rounded-full px-6 py-2.5 flex items-center space-x-2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300 ease-md-emphasized ring-1 ring-white/10">
+                    <div className="fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 transform items-center space-x-2 rounded-full border border-border/70 bg-card/94 px-6 py-2.5 shadow-panel backdrop-blur-md animate-in slide-in-from-bottom-10 fade-in duration-300 ease-md-emphasized">
                         <span className="text-sm font-medium mr-2 text-secondary-foreground">
                             {t('selectedCount', { count: selectedItems.size })}
                         </span>
@@ -1387,7 +1403,7 @@ export const Bookmarks: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-100/50 rounded-full px-4"
+                            className="rounded-full px-4 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setShowBatchDeleteDialog(true)}
                             disabled={selectedItems.size === 0}
                         >

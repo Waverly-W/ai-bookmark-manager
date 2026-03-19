@@ -179,7 +179,7 @@ export function FolderRecommendationSettings() {
             {/* 标题 */}
             <div className="space-y-2 pb-4 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-blue-500" />
+                    <Sparkles className="w-5 h-5 text-primary" />
                     <h2 className="text-xl font-semibold">{t('folderRecommendationSettings')}</h2>
                 </div>
                 <p className="text-sm text-muted-foreground max-w-prose">
@@ -367,4 +367,3 @@ export function FolderRecommendationSettings() {
         </div>
     );
 }
-

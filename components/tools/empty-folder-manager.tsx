@@ -79,21 +79,26 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={onBack}>
+            <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                <Button variant="outline" size="icon" onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{t('emptyFolderManager')}</h2>
-                    <p className="text-muted-foreground">
+                <div className="space-y-2">
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                        {t('emptyFolderManager')}
+                    </span>
+                    <h2 className="font-display text-3xl font-semibold tracking-tight">{t('emptyFolderManager')}</h2>
+                    <p className="max-w-2xl text-sm text-muted-foreground">
                         {t('emptyFolderManagerDesc')}
                     </p>
+                </div>
                 </div>
             </div>
 
             {!hasScanned ? (
-                <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl bg-muted/10 mt-8">
-                    <div className="mb-4 p-4 bg-primary/10 rounded-full">
+                <div className="mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12">
+                    <div className="mb-4 rounded-full bg-primary/10 p-4">
                         <Folder className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{t('scanForEmptyFolders')}</h3>
@@ -106,7 +111,7 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm">
                         <h3 className="text-lg font-medium">
                             {emptyFolders.length > 0
                                 ? t('emptyFoldersFound', { count: emptyFolders.length })
@@ -127,10 +132,10 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
                     </div>
 
                     {emptyFolders.length > 0 ? (
-                        <ScrollArea className="h-[500px] border rounded-md p-4">
+                        <ScrollArea className="h-[500px] rounded-[1.25rem] border border-border/70 bg-card/92 p-4">
                             <div className="space-y-2">
                                 {emptyFolders.map((folder) => (
-                                    <Card key={folder.id} className="overflow-hidden">
+                                    <Card key={folder.id} className="overflow-hidden border-border/70 bg-card/92">
                                         <CardContent className="p-4 flex items-center justify-between">
                                             <div className="flex items-center gap-3 overflow-hidden">
                                                 <Folder className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -153,7 +158,7 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
                             </div>
                         </ScrollArea>
                     ) : (
-                        <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-border/80 bg-surface-2/65 p-12 text-muted-foreground">
                             <AlertCircle className="h-12 w-12 mb-4 opacity-20" />
                             <p>{t('noEmptyFolders')}</p>
                         </div>

@@ -34,8 +34,8 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
                     className={cn(
                         "flex items-center justify-center",
                         "p-1.5",
-                        "text-gray-500 dark:text-gray-400",
-                        "hover:text-gray-700 dark:hover:text-gray-200",
+                        "text-muted-foreground",
+                        "hover:text-foreground",
                         "transition-colors duration-200",
                         "opacity-80 hover:opacity-100"
                     )}
@@ -54,10 +54,10 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
                             className={cn(
                                 "text-sm font-medium px-1 py-0.5 transition-colors duration-200 truncate",
                                 item.isLast
-                                    ? "text-gray-900 dark:text-gray-100 cursor-default"
+                                    ? "text-foreground cursor-default"
                                     : cn(
-                                        "text-gray-500 dark:text-gray-400",
-                                        "hover:text-gray-700 dark:hover:text-gray-200",
+                                        "text-muted-foreground",
+                                        "hover:text-foreground",
                                         "opacity-80 hover:opacity-100"
                                     )
                             )}
@@ -68,7 +68,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
                         {/* 分隔符 */}
                         {index < items.length - 1 && (
-                            <FaChevronRight className="h-3 w-3 text-gray-400 dark:text-gray-500 opacity-60" />
+                            <FaChevronRight className="h-3 w-3 text-muted-foreground opacity-60" />
                         )}
                     </React.Fragment>
                 ))}

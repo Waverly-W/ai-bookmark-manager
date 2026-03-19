@@ -52,7 +52,7 @@ export function TagEditor({
     const matchedSuggestions = useMemo(() => {
         const keyword = input.trim().toLowerCase();
         if (!keyword) {
-            return normalizedSuggestions.slice(0, 8);
+            return [];
         }
 
         return normalizedSuggestions
@@ -73,18 +73,18 @@ export function TagEditor({
     };
 
     return (
-        <div className="space-y-1 relative">
-            <div className="flex items-center justify-between px-1">
-                <Label className="text-xs font-medium text-muted-foreground/90">
+        <div className="space-y-2 relative">
+            <div className="flex items-center justify-between gap-2">
+                <Label className="text-[13px] font-medium text-foreground/88">
                     {label}
                 </Label>
                 {onAiGenerate && (
                     <Button
-                        variant="ghost"
+                        variant="subtle"
                         size="sm"
                         onClick={onAiGenerate}
                         disabled={isAiLoading}
-                        className="h-5 px-1.5 text-[10px] text-primary/80 hover:text-primary hover:bg-primary/10 -mr-1.5 gap-1 rounded-full"
+                        className="h-8 gap-1.5 px-3 text-[11px]"
                     >
                         <Sparkles className={`w-3 h-3 ${isAiLoading ? 'animate-spin' : ''}`} />
                         <span className="font-medium">{aiButtonLabel}</span>
@@ -92,12 +92,12 @@ export function TagEditor({
                 )}
             </div>
 
-            <div className="bg-secondary/40 hover:bg-secondary/60 transition-colors rounded-lg p-2 min-h-[42px] flex flex-wrap content-start gap-1.5">
+            <div className="flex min-h-[46px] flex-wrap content-start gap-1.5 rounded-[1rem] border border-transparent bg-surface-2 p-2 transition-colors hover:bg-surface-2/90">
                 {tags.map((tag) => (
                     <Badge
                         key={tag}
                         variant="secondary"
-                        className="bg-background/80 backdrop-blur-sm border border-border/20 text-foreground/90 hover:bg-background font-medium h-6 px-2 gap-1 rounded-md shadow-sm text-[11px]"
+                        className="h-7 gap-1 rounded-full border border-border/50 bg-background/88 px-2.5 text-[11px] font-medium text-foreground/90 shadow-sm hover:bg-background"
                     >
                         {tag}
                         <div
@@ -120,7 +120,7 @@ export function TagEditor({
                         }
                     }}
                     onFocus={() => {
-                        if (suggestionMode === 'match' && matchedSuggestions.length > 0) {
+                        if (suggestionMode === 'match' && input.trim().length > 0 && matchedSuggestions.length > 0) {
                             setIsSuggestionOpen(true);
                         }
                     }}
@@ -131,17 +131,18 @@ export function TagEditor({
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder={tags.length === 0 ? placeholder : ""}
-                    className="flex-1 min-w-[80px] border-0 bg-transparent focus-visible:ring-0 px-1 py-0 text-sm placeholder:text-muted-foreground/50 h-6"
+                    variant="filled"
+                    className="h-7 min-w-[90px] flex-1 border-0 bg-transparent px-1 py-0 text-sm shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50"
                 />
             </div>
 
             {suggestionMode === 'inline' && normalizedSuggestions.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 px-1">
+                <div className="flex flex-wrap gap-1.5">
                     {normalizedSuggestions.map((tag) => (
                         <button
                             key={tag}
                             onClick={() => handleAddTag(tag)}
-                            className="flex items-center gap-1 h-6 px-2 rounded-md text-[11px] font-medium border border-border/40 bg-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground hover:border-border/60 transition-all"
+                            className="flex h-7 items-center gap-1 rounded-full border border-border/50 bg-transparent px-2.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-border/70 hover:bg-surface-2 hover:text-foreground"
                         >
                             <Plus className="w-3 h-3 opacity-70" />
                             {tag}
@@ -151,7 +152,7 @@ export function TagEditor({
             )}
 
             {suggestionMode === 'match' && isSuggestionOpen && matchedSuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full z-30 mt-2 rounded-lg border bg-popover p-2 shadow-lg">
+                <div className="absolute left-0 right-0 top-full z-30 mt-2 rounded-[1rem] border border-border/70 bg-popover p-2 shadow-md">
                     <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground">
                         <Search className="h-3 w-3" />
                         <span>{label}</span>
