@@ -41,6 +41,8 @@ import { getAIConfig } from '@/lib/aiConfigUtils';
 import { getBookmarkFolders, moveChromeBookmark } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
 import { getTagsMapForBookmarks, removeTagsForBookmark, removeTagsForBookmarks, saveTagsForBookmark } from '@/lib/tagStorage';
+import { useTheme } from '@/components/theme-provider.tsx';
+import { cn } from '@/lib/utils';
 
 // 书签节点类型定义 - 使用 entrypoints/types.ts 中的定义
 // interface BookmarkNode {
@@ -194,6 +196,7 @@ const collectBookmarkIdsForNode = (node: BookmarkNode | null): string[] => {
 };
 
 export const Bookmarks: React.FC = () => {
+    const { themeId } = useTheme();
     const [allBookmarks, setAllBookmarks] = useState<BookmarkNode[]>([]);
     const [tagsMap, setTagsMap] = useState<Record<string, string[]>>({});
     const [currentItems, setCurrentItems] = useState<BookmarkCardItem[]>([]);
@@ -1128,25 +1131,43 @@ export const Bookmarks: React.FC = () => {
     return (
         <div className="space-y-6">
             {/* 页面标题区域 */}
-            <div className="space-y-5 rounded-[1.75rem] border border-border/70 bg-card/86 p-5 shadow-sm">
+            <div className={cn(
+                "space-y-5 rounded-[1.75rem] border border-border/70 bg-card/86 p-5 shadow-sm",
+                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-card/92"
+            )}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                            <span className={cn(
+                                "rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
+                                themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                            )}>
                                 {t('allBookmarks')}
                             </span>
-                            <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-muted-foreground">
+                            <span className={cn(
+                                "rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-muted-foreground",
+                                themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
+                            )}>
                                 {countBookmarks(allBookmarks)} {t('bookmarksTotal')}
                             </span>
                             {isSelectionMode && (
-                                <span className="rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-primary">
+                                <span className={cn(
+                                    "rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-primary",
+                                    themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
+                                )}>
                                     {t('selectedCount', { count: selectedItems.size })}
                                 </span>
                             )}
                         </div>
                         <div>
-                            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">{t('bookmarks')}</h1>
-                            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                            <h1 className={cn(
+                                "font-display text-3xl font-semibold tracking-tight text-foreground",
+                                themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]"
+                            )}>{t('bookmarks')}</h1>
+                            <p className={cn(
+                                "mt-1 max-w-2xl text-sm text-muted-foreground",
+                                themeId === 'blueprint' && "font-mono"
+                            )}>
                                 {t('searchPlaceholder')}
                             </p>
                         </div>
@@ -1155,7 +1176,7 @@ export const Bookmarks: React.FC = () => {
                         <Button
                             variant={isSelectionMode ? "subtle" : "outline"}
                             onClick={toggleSelectionMode}
-                            className="gap-2"
+                            className={cn("gap-2", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
                         >
                             {isSelectionMode ? (
                                 <>
@@ -1183,7 +1204,10 @@ export const Bookmarks: React.FC = () => {
                                     type="text"
                                     placeholder={t('searchPlaceholder')}
                                     variant="filled"
-                                    className="h-12 w-full rounded-full border-transparent bg-surface-2 pl-11 text-base shadow-sm transition-all duration-300 ease-md-emphasized placeholder:text-muted-foreground/70 hover:bg-surface-2/88 focus-visible:border-border/80 focus-visible:bg-background"
+                                    className={cn(
+                                        "h-12 w-full rounded-full border-transparent bg-surface-2 pl-11 text-base shadow-sm transition-all duration-300 ease-md-emphasized placeholder:text-muted-foreground/70 hover:bg-surface-2/88 focus-visible:border-border/80 focus-visible:bg-background",
+                                        themeId === 'blueprint' && "rounded-[var(--input-radius)] border border-border/60 bg-input/85 font-mono"
+                                    )}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     onFocus={() => setShowSearchHistory(true)}
@@ -1194,9 +1218,15 @@ export const Bookmarks: React.FC = () => {
 
                         {/* 搜索历史下拉面板 */}
                         {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
-                            <Card className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.5rem] border border-border/70 bg-surface-container shadow-panel animate-in fade-in zoom-in-95 duration-200">
+                            <Card className={cn(
+                                "absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.5rem] border border-border/70 bg-surface-container shadow-panel animate-in fade-in zoom-in-95 duration-200",
+                                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                            )}>
                                 <CardContent className="p-2 space-y-1">
-                                    <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground">
+                                    <div className={cn(
+                                        "flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground",
+                                        themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                                    )}>
                                         <span>{t('searchHistory')}</span>
                                         <button
                                             onClick={clearSearchHistory}
@@ -1208,7 +1238,10 @@ export const Bookmarks: React.FC = () => {
                                     {searchHistory.map((term, index) => (
                                         <div
                                             key={index}
-                                            className="group flex cursor-pointer items-center justify-between rounded-full px-4 py-3 transition-colors duration-200 hover:bg-on-surface/5"
+                                            className={cn(
+                                                "group flex cursor-pointer items-center justify-between rounded-full px-4 py-3 transition-colors duration-200 hover:bg-on-surface/5",
+                                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono"
+                                            )}
                                             onClick={() => {
                                                 setSearchTerm(term);
                                                 setShowSearchHistory(false);
@@ -1220,7 +1253,10 @@ export const Bookmarks: React.FC = () => {
                                             </div>
                                             <button
                                                 onClick={(e) => removeHistoryItem(e, term)}
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-all"
+                                                className={cn(
+                                                    "opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-all",
+                                                    themeId === 'blueprint' && "rounded-[var(--badge-radius)]"
+                                                )}
                                             >
                                                 <span className="sr-only">{t('delete')}</span>
                                                 <FaTimes className="w-3 h-3" />
@@ -1364,8 +1400,14 @@ export const Bookmarks: React.FC = () => {
             {/* 批量操作栏 */}
             {
                 isSelectionMode && (
-                    <div className="fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 transform items-center space-x-2 rounded-full border border-border/70 bg-card/94 px-6 py-2.5 shadow-panel backdrop-blur-md animate-in slide-in-from-bottom-10 fade-in duration-300 ease-md-emphasized">
-                        <span className="text-sm font-medium mr-2 text-secondary-foreground">
+                    <div className={cn(
+                        "fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 transform items-center space-x-2 rounded-full border border-border/70 bg-card/94 px-6 py-2.5 shadow-panel backdrop-blur-md animate-in slide-in-from-bottom-10 fade-in duration-300 ease-md-emphasized",
+                        themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-card/96"
+                    )}>
+                        <span className={cn(
+                            "text-sm font-medium mr-2 text-secondary-foreground",
+                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                        )}>
                             {t('selectedCount', { count: selectedItems.size })}
                         </span>
 
@@ -1375,7 +1417,10 @@ export const Bookmarks: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={handleSelectAll}
-                            className="hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4"
+                            className={cn(
+                                "hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4",
+                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.12em]"
+                            )}
                         >
                             <CheckSquare className="w-4 h-4 mr-2" />
                             {selectedItems.size === displayItems.length ? t('deselectAll') : t('selectAll')}
@@ -1388,7 +1433,10 @@ export const Bookmarks: React.FC = () => {
                             size="sm"
                             onClick={handleAIClassify}
                             disabled={isClassifying}
-                            className="hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4"
+                            className={cn(
+                                "hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4",
+                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.12em]"
+                            )}
                         >
                             {isClassifying ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1403,7 +1451,10 @@ export const Bookmarks: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="rounded-full px-4 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className={cn(
+                                "rounded-full px-4 text-destructive hover:bg-destructive/10 hover:text-destructive",
+                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.12em]"
+                            )}
                             onClick={() => setShowBatchDeleteDialog(true)}
                             disabled={selectedItems.size === 0}
                         >
@@ -1416,7 +1467,10 @@ export const Bookmarks: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-full hover:bg-secondary-foreground/10 text-secondary-foreground"
+                            className={cn(
+                                "h-8 w-8 rounded-full hover:bg-secondary-foreground/10 text-secondary-foreground",
+                                themeId === 'blueprint' && "rounded-[var(--button-radius)]"
+                            )}
                             onClick={toggleSelectionMode}
                         >
                             <X className="w-4 h-4" />

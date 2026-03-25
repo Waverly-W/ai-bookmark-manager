@@ -14,6 +14,8 @@ import { getBookmarksInFolder, getBookmarkFolderTree, BookmarkFolder } from '@/l
 import { isAIConfigured, getAIConfig } from '@/lib/aiConfigUtils';
 import { batchRenameBookmarksWithConsistency, detectStyleConsistency } from '@/lib/aiService';
 import { updateChromeBookmark, broadcastBookmarkUpdate } from '@/lib/bookmarkUtils';
+import { useTheme } from '@/components/theme-provider.tsx';
+import { cn } from '@/lib/utils';
 
 interface BookmarkItem {
     id: string;
@@ -41,6 +43,7 @@ enum BatchRenameStep {
 export const BatchRenamePage: React.FC = () => {
     const { t, i18n } = useTranslation('common');
     const { toast } = useToast();
+    const { themeId } = useTheme();
 
     const [currentStep, setCurrentStep] = useState<BatchRenameStep>(BatchRenameStep.FolderSelection);
     const [selectedFolderId, setSelectedFolderId] = useState<string>('');
@@ -359,13 +362,25 @@ export const BatchRenamePage: React.FC = () => {
             )}
 
             {/* 页面标题区域 */}
-            <div className="space-y-4 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+            <div className={cn(
+                "space-y-4 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
+                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+            )}>
                 <div className="space-y-2">
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                    <span className={cn(
+                        "inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
+                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                    )}>
                         {t('batchRenameTitle')}
                     </span>
-                    <h1 className="font-display text-3xl font-semibold tracking-tight">{t('batchRenameTitle')}</h1>
-                    <p className="text-sm text-muted-foreground">
+                    <h1 className={cn(
+                        "font-display text-3xl font-semibold tracking-tight",
+                        themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]"
+                    )}>{t('batchRenameTitle')}</h1>
+                    <p className={cn(
+                        "text-sm text-muted-foreground",
+                        themeId === 'blueprint' && "font-mono"
+                    )}>
                         {t('batchRenameDescription')}
                     </p>
                 </div>
@@ -386,16 +401,17 @@ export const BatchRenamePage: React.FC = () => {
                             (currentStep === BatchRenameStep.Review && index < 2);
 
                         return (
-                            <div key={item.step} className="flex flex-col items-center bg-background px-4">
+                            <div key={item.step} className={cn("flex flex-col items-center bg-background px-4", themeId === 'blueprint' && "font-mono")}>
                                 <div className={`
                                     flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300
                                     ${isActive || isCompleted
                                         ? 'scale-110 border-primary bg-primary text-primary-foreground'
                                         : 'border-border bg-background text-muted-foreground'}
+                                    ${themeId === 'blueprint' ? ' rounded-[var(--badge-radius)]' : ''}
                                 `}>
                                     {isCompleted ? <CheckCircle className="h-6 w-6" /> : item.number}
                                 </div>
-                                <span className={`mt-2 text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'
+                                <span className={`mt-2 text-sm font-medium transition-colors ${themeId === 'blueprint' ? 'uppercase tracking-[0.12em] ' : ''}${isActive ? 'text-primary' : 'text-muted-foreground'
                                     }`}>
                                     {item.label}
                                 </span>
@@ -410,7 +426,10 @@ export const BatchRenamePage: React.FC = () => {
                 {/* 步骤 1: 文件夹选择 */}
                 {currentStep === BatchRenameStep.FolderSelection && (
                     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <Card className="border-border/70 bg-card/92 shadow-sm">
+                        <Card className={cn(
+                            "border-border/70 bg-card/92 shadow-sm",
+                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                        )}>
                             <CardHeader>
                                 <CardTitle>{t('selectFolderToRename')}</CardTitle>
                                 <CardDescription>{t('selectFolderDescription')}</CardDescription>
@@ -442,7 +461,10 @@ export const BatchRenamePage: React.FC = () => {
                                         <div className="flex flex-col gap-4">
                                             {/* Status Badge */}
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3 rounded-[1rem] border border-border/60 bg-surface-2/85 p-3 text-secondary-foreground">
+                                                <div className={cn(
+                                                    "flex items-center gap-3 rounded-[1rem] border border-border/60 bg-surface-2/85 p-3 text-secondary-foreground",
+                                                    themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed font-mono"
+                                                )}>
                                                     <FolderOpen className="h-5 w-5 flex-shrink-0" />
                                                     <span className="font-medium text-sm">
                                                         {t('totalInFolder')}: {rawBookmarks.length}
@@ -450,12 +472,15 @@ export const BatchRenamePage: React.FC = () => {
                                                 </div>
 
                                                 {/* Filter Controls "Safety Lock" */}
-                                                <div className="flex items-center gap-2 rounded-[1rem] border border-border/60 bg-surface-2/85 p-1">
+                                                <div className={cn(
+                                                    "flex items-center gap-2 rounded-[1rem] border border-border/60 bg-surface-2/85 p-1",
+                                                    themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                                                )}>
                                                     <Button
                                                         variant={filterMode === 'all' ? 'secondary' : 'ghost'}
                                                         size="sm"
                                                         onClick={() => setFilterMode('all')}
-                                                        className="text-xs h-8"
+                                                        className={cn("text-xs h-8", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
                                                     >
                                                         {t('allBookmarks')}
                                                     </Button>
@@ -463,7 +488,7 @@ export const BatchRenamePage: React.FC = () => {
                                                         variant={filterMode === 'short' ? 'secondary' : 'ghost'}
                                                         size="sm"
                                                         onClick={() => setFilterMode('short')}
-                                                        className="text-xs h-8 gap-1.5"
+                                                        className={cn("text-xs h-8 gap-1.5", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
                                                         title={t('filterShortDesc', 'Only rename items with short or numeric titles')}
                                                     >
                                                         <ShieldCheck className="h-3.5 w-3.5" />
@@ -483,7 +508,10 @@ export const BatchRenamePage: React.FC = () => {
 
                                         <Button
                                             onClick={handleStartBatchRename}
-                                            className="h-12 w-full text-lg shadow-md hover:shadow-lg transition-all"
+                                            className={cn(
+                                                "h-12 w-full text-lg shadow-md hover:shadow-lg transition-all",
+                                                themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                                            )}
                                             size="lg"
                                         >
                                             <Sparkles className="mr-2 h-5 w-5" />
@@ -499,10 +527,16 @@ export const BatchRenamePage: React.FC = () => {
                 {/* 步骤 2: 处理 */}
                 {currentStep === BatchRenameStep.Processing && (
                     <div className="max-w-xl mx-auto mt-12 animate-in fade-in zoom-in-95 duration-500 space-y-6">
-                        <Card className="overflow-hidden border-primary/20 bg-card/92 shadow-lg">
+                        <Card className={cn(
+                            "overflow-hidden border-primary/20 bg-card/92 shadow-lg",
+                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                        )}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20 animate-pulse" />
                             <CardHeader className="text-center pb-2">
-                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                                <div className={cn(
+                                    "mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10",
+                                    themeId === 'blueprint' && "rounded-[var(--card-radius)] border border-primary/30"
+                                )}>
                                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                                 </div>
                                 <CardTitle className="text-xl">{t('processingProgress')}</CardTitle>
@@ -537,14 +571,20 @@ export const BatchRenamePage: React.FC = () => {
                         {/* 实时显示处理结果 */}
                         {renameResults.length > 0 && (
                             <div className="space-y-2 animate-in slide-in-from-bottom-4 fade-in duration-500">
-                                <h3 className="text-sm font-medium text-muted-foreground px-1">
+                                <h3 className={cn(
+                                    "text-sm font-medium text-muted-foreground px-1",
+                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                                )}>
                                     {t('processedItems')} ({renameResults.length})
                                 </h3>
                                 <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                     {[...renameResults].reverse().map((result) => (
                                         <div
                                             key={result.id}
-                                            className="flex items-center justify-between rounded-[1rem] border border-border/70 bg-card/92 p-3 text-sm shadow-sm animate-in slide-in-from-left-2 fade-in duration-300"
+                                            className={cn(
+                                                "flex items-center justify-between rounded-[1rem] border border-border/70 bg-card/92 p-3 text-sm shadow-sm animate-in slide-in-from-left-2 fade-in duration-300",
+                                                themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed font-mono"
+                                            )}
                                         >
                                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 {result.success ? (
@@ -607,28 +647,34 @@ export const BatchRenamePage: React.FC = () => {
                         )}
 
                         {/* 操作栏 - 粘性定位 */}
-                        <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                        <div className={cn(
+                            "sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+                            themeId === 'blueprint' && "border-dashed"
+                        )}>
                             <div className="flex items-center gap-2">
-                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <h2 className={cn(
+                                    "text-lg font-semibold flex items-center gap-2",
+                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                                )}>
                                     <CheckCircle className="h-5 w-5 text-accent" />
                                     {t('renameResults')}
-                                    <Badge variant="secondary" className="ml-2">
+                                    <Badge variant="secondary" className={cn("ml-2", themeId === 'blueprint' && "font-mono")}>
                                         {(renameResults || []).filter(r => r.selected).length} / {renameResults.length}
                                     </Badge>
                                 </h2>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => handleSelectionChange('all')}>
+                                <Button variant="outline" size="sm" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={() => handleSelectionChange('all')}>
                                     {t('selectAll')}
                                 </Button>
-                                <Button variant="outline" size="sm" onClick={() => handleSelectionChange('none')}>
+                                <Button variant="outline" size="sm" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={() => handleSelectionChange('none')}>
                                     {t('deselectAll')}
                                 </Button>
                                 <Button
                                     onClick={handleApplySelected}
                                     disabled={(renameResults || []).filter(r => r.selected).length === 0}
-                                    className="shadow-sm"
+                                    className={cn("shadow-sm", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
                                 >
                                     <Sparkles className="mr-2 h-4 w-4" />
                                     {t('applySelected')}

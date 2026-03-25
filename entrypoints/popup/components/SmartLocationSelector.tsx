@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider.tsx";
 
 interface SmartLocationSelectorProps {
     folders: BookmarkFolder[];
@@ -21,11 +23,15 @@ export function SmartLocationSelector({
     isAiLoading
 }: SmartLocationSelectorProps) {
     const { t } = useTranslation('popup');
+    const { themeId } = useTheme();
 
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-                <Label className="text-[13px] font-medium text-foreground/88">
+                <Label className={cn(
+                    "text-[13px] font-medium text-foreground/88",
+                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                )}>
                     {t('location')}
                 </Label>
                 {onAiRecommend && (
@@ -34,7 +40,10 @@ export function SmartLocationSelector({
                         size="sm"
                         onClick={onAiRecommend}
                         disabled={isAiLoading}
-                        className="h-8 gap-1.5 px-3 text-[11px]"
+                        className={cn(
+                            "h-8 gap-1.5 px-3 text-[11px]",
+                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                        )}
                     >
                         <Sparkles className={`h-3 w-3 ${isAiLoading ? 'animate-spin' : ''}`} />
                         <span className="font-medium">{t('aiRecommend')}</span>
@@ -47,7 +56,10 @@ export function SmartLocationSelector({
                 selectedId={selectedFolder}
                 onSelect={onSelect}
                 placeholder={t('selectFolder')}
-                className="w-full justify-between rounded-[1rem] bg-surface-2 px-3.5 text-sm font-normal shadow-none"
+                className={cn(
+                    "w-full justify-between rounded-[1rem] bg-surface-2 px-3.5 text-sm font-normal shadow-none",
+                    themeId === 'blueprint' && "rounded-[var(--input-radius)]"
+                )}
             />
         </div>
     );

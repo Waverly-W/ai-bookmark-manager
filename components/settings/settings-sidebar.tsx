@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { Bookmark, Palette, Sparkles, FileText, Database } from "lucide-react";
+import { useTheme } from "@/components/theme-provider.tsx";
 
 interface SettingsSidebarProps {
     activeTab: string;
@@ -12,6 +13,7 @@ interface SettingsSidebarProps {
 
 export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsSidebarProps) {
     const { t } = useTranslation();
+    const { themeId } = useTheme();
 
     const menuItems = [
         {
@@ -43,7 +45,11 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
     ];
 
     return (
-        <nav className={cn("rounded-[1.5rem] border border-border/70 bg-card/88 p-2 shadow-sm", className)}>
+        <nav className={cn(
+            "rounded-[1.5rem] border border-border/70 bg-card/88 p-2 shadow-sm",
+            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed",
+            className
+        )}>
             {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -52,6 +58,7 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
                         variant={activeTab === item.id ? "subtle" : "ghost"}
                         className={cn(
                             "h-11 w-full justify-start gap-3 rounded-[1rem] px-4",
+                            themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.14em]",
                             activeTab === item.id
                                 ? "bg-primary-soft text-foreground"
                                 : "text-muted-foreground hover:text-foreground"

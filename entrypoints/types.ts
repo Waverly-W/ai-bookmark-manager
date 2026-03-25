@@ -13,7 +13,7 @@ export enum MessageFrom {
 }
 
 class ExtMessage {
-    content?: string;
+    content?: unknown;
     from?: MessageFrom;
 
     constructor(messageType: MessageType) {

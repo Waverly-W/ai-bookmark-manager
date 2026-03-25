@@ -11,6 +11,8 @@ import { scanBookmarkValidity, ValidityResult, updateChromeBookmark, deleteChrom
 import { BookmarkNode } from '@/entrypoints/types';
 import { Loader2, AlertTriangle, ArrowLeft, Trash2, ExternalLink, Edit, StopCircle } from 'lucide-react';
 import { CascadingFolderSelect } from '@/components/ui/cascading-folder-select';
+import { useTheme } from '@/components/theme-provider.tsx';
+import { cn } from '@/lib/utils';
 
 interface ValidityManagerProps {
     bookmarks: BookmarkNode[];
@@ -21,6 +23,7 @@ interface ValidityManagerProps {
 export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onRefresh, onBack }) => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
+    const { themeId } = useTheme();
     const [isScanning, setIsScanning] = useState(false);
     const [invalidBookmarks, setInvalidBookmarks] = useState<ValidityResult[]>([]);
     const [scanned, setScanned] = useState(false);
@@ -150,17 +153,23 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
 
     return (
         <div className="space-y-6">
-            <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+            <div className={cn(
+                "rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
+                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+            )}>
                 <div className="flex items-start gap-4">
-                <Button variant="outline" size="icon" onClick={onBack}>
+                <Button variant="outline" size="icon" className={cn(themeId === 'blueprint' && "rounded-[var(--button-radius)]")} onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="space-y-2">
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                    <span className={cn(
+                        "inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
+                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                    )}>
                         {t('validityManager')}
                     </span>
-                    <h2 className="font-display text-3xl font-semibold tracking-tight">{t('validityManager')}</h2>
-                    <p className="max-w-2xl text-sm text-muted-foreground">
+                    <h2 className={cn("font-display text-3xl font-semibold tracking-tight", themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]")}>{t('validityManager')}</h2>
+                    <p className={cn("max-w-2xl text-sm text-muted-foreground", themeId === 'blueprint' && "font-mono")}>
                         {t('validityManagerDesc')}
                     </p>
                 </div>
@@ -168,7 +177,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
             </div>
 
             {isScanning ? (
-                <Card className="mt-8 border-primary/20 bg-card/92">
+                <Card className={cn("mt-8 border-primary/20 bg-card/92", themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed")}>
                     <CardHeader>
                         <CardTitle>{t('scanProgress')}</CardTitle>
                     </CardHeader>
@@ -181,7 +190,10 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                             <Progress value={progress} className="h-2" />
                         </div>
 
-                        <div className="flex h-48 flex-col overflow-hidden rounded-[1rem] border border-border/70 bg-surface-2/70 p-4 font-mono text-xs">
+                        <div className={cn(
+                            "flex h-48 flex-col overflow-hidden rounded-[1rem] border border-border/70 bg-surface-2/70 p-4 font-mono text-xs",
+                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                        )}>
                             <div className="flex-1 overflow-y-auto space-y-1">
                                 {logs.map((log, i) => (
                                     <div key={i} className="text-muted-foreground">{log}</div>
@@ -191,7 +203,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                         </div>
 
                         <div className="flex justify-center">
-                            <Button variant="destructive" onClick={handleStop}>
+                            <Button variant="destructive" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={handleStop}>
                                 <StopCircle className="mr-2 h-4 w-4" />
                                 {t('stop')}
                             </Button>
@@ -199,8 +211,14 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                     </CardContent>
                 </Card>
             ) : !scanned ? (
-                <div className="mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12">
-                    <div className="mb-4 rounded-full bg-primary/10 p-4">
+                <div className={cn(
+                    "mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12",
+                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)]"
+                )}>
+                    <div className={cn(
+                        "mb-4 rounded-full bg-primary/10 p-4",
+                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border border-primary/30"
+                    )}>
                         <AlertTriangle className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{t('startValidityScan')}</h3>

@@ -24,10 +24,13 @@ import { PopupLayout } from './components/PopupLayout';
 import { SmartInput } from './components/SmartInput';
 import { SmartTagInput } from './components/SmartTagInput';
 import { SmartLocationSelector } from './components/SmartLocationSelector';
+import { useTheme } from "@/components/theme-provider.tsx";
+import { cn } from "@/lib/utils";
 
 function App() {
     const { toast } = useToast();
     const { t, i18n } = useTranslation('popup');
+    const { themeId } = useTheme();
 
     // Core Data
     const [title, setTitle] = useState('');
@@ -266,13 +269,19 @@ function App() {
 
         toast({
             duration: autoClose ? 1200 : 2200,
-            className: "border-primary/20 bg-gradient-to-br from-primary/12 via-card to-card shadow-panel",
+            className: cn(
+                "border-primary/20 bg-gradient-to-br from-primary/12 via-card to-card shadow-panel",
+                themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed bg-card"
+            ),
             title: (
                 <span className="flex items-center gap-2 text-primary">
-                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                    <span className={cn(
+                        "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15",
+                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-primary/30"
+                    )}>
                         <Check className="h-3.5 w-3.5" />
                     </span>
-                    <span className="tracking-tight">{t('success')}</span>
+                    <span className={cn("tracking-tight", themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]")}>{t('success')}</span>
                 </span>
             ),
             description: (
@@ -333,10 +342,16 @@ function App() {
         return (
             <PopupLayout>
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center text-muted-foreground">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10">
+                    <div className={cn(
+                        "flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10",
+                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border-primary/35"
+                    )}>
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
-                    <p className="font-display text-base font-semibold text-foreground">{t('initializing')}</p>
+                    <p className={cn(
+                        "font-display text-base font-semibold text-foreground",
+                        themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
+                    )}>{t('initializing')}</p>
                 </div>
             </PopupLayout>
         );
@@ -344,11 +359,17 @@ function App() {
 
     return (
         <PopupLayout>
-            <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">
+            <h1 className={cn(
+                "font-display text-lg font-semibold tracking-tight text-foreground",
+                themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
+            )}>
                 {t('saveToLibrary')}
             </h1>
             <div className="space-y-3">
-                <section className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm">
+                <section className={cn(
+                    "rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm",
+                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/72"
+                )}>
                     <SmartInput
                         id="title"
                         label={t('title')}
@@ -360,7 +381,10 @@ function App() {
                     />
                 </section>
 
-                <section className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm">
+                <section className={cn(
+                    "rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm",
+                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/72"
+                )}>
                     <SmartLocationSelector
                         folders={folders}
                         selectedFolder={selectedFolder}
@@ -370,7 +394,10 @@ function App() {
                     />
                 </section>
 
-                <section className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm">
+                <section className={cn(
+                    "rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm",
+                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/72"
+                )}>
                     <SmartTagInput
                         tags={tags}
                         onAddTag={(tag) => setTags([...tags, tag])}
@@ -383,7 +410,10 @@ function App() {
             </div>
 
             <Button
-                className="mt-auto h-11 w-full rounded-full text-sm font-semibold shadow-md"
+                className={cn(
+                    "mt-auto h-11 w-full rounded-full text-sm font-semibold shadow-md",
+                    themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-primary/35 font-mono uppercase tracking-[0.14em] shadow-sm"
+                )}
                 onClick={handleSave}
                 disabled={isCreating}
             >

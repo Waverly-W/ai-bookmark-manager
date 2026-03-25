@@ -3,12 +3,20 @@ import { AIConfig } from "./aiConfigUtils";
 import { FolderRecommendationConfig } from "./folderRecommendationConfig";
 import { BackgroundConfig } from "@/components/background-provider";
 import { AIRenameConfig } from "./aiRenameConfig";
+import {
+    LEGACY_THEME_STORAGE_KEY,
+    THEME_ID_STORAGE_KEY,
+    THEME_MODE_STORAGE_KEY,
+    resolveThemeState
+} from "@/lib/theme";
 
 export interface AppConfiguration {
     version: number;
     timestamp: number;
     settings: {
         theme?: string;
+        themeMode?: string;
+        themeId?: string;
         accentColor?: string;
         i18nextLng?: string;
         aiConfig?: AIConfig;
@@ -30,7 +38,9 @@ const CURRENT_CONFIG_VERSION = 1;
  * Keys to export from local storage
  */
 const CONFIG_KEYS = [
-    'theme',
+    LEGACY_THEME_STORAGE_KEY,
+    THEME_MODE_STORAGE_KEY,
+    THEME_ID_STORAGE_KEY,
     'accentColor',
     'i18nextLng',
     'aiConfig',
@@ -51,11 +61,16 @@ const CONFIG_KEYS = [
 export const exportConfiguration = async (): Promise<void> => {
     try {
         const result = await browser.storage.local.get(CONFIG_KEYS);
+        const themeState = resolveThemeState(result);
 
         const exportData: AppConfiguration = {
             version: CURRENT_CONFIG_VERSION,
             timestamp: Date.now(),
-            settings: result
+            settings: {
+                ...result,
+                [THEME_MODE_STORAGE_KEY]: themeState.themeMode,
+                [THEME_ID_STORAGE_KEY]: themeState.themeId
+            }
         };
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -95,6 +110,8 @@ export const importConfiguration = async (jsonString: string): Promise<void> => 
 
         // Filter out unknown keys to prevent pollution
         const settingsToImport: Record<string, any> = {};
+        const themeState = resolveThemeState(data.settings as Record<string, unknown>);
+
         for (const key of CONFIG_KEYS) {
             // @ts-ignore
             if (data.settings[key] !== undefined) {
@@ -102,6 +119,9 @@ export const importConfiguration = async (jsonString: string): Promise<void> => 
                 settingsToImport[key] = data.settings[key];
             }
         }
+
+        settingsToImport[THEME_MODE_STORAGE_KEY] = themeState.themeMode;
+        settingsToImport[THEME_ID_STORAGE_KEY] = themeState.themeId;
 
         if (Object.keys(settingsToImport).length === 0) {
             throw new Error('No valid settings found to import');

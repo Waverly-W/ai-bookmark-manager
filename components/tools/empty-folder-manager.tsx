@@ -7,6 +7,8 @@ import { findEmptyFolders, deleteChromeBookmark } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
 import { Folder, Trash2, ArrowLeft, RefreshCw, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTheme } from '@/components/theme-provider.tsx';
+import { cn } from '@/lib/utils';
 
 interface EmptyFolderManagerProps {
     bookmarks: BookmarkNode[];
@@ -17,6 +19,7 @@ interface EmptyFolderManagerProps {
 export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmarks, onRefresh, onBack }) => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
+    const { themeId } = useTheme();
     const [emptyFolders, setEmptyFolders] = useState<BookmarkNode[]>([]);
     const [hasScanned, setHasScanned] = useState(false);
 
@@ -79,17 +82,23 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
 
     return (
         <div className="space-y-6">
-            <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+            <div className={cn(
+                "rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
+                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+            )}>
                 <div className="flex items-start gap-4">
-                <Button variant="outline" size="icon" onClick={onBack}>
+                <Button variant="outline" size="icon" className={cn(themeId === 'blueprint' && "rounded-[var(--button-radius)]")} onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="space-y-2">
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                    <span className={cn(
+                        "inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
+                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                    )}>
                         {t('emptyFolderManager')}
                     </span>
-                    <h2 className="font-display text-3xl font-semibold tracking-tight">{t('emptyFolderManager')}</h2>
-                    <p className="max-w-2xl text-sm text-muted-foreground">
+                    <h2 className={cn("font-display text-3xl font-semibold tracking-tight", themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]")}>{t('emptyFolderManager')}</h2>
+                    <p className={cn("max-w-2xl text-sm text-muted-foreground", themeId === 'blueprint' && "font-mono")}>
                         {t('emptyFolderManagerDesc')}
                     </p>
                 </div>
@@ -97,33 +106,42 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
             </div>
 
             {!hasScanned ? (
-                <div className="mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12">
-                    <div className="mb-4 rounded-full bg-primary/10 p-4">
+                <div className={cn(
+                    "mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12",
+                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)]"
+                )}>
+                    <div className={cn(
+                        "mb-4 rounded-full bg-primary/10 p-4",
+                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border border-primary/30"
+                    )}>
                         <Folder className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{t('scanForEmptyFolders')}</h3>
                     <p className="text-muted-foreground text-center max-w-md mb-6">
                         {t('emptyFolderScanDesc')}
                     </p>
-                    <Button onClick={handleScan} size="lg">
+                    <Button onClick={handleScan} size="lg" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}>
                         {t('startScan')}
                     </Button>
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm">
-                        <h3 className="text-lg font-medium">
+                    <div className={cn(
+                        "flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm",
+                        themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                    )}>
+                        <h3 className={cn("text-lg font-medium", themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]")}>
                             {emptyFolders.length > 0
                                 ? t('emptyFoldersFound', { count: emptyFolders.length })
                                 : t('noEmptyFolders')}
                         </h3>
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={handleScan}>
+                            <Button variant="outline" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={handleScan}>
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 {t('rescan')}
                             </Button>
                             {emptyFolders.length > 0 && (
-                                <Button variant="destructive" onClick={handleDeleteAll}>
+                                <Button variant="destructive" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={handleDeleteAll}>
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     {t('deleteAll')}
                                 </Button>
@@ -132,10 +150,16 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
                     </div>
 
                     {emptyFolders.length > 0 ? (
-                        <ScrollArea className="h-[500px] rounded-[1.25rem] border border-border/70 bg-card/92 p-4">
+                        <ScrollArea className={cn(
+                            "h-[500px] rounded-[1.25rem] border border-border/70 bg-card/92 p-4",
+                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                        )}>
                             <div className="space-y-2">
                                 {emptyFolders.map((folder) => (
-                                    <Card key={folder.id} className="overflow-hidden border-border/70 bg-card/92">
+                                        <Card key={folder.id} className={cn(
+                                            "overflow-hidden border-border/70 bg-card/92",
+                                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                                        )}>
                                         <CardContent className="p-4 flex items-center justify-between">
                                             <div className="flex items-center gap-3 overflow-hidden">
                                                 <Folder className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -158,7 +182,10 @@ export const EmptyFolderManager: React.FC<EmptyFolderManagerProps> = ({ bookmark
                             </div>
                         </ScrollArea>
                     ) : (
-                        <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-border/80 bg-surface-2/65 p-12 text-muted-foreground">
+                        <div className={cn(
+                            "flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-border/80 bg-surface-2/65 p-12 text-muted-foreground",
+                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] font-mono"
+                        )}>
                             <AlertCircle className="h-12 w-12 mb-4 opacity-20" />
                             <p>{t('noEmptyFolders')}</p>
                         </div>

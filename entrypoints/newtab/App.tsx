@@ -24,7 +24,7 @@ export default () => {
     const [buttonStyle, setButtonStyle] = useState<any>();
     const [cardStyle, setCardStyle] = useState<any>();
     const cardRef = useRef<HTMLDivElement>(null);
-    const { theme, toggleTheme } = useTheme();
+    const { themeId } = useTheme();
     const { t, i18n } = useTranslation();
     const { backgroundConfig } = useBackground();
 
@@ -40,9 +40,7 @@ export default () => {
             console.log('newtab:')
             console.log(message)
             if (message.messageType == MessageType.changeLocale) {
-                i18n.changeLanguage(message.content)
-            } else if (message.messageType == MessageType.changeTheme && message.content) {
-                toggleTheme(message.content as "light" | "dark" | "auto")
+                i18n.changeLanguage(message.content as string | undefined)
             }
         });
 
@@ -67,7 +65,7 @@ export default () => {
     const isCustomBackground = backgroundConfig.type !== 'default';
 
     return (
-        <div className={theme}>
+        <div data-theme-id={themeId}>
             {isCustomBackground && (
                 <>
                     <div
@@ -86,7 +84,7 @@ export default () => {
             <div className={`min-h-screen w-full transition-colors duration-300 relative overflow-hidden ${!isCustomBackground ? 'bg-background' : ''}`}>
 
                 {/* Material You Organic Shapes (Only shown for default background) */}
-                {!isCustomBackground && (
+                {!isCustomBackground && themeId !== 'blueprint' && (
                     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                         {/* Top Right - Primary/Secondary Blend */}
                         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl opacity-60 mix-blend-multiply animate-in fade-in duration-1000" />
@@ -111,7 +109,7 @@ export default () => {
                     }`}>
                     {isCustomBackground ? (
                         <div className="h-full w-full max-w-[1600px] mx-auto animate-in fade-in zoom-in-[0.99] duration-500 slide-in-from-bottom-2">
-                            <div className="h-full min-h-[calc(100vh-3rem)] rounded-[2rem] border border-border/40 bg-background/88 p-6 shadow-panel backdrop-blur-md transition-all duration-300 hover:bg-background/92 md:min-h-[calc(100vh-3rem)] md:p-8">
+                            <div className={`h-full min-h-[calc(100vh-3rem)] rounded-[2rem] border border-border/40 bg-background/88 p-6 shadow-panel backdrop-blur-md transition-all duration-300 hover:bg-background/92 md:min-h-[calc(100vh-3rem)] md:p-8 ${themeId === 'blueprint' ? 'blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/84 hover:bg-background/88' : ''}`}>
                                 {sidebarType === SidebarType.home && <Home onNavigate={setSidebarType} />}
                                 {sidebarType === SidebarType.statistics && <StatisticsPage />}
                                 {sidebarType === SidebarType.batchRename && <BatchRenamePage />}

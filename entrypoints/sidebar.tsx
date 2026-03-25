@@ -3,6 +3,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { X, Settings, Home, Wrench, PieChart, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider.tsx";
 
 export enum SidebarType {
     'home' = 'home',
@@ -24,6 +25,7 @@ const Sidebar = (
         closeContent?: () => void
     }) => {
     const { t } = useTranslation('common');
+    const { themeId } = useTheme();
 
     const primaryItems = useMemo(() => ([
         { type: SidebarType.home, label: t('home'), icon: Home },
@@ -53,6 +55,7 @@ const Sidebar = (
                 className={cn(
                     "inline-flex h-12 w-12 items-center justify-center rounded-[1rem] transition-colors duration-200",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-transparent font-mono",
                     isActive
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
@@ -79,11 +82,15 @@ const Sidebar = (
         <>
             <aside
                 className={cn(
-                    "hidden md:flex fixed inset-y-0 left-0 z-20 w-24 flex-col border-r border-border/70 bg-card/82 px-3 py-5 shadow-panel backdrop-blur-xl"
+                    "hidden md:flex fixed inset-y-0 left-0 z-20 w-24 flex-col border-r border-border/70 bg-card/82 px-3 py-5 shadow-panel backdrop-blur-xl",
+                    themeId === 'blueprint' && "blueprint-panel border-r border-dashed bg-card/90"
                 )}
             >
                 <div className="flex items-center justify-center px-1">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-sm">
+                    <div className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-sm",
+                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border-primary/40"
+                    )}>
                         <Sparkles className="h-4 w-4 text-primary" />
                     </div>
                     {closeContent && (
@@ -92,7 +99,8 @@ const Sidebar = (
                             className={cn(
                                 "inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground",
                                 "transition-all duration-200 hover:bg-surface-2 hover:text-foreground",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-transparent"
                             )}
                             aria-label="Close sidebar"
                             >
@@ -108,7 +116,7 @@ const Sidebar = (
                         {renderNavItem(primaryItems[2])}
                     </nav>
 
-                    <div className="my-6 h-px bg-border/70" />
+                    <div className={cn("my-6 h-px bg-border/70", themeId === 'blueprint' && "bg-border/40")} />
 
                     <nav className="mt-auto flex flex-col items-center gap-2">
                         {secondaryItems.map(renderNavItem)}
@@ -116,7 +124,10 @@ const Sidebar = (
                 </TooltipProvider>
             </aside>
 
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <nav className={cn(
+                "md:hidden fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+                themeId === 'blueprint' && "blueprint-panel border-dashed"
+            )}>
                 <div className="flex items-center justify-around h-16 px-2">
                     {[
                         { type: SidebarType.home, label: t('home'), icon: Home },
@@ -133,12 +144,14 @@ const Sidebar = (
                                 onClick={() => sideNav(item.type)}
                                 className={cn(
                                     "flex h-full flex-1 flex-col items-center justify-center gap-1 rounded-lg transition-colors duration-200",
-                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                                    themeId === 'blueprint' && "rounded-[var(--button-radius)]"
                                 )}
                                 aria-label={item.label}
                             >
                                 <div className={cn(
                                     "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+                                    themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-transparent",
                                     isActive
                                         ? "bg-primary text-primary-foreground shadow-sm"
                                         : "text-muted-foreground"
@@ -147,6 +160,7 @@ const Sidebar = (
                                 </div>
                                 <span className={cn(
                                     "text-xs font-medium transition-colors",
+                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]",
                                     isActive ? "text-foreground" : "text-muted-foreground"
                                 )}>
                                     {item.label}

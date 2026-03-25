@@ -11,6 +11,8 @@ import { BookmarkNode } from '@/entrypoints/types';
 import { Loader2, Save, Folder, Calendar, AlertCircle, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { CascadingFolderSelect } from "@/components/ui/cascading-folder-select";
+import { useTheme } from '@/components/theme-provider.tsx';
+import { cn } from '@/lib/utils';
 
 interface DuplicateManagerProps {
     bookmarks: BookmarkNode[];
@@ -21,6 +23,7 @@ interface DuplicateManagerProps {
 export const DuplicateManager: React.FC<DuplicateManagerProps> = ({ bookmarks, onRefresh, onBack }) => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
+    const { themeId } = useTheme();
     const [isScanning, setIsScanning] = useState(false);
     const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
     const [scanned, setScanned] = useState(false);
@@ -65,17 +68,23 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({ bookmarks, o
 
     return (
         <div className="space-y-6">
-            <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+            <div className={cn(
+                "rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
+                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+            )}>
                 <div className="flex items-start gap-4">
-                <Button variant="outline" size="icon" onClick={onBack}>
+                <Button variant="outline" size="icon" className={cn(themeId === 'blueprint' && "rounded-[var(--button-radius)]")} onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="space-y-2">
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                    <span className={cn(
+                        "inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
+                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                    )}>
                         {t('duplicateManager')}
                     </span>
-                    <h2 className="font-display text-3xl font-semibold tracking-tight">{t('duplicateOrganization', 'Duplicate Manager')}</h2>
-                    <p className="max-w-2xl text-sm text-muted-foreground">
+                    <h2 className={cn("font-display text-3xl font-semibold tracking-tight", themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]")}>{t('duplicateOrganization', 'Duplicate Manager')}</h2>
+                    <p className={cn("max-w-2xl text-sm text-muted-foreground", themeId === 'blueprint' && "font-mono")}>
                         {t('duplicateManagerCardDesc', 'Find and merge duplicate bookmarks to clean up your collection.')}
                     </p>
                 </div>
@@ -83,15 +92,21 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({ bookmarks, o
             </div>
 
             {!scanned ? (
-                <div className="mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12">
-                    <div className="mb-4 rounded-full bg-primary/10 p-4">
+                <div className={cn(
+                    "mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12",
+                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)]"
+                )}>
+                    <div className={cn(
+                        "mb-4 rounded-full bg-primary/10 p-4",
+                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border border-primary/30"
+                    )}>
                         <AlertCircle className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{t('scanForDuplicates', 'Scan for Duplicates')}</h3>
                     <p className="text-muted-foreground text-center max-w-md mb-6">
                         {t('duplicateScanDesc', 'Find bookmarks with identical URLs. You can choose which one to keep and merge them.')}
                     </p>
-                    <Button onClick={handleScan} disabled={isScanning} size="lg">
+                    <Button onClick={handleScan} disabled={isScanning} size="lg" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}>
                         {isScanning ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -104,13 +119,16 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({ bookmarks, o
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm">
-                        <h3 className="text-lg font-medium">
+                    <div className={cn(
+                        "flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-card/92 px-4 py-3 shadow-sm",
+                        themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                    )}>
+                        <h3 className={cn("text-lg font-medium", themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]")}>
                             {duplicates.length > 0
                                 ? t('duplicatesFound', { count: duplicates.length })
                                 : t('noDuplicatesFound', 'No duplicates found.')}
                         </h3>
-                        <Button variant="outline" onClick={handleScan} disabled={isScanning}>
+                        <Button variant="outline" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={handleScan} disabled={isScanning}>
                             {isScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : t('rescan', 'Rescan')}
                         </Button>
                     </div>
