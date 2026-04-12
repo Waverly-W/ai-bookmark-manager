@@ -83,16 +83,11 @@ export default () => {
             )}
             <div className={`min-h-screen w-full transition-colors duration-300 relative overflow-hidden ${!isCustomBackground ? 'bg-background' : ''}`}>
 
-                {/* Material You Organic Shapes (Only shown for default background) */}
                 {!isCustomBackground && themeId !== 'blueprint' && (
-                    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-                        {/* Top Right - Primary/Secondary Blend */}
-                        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl opacity-60 mix-blend-multiply animate-in fade-in duration-1000" />
-                        <div className="absolute top-[10%] right-[10%] w-[400px] h-[400px] rounded-full bg-secondary/20 blur-3xl opacity-60 mix-blend-multiply animate-in fade-in duration-1500" />
-
-                        {/* Bottom Left - Tertiary/Accent Blend */}
-                        <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] rounded-full bg-accent/15 blur-3xl opacity-50 mix-blend-multiply animate-in fade-in duration-2000" />
-                        <div className="absolute bottom-[20%] left-[10%] w-[300px] h-[300px] rounded-full bg-primary/5 blur-3xl opacity-40 mix-blend-multiply" />
+                    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+                        <div className="enterprise-grid absolute inset-0 opacity-60" />
+                        <div className="absolute inset-x-0 top-0 h-[36vh] bg-[radial-gradient(circle_at_top_left,rgba(24,99,220,0.08),transparent_36%),radial-gradient(circle_at_top_right,rgba(155,96,170,0.1),transparent_28%)]" />
+                        <div className="absolute inset-x-0 bottom-0 h-[28vh] bg-[linear-gradient(180deg,transparent,rgba(23,23,28,0.04))]" />
                     </div>
                 )}
 

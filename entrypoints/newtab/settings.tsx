@@ -22,19 +22,22 @@ export function SettingsPage() {
         <div className="container mx-auto flex h-[calc(100vh-2rem)] max-w-7xl gap-8 px-6 py-6 md:px-8 md:py-8">
             {/* Sidebar */}
             <aside className="w-72 flex-shrink-0 space-y-6">
-                <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-5 shadow-sm">
+                <div className={cn(
+                    "panel-shell space-y-2 p-5",
+                    themeId === 'blueprint' ? "blueprint-panel" : "surface-subtle"
+                )}>
                     <div className="space-y-2">
                         <span className={cn(
-                            "inline-flex bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
-                            themeId === 'blueprint' ? "rounded-[var(--badge-radius)] border border-border/60 uppercase tracking-[0.18em]" : "rounded-full"
+                            "kicker-label",
+                            themeId === 'blueprint' ? "border-dashed bg-background/10 text-muted-foreground" : "text-primary"
                         )}>
                             {t('settings')}
                         </span>
                         <h1 className={cn(
-                            "font-display text-3xl font-semibold tracking-tight",
+                            "font-display text-4xl font-normal tracking-[-0.04em]",
                             themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]"
                         )}>{t('settings')}</h1>
-                        <p className="text-sm text-muted-foreground">{t('settingsDescription')}</p>
+                        <p className="text-sm leading-6 text-muted-foreground">{t('settingsDescription')}</p>
                     </div>
                 </div>
                 <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
@@ -44,22 +47,22 @@ export function SettingsPage() {
             <main className="flex-1 overflow-y-auto pr-2">
                 <div className="max-w-4xl space-y-6 pb-10">
                     {activeTab === "bookmarks" && (
-                        <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                        <div className="panel-shell p-6">
                             <BookmarkSettings />
                         </div>
                     )}
 
                     {activeTab === "appearance" && (
                         <div className={cn(
-                            "space-y-6 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
-                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                            "panel-shell space-y-6 p-6",
+                            themeId === 'blueprint' && "blueprint-panel border-dashed"
                         )}>
                             <div className="space-y-2 border-b border-border/70 pb-4">
                                 <h2 className={cn(
-                                    "text-xl font-semibold",
+                                    "font-display text-[2rem] font-normal tracking-[-0.03em]",
                                     themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
                                 )}>{t('appearanceSettings')}</h2>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm leading-6 text-muted-foreground">
                                     {t('appearanceSettingsDescription')}
                                 </p>
                             </div>
@@ -75,19 +78,19 @@ export function SettingsPage() {
 
 
                     {activeTab === "ai-service" && (
-                        <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                        <div className="panel-shell p-6">
                             <AIConfigSettings />
                         </div>
                     )}
 
                     {activeTab === "prompts" && (
-                        <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                        <div className="panel-shell p-6">
                             <AIPromptSettings />
                         </div>
                     )}
 
                     {activeTab === "data" && (
-                        <div className="rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
+                        <div className="panel-shell p-6">
                             <DataExportSettings />
                         </div>
                     )}

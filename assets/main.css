@@ -6,119 +6,119 @@
     :root {
         color-scheme: light;
 
-        --font-sans: "Avenir Next", "Avenir", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-        --font-display: "Satoshi", "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        --font-sans: "Neue Haas Grotesk Text Pro", "Avenir Next", "Avenir", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+        --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Times New Roman", "PingFang SC", serif;
         --font-mono: "JetBrains Mono", "SFMono-Regular", "SFMono", "Consolas", "Liberation Mono", monospace;
 
-        --background: 36 38% 94%;
-        --foreground: 28 18% 12%;
+        --background: 0 0% 100%;
+        --foreground: 0 0% 0%;
 
-        --card: 40 56% 98%;
-        --card-foreground: 28 18% 12%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 0%;
 
-        --popover: 40 56% 98%;
-        --popover-foreground: 28 18% 12%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 0%;
 
-        --primary: 40 58% 45%;
-        --primary-foreground: 43 100% 98%;
-        --primary-soft: 40 62% 92%;
+        --primary: 217 80% 48%;
+        --primary-foreground: 0 0% 100%;
+        --primary-soft: 217 70% 96%;
 
-        --secondary: 34 30% 89%;
-        --secondary-foreground: 28 18% 18%;
+        --secondary: 210 17% 96%;
+        --secondary-foreground: 240 6% 16%;
 
-        --muted: 35 25% 91%;
-        --muted-foreground: 28 10% 42%;
+        --muted: 220 16% 97%;
+        --muted-foreground: 240 8% 46%;
 
-        --accent: 103 18% 40%;
-        --accent-foreground: 96 24% 96%;
+        --accent: 217 80% 48%;
+        --accent-foreground: 0 0% 100%;
 
         --destructive: 0 72% 56%;
         --destructive-foreground: 0 0% 100%;
 
-        --border: 35 24% 80%;
-        --input: 34 34% 92%;
-        --ring: 40 58% 45%;
+        --border: 240 10% 86%;
+        --input: 220 16% 97%;
+        --ring: 226 73% 60%;
 
-        --surface-1: 40 56% 98%;
-        --surface-2: 35 34% 94%;
-        --surface-3: 34 28% 89%;
-        --surface-inverse: 27 12% 18%;
-        --surface-overlay: 34 28% 12%;
-        --text-1: 28 18% 12%;
-        --text-2: 28 10% 42%;
-        --text-3: 30 8% 56%;
+        --surface-1: 0 0% 100%;
+        --surface-2: 210 20% 98%;
+        --surface-3: 210 16% 92%;
+        --surface-inverse: 235 11% 12%;
+        --surface-overlay: 235 18% 10%;
+        --text-1: 0 0% 0%;
+        --text-2: 240 8% 46%;
+        --text-3: 240 6% 62%;
 
         --surface-container: var(--surface-1);
         --surface-container-high: var(--surface-2);
-        --secondary-container: 40 62% 92%;
-        --on-secondary-container: 32 28% 20%;
+        --secondary-container: 217 70% 96%;
+        --on-secondary-container: 232 18% 22%;
         --on-surface: var(--text-1);
 
-        --radius: 1.5rem;
-        --radius-md: 1.125rem;
-        --radius-sm: 0.875rem;
+        --radius: 1.375rem;
+        --radius-md: 1rem;
+        --radius-sm: 0.5rem;
         --button-radius: 9999px;
-        --card-radius: 1.5rem;
+        --card-radius: 1.375rem;
         --badge-radius: 9999px;
-        --input-radius: 0.75rem;
+        --input-radius: 0.5rem;
 
-        --shadow-sm: 0 10px 24px -18px rgba(73, 47, 16, 0.28);
-        --shadow-md: 0 20px 44px -28px rgba(73, 47, 16, 0.36);
-        --shadow-panel: 0 32px 80px -40px rgba(45, 29, 7, 0.42);
-        --shadow-focus: 0 0 0 4px hsl(var(--primary) / 0.16);
+        --shadow-sm: 0 1px 2px rgba(23, 23, 28, 0.02);
+        --shadow-md: 0 8px 24px rgba(23, 23, 28, 0.04);
+        --shadow-panel: 0 20px 50px rgba(23, 23, 28, 0.05);
+        --shadow-focus: 0 0 0 3px hsl(var(--ring) / 0.24);
     }
 
     .dark {
         color-scheme: dark;
 
-        --background: 28 14% 10%;
-        --foreground: 40 26% 94%;
+        --background: 240 11% 8%;
+        --foreground: 210 20% 96%;
 
-        --card: 30 16% 14%;
-        --card-foreground: 40 26% 94%;
+        --card: 240 10% 10%;
+        --card-foreground: 210 20% 96%;
 
-        --popover: 30 16% 14%;
-        --popover-foreground: 40 26% 94%;
+        --popover: 240 10% 10%;
+        --popover-foreground: 210 20% 96%;
 
-        --primary: 40 62% 66%;
-        --primary-foreground: 30 22% 11%;
-        --primary-soft: 38 34% 22%;
+        --primary: 217 83% 60%;
+        --primary-foreground: 0 0% 100%;
+        --primary-soft: 232 24% 18%;
 
-        --secondary: 26 12% 18%;
-        --secondary-foreground: 40 18% 90%;
+        --secondary: 240 7% 16%;
+        --secondary-foreground: 210 16% 92%;
 
-        --muted: 26 10% 18%;
-        --muted-foreground: 35 12% 68%;
+        --muted: 240 7% 15%;
+        --muted-foreground: 230 12% 68%;
 
-        --accent: 108 18% 58%;
-        --accent-foreground: 102 20% 10%;
+        --accent: 217 83% 60%;
+        --accent-foreground: 0 0% 100%;
 
         --destructive: 0 70% 62%;
         --destructive-foreground: 0 0% 100%;
 
-        --border: 28 12% 24%;
-        --input: 28 11% 18%;
-        --ring: 40 62% 66%;
+        --border: 240 6% 24%;
+        --input: 240 7% 15%;
+        --ring: 226 73% 60%;
 
-        --surface-1: 30 16% 14%;
-        --surface-2: 28 12% 18%;
-        --surface-3: 29 11% 22%;
-        --surface-inverse: 40 30% 94%;
-        --surface-overlay: 28 12% 6%;
-        --text-1: 40 26% 94%;
-        --text-2: 35 12% 68%;
-        --text-3: 35 10% 54%;
+        --surface-1: 240 10% 10%;
+        --surface-2: 240 7% 14%;
+        --surface-3: 240 6% 19%;
+        --surface-inverse: 0 0% 100%;
+        --surface-overlay: 240 14% 6%;
+        --text-1: 210 20% 96%;
+        --text-2: 230 12% 68%;
+        --text-3: 230 10% 52%;
 
         --surface-container: var(--surface-1);
         --surface-container-high: var(--surface-2);
-        --secondary-container: 37 24% 22%;
-        --on-secondary-container: 40 30% 90%;
+        --secondary-container: 232 24% 18%;
+        --on-secondary-container: 210 20% 92%;
         --on-surface: var(--text-1);
 
-        --shadow-sm: 0 16px 28px -20px rgba(0, 0, 0, 0.5);
-        --shadow-md: 0 26px 56px -28px rgba(0, 0, 0, 0.56);
-        --shadow-panel: 0 36px 90px -42px rgba(0, 0, 0, 0.7);
-        --shadow-focus: 0 0 0 4px hsl(var(--primary) / 0.2);
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+        --shadow-md: 0 14px 36px rgba(0, 0, 0, 0.24);
+        --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.28);
+        --shadow-focus: 0 0 0 3px hsl(var(--ring) / 0.28);
     }
 
     [data-theme-id="blueprint"] {
@@ -204,6 +204,8 @@
         font-family: var(--font-sans);
         text-rendering: optimizeLegibility;
         position: relative;
+        background-image:
+            linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface-2)) 100%);
     }
 
     h1,
@@ -213,7 +215,7 @@
     h5,
     h6 {
         font-family: var(--font-display);
-        letter-spacing: -0.025em;
+        letter-spacing: -0.035em;
     }
 
     button,
@@ -304,16 +306,40 @@
     .panel-shell {
         @apply border backdrop-blur-xl;
         border-color: hsl(var(--border) / 0.7);
-        background-color: hsl(var(--card) / 0.92);
+        border-radius: var(--card-radius);
+        background-color: hsl(var(--card) / 0.94);
         box-shadow: var(--shadow-panel);
     }
 
     .surface-subtle {
-        background: linear-gradient(180deg, hsl(var(--surface-1) / 0.98), hsl(var(--surface-2) / 0.92));
+        background: linear-gradient(180deg, hsl(var(--surface-1) / 0.98), hsl(var(--surface-2) / 0.96));
     }
 
     .hairline-border {
         border: 1px solid hsl(var(--border) / 0.65);
+    }
+
+    .enterprise-grid {
+        background-image:
+            linear-gradient(hsl(var(--border) / 0.18) 1px, transparent 1px),
+            linear-gradient(90deg, hsl(var(--border) / 0.18) 1px, transparent 1px);
+        background-size: 32px 32px;
+    }
+
+    .hero-band {
+        background:
+            radial-gradient(circle at top left, rgba(155, 96, 170, 0.16), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(24, 99, 220, 0.14), transparent 36%),
+            linear-gradient(135deg, rgba(23, 23, 28, 0.98), rgba(54, 32, 74, 0.92));
+        color: white;
+    }
+
+    .kicker-label {
+        @apply inline-flex items-center gap-2 border px-3 py-1 text-[11px] uppercase tracking-[0.22em];
+        border-radius: var(--badge-radius);
+        border-color: hsl(var(--border) / 0.75);
+        background-color: hsl(var(--background) / 0.72);
+        color: hsl(var(--muted-foreground));
     }
 
     .blueprint-panel {

@@ -46,8 +46,8 @@ export function ThemeSettings() {
                                 key={mode}
                                 htmlFor={`theme-mode-${mode}`}
                                 className={cn(
-                                    "flex cursor-pointer items-start gap-3 rounded-[1.25rem] border border-border/70 bg-background/80 p-4 transition-all duration-200 hover:border-border hover:bg-surface-2/70",
-                                    selected && "border-primary/50 bg-primary/5 shadow-sm"
+                                    "flex cursor-pointer items-start gap-3 rounded-[var(--card-radius)] border border-border/70 bg-background/90 p-4 transition-all duration-200 hover:border-border hover:bg-surface-2/72",
+                                    selected && "border-primary/40 bg-primary/5"
                                 )}
                             >
                                 <RadioGroupItem id={`theme-mode-${mode}`} value={mode} className="mt-1" />
@@ -87,8 +87,8 @@ export function ThemeSettings() {
                             <Label key={theme.id} htmlFor={`theme-style-${theme.id}`} className="cursor-pointer">
                                 <Card
                                     className={cn(
-                                        "overflow-hidden rounded-[1.5rem] border-border/70 bg-card/96 transition-all duration-200 hover:-translate-y-0.5 hover:border-border",
-                                        selected && "border-primary/60 shadow-md"
+                                        "overflow-hidden border-border/70 bg-card/96 transition-all duration-200 hover:border-border",
+                                        selected && "border-primary/50"
                                     )}
                                 >
                                     <div className={cn("relative h-28 border-b border-border/70", theme.previewClassName)}>
@@ -100,7 +100,11 @@ export function ThemeSettings() {
                                             </>
                                         )}
                                         {theme.id === 'default' && (
-                                            <div className="absolute inset-x-4 bottom-4 top-4 rounded-[1.25rem] border border-white/40 bg-white/50 backdrop-blur-sm dark:bg-black/10" />
+                                            <>
+                                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,99,220,0.08),transparent_42%)]" />
+                                                <div className="absolute bottom-4 left-4 right-16 top-4 rounded-[1.375rem] border border-black/10 bg-white/92" />
+                                                <div className="absolute bottom-4 right-4 top-8 w-12 rounded-[1rem] bg-[#17171c]" />
+                                            </>
                                         )}
                                     </div>
                                     <CardContent className="space-y-3 p-4">

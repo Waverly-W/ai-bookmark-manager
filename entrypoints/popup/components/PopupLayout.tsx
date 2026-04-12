@@ -15,8 +15,8 @@ export function PopupLayout({ children }: PopupLayoutProps) {
             themeId === 'blueprint' && "font-mono"
         )}>
             <div className={cn(
-                "relative z-10 m-2 flex min-h-[calc(100%-1rem)] flex-col gap-3 rounded-[1.5rem] border border-border/70 bg-card/96 p-3.5 shadow-panel backdrop-blur-xl",
-                themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                "panel-shell relative z-10 m-2 flex min-h-[calc(100%-1rem)] flex-col gap-3 p-3.5",
+                themeId === 'blueprint' ? "blueprint-panel border-dashed" : "surface-subtle"
             )}>
                 {children}
             </div>

@@ -33,8 +33,13 @@ module.exports = {
             fontSize: {
                 xs: ['12px', { lineHeight: '1.4' }],
                 sm: ['14px', { lineHeight: '1.45' }],
-                base: '16px',
-                lg: ['18px', { lineHeight: '1.5' }],
+                base: ['16px', { lineHeight: '1.5' }],
+                lg: ['18px', { lineHeight: '1.4' }],
+                xl: ['24px', { lineHeight: '1.3' }],
+                '2xl': ['32px', { lineHeight: '1.2' }],
+                '3xl': ['48px', { lineHeight: '1.2' }],
+                '4xl': ['60px', { lineHeight: '1' }],
+                '5xl': ['72px', { lineHeight: '1' }],
             },
             colors: {
                 border: "hsl(var(--border))",
