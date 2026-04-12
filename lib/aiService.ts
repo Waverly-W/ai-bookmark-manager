@@ -22,8 +22,15 @@ import { getTopTags } from './tagStorage';
  */
 interface AIResponse {
     choices: Array<{
+        finish_reason?: string | null;
         message: {
-            content: string;
+            content?: string | Array<{
+                type?: string;
+                text?: string;
+            }>;
+            reasoning_content?: string;
+            refusal?: string;
+            tool_calls?: unknown[] | null;
         };
     }>;
 }
@@ -35,6 +42,59 @@ export interface AIRequestOptions {
     signal?: AbortSignal;
     maxConcurrency?: number; // 最大并发数（仅用于逐个模式）
 }
+
+interface AIGenerationOptions {
+    maxTokens?: number;
+    temperature?: number;
+    label?: string;
+}
+
+export const extractResponseText = (message?: AIResponse['choices'][number]['message']): string => {
+    if (!message) {
+        return '';
+    }
+
+    if (typeof message.content === 'string' && message.content.trim().length > 0) {
+        return message.content.trim();
+    }
+
+    if (Array.isArray(message.content)) {
+        const text = message.content
+            .map((part) => typeof part?.text === 'string' ? part.text : '')
+            .join('')
+            .trim();
+
+        if (text.length > 0) {
+            return text;
+        }
+    }
+
+    if (typeof message.reasoning_content === 'string' && message.reasoning_content.trim().length > 0) {
+        return message.reasoning_content.trim();
+    }
+
+    if (typeof message.refusal === 'string' && message.refusal.trim().length > 0) {
+        return message.refusal.trim();
+    }
+
+    return '';
+};
+
+const hasUsableResponse = (choice?: AIResponse['choices'][number]): boolean => {
+    if (!choice) {
+        return false;
+    }
+
+    if (extractResponseText(choice.message).length > 0) {
+        return true;
+    }
+
+    if (Array.isArray(choice.message?.tool_calls) && choice.message.tool_calls.length > 0) {
+        return true;
+    }
+
+    return choice.finish_reason === 'stop' || choice.finish_reason === 'length';
+};
 
 
 // 通用异步工具：延迟
@@ -122,7 +182,9 @@ async function fetchWithRetry(
 export interface TestConnectionResult {
     success: boolean;
     message: string;
+    messageKey?: string;
     error?: string;
+    errorKey?: string;
 }
 
 /**
@@ -157,9 +219,11 @@ const callAIAPI = async (
     systemPrompt?: string,
     maxTokens: number = 1000, // Increased default for JSON
     options?: AIRequestOptions,
-    responseFormat?: { type: "text" | "json_object" | "json_schema"; json_schema?: any }
+    responseFormat?: { type: "text" | "json_object" | "json_schema"; json_schema?: any },
+    generation?: AIGenerationOptions
 ): Promise<string> => {
     const { apiUrl, apiKey, modelId } = config;
+    const requestLabel = generation?.label || 'generic';
 
     // 构建完整的API URL
     const endpoint = buildEndpoint(apiUrl);
@@ -183,7 +247,7 @@ const callAIAPI = async (
         const requestBody: any = {
             model: modelId,
             messages: messages,
-            temperature: 0.7,
+            temperature: generation?.temperature ?? 0.7,
             max_tokens: maxTokens
         };
 
@@ -192,6 +256,7 @@ const callAIAPI = async (
             requestBody.response_format = responseFormat;
         }
 
+        const startTime = performance.now();
         const response = await fetchWithRetry(endpoint, {
             method: 'POST',
             headers: {
@@ -200,6 +265,7 @@ const callAIAPI = async (
             },
             body: JSON.stringify(requestBody)
         }, options);
+        const elapsedMs = Math.round(performance.now() - startTime);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -212,7 +278,15 @@ const callAIAPI = async (
             throw new Error('No response from AI');
         }
 
-        return data.choices[0].message.content.trim();
+        console.log(`[AI] ${requestLabel} completed in ${elapsedMs}ms`, {
+            modelId,
+            promptChars: prompt.length,
+            systemPromptChars: systemPrompt?.length || 0,
+            maxTokens,
+            temperature: requestBody.temperature
+        });
+
+        return extractResponseText(data.choices[0].message);
     } catch (error) {
         console.error('AI API call failed:', error);
         throw error;
@@ -233,7 +307,8 @@ export const executeScenario = async <InputType, OutputType>(
     input: InputType,
     userPromptTemplate?: string,
     systemPromptOverride?: string, // Allow overriding system prompt (e.g. for dynamic injection)
-    locale: string = 'zh_CN'
+    locale: string = 'zh_CN',
+    generation?: AIGenerationOptions
 ): Promise<OutputType> => {
     // 1. 准备 System Prompt
     const systemPrompt = systemPromptOverride || scenario.getSystemPrompt(locale);
@@ -247,10 +322,14 @@ export const executeScenario = async <InputType, OutputType>(
         config,
         userPrompt,
         systemPrompt,
-        1000,
+        generation?.maxTokens ?? 1000,
         undefined,
         {
             type: "json_object"
+        },
+        {
+            temperature: generation?.temperature,
+            label: generation?.label ?? scenario.id
         }
     );
 
@@ -271,30 +350,63 @@ export const executeScenario = async <InputType, OutputType>(
  */
 export const testAIConnection = async (config: AIConfig): Promise<TestConnectionResult> => {
     try {
-        // 发送一个简单的测试请求
-        const testPrompt = 'Say "Hello" if you can read this.';
-        // callAIAPI signature: (config, prompt, systemPrompt, maxTokens, options, responseFormat)
-        const response = await callAIAPI(config, testPrompt, undefined, 10);
+        const endpoint = buildEndpoint(config.apiUrl);
+        const requestBody = {
+            model: config.modelId,
+            messages: [
+                {
+                    role: 'user',
+                    content: 'Reply with exactly "Hello".'
+                }
+            ],
+            temperature: 0,
+            max_tokens: 32
+        };
 
-        // 检查响应是否有效
-        if (response && response.length > 0) {
-            return {
-                success: true,
-                message: 'Connection successful! AI is responding correctly.'
-            };
-        } else {
+        const response = await fetchWithRetry(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
             return {
                 success: false,
                 message: 'Connection failed',
-                error: 'Empty response from AI'
+                messageKey: 'connectionFailed',
+                error: `API request failed: ${response.status} ${response.statusText}. ${errorText}`
             };
         }
+
+        const data: AIResponse = await response.json();
+        const firstChoice = data.choices?.[0];
+        if (hasUsableResponse(firstChoice)) {
+            return {
+                success: true,
+                message: 'Connection successful. The model accepted the request and returned a completion.',
+                messageKey: 'connectionTestSucceeded'
+            };
+        }
+
+        return {
+            success: false,
+            message: 'Connection failed',
+            messageKey: 'connectionFailed',
+            error: 'The model returned no usable content.',
+            errorKey: 'connectionTestNoUsableContent'
+        };
     } catch (error) {
         console.error('Test connection failed:', error);
         return {
             success: false,
             message: 'Connection failed',
-            error: error instanceof Error ? error.message : 'Unknown error'
+            messageKey: 'connectionFailed',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            errorKey: error instanceof Error ? undefined : 'unknownError'
         };
     }
 };
@@ -810,7 +922,12 @@ export const renameBookmarkContextuallyWithAI = async (
             { url, title, currentFolder, otherBookmarks },
             userPromptTemplate,
             systemPrompt,
-            locale
+            locale,
+            {
+                maxTokens: 80,
+                temperature: 0.2,
+                label: 'contextual-rename'
+            }
         );
 
         return {
@@ -846,7 +963,12 @@ export const autoTagBookmark = async (
             { url, title, existingTags: topTags },
             formatAutoTagPrompt(userPromptTemplate, url, title),
             systemPrompt,
-            locale
+            locale,
+            {
+                maxTokens: 120,
+                temperature: 0.2,
+                label: 'auto-tagging'
+            }
         );
 
         return {

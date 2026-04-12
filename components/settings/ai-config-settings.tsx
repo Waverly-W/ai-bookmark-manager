@@ -26,6 +26,9 @@ export function AIConfigSettings() {
     const [testResult, setTestResult] = useState<{
         success: boolean;
         message: string;
+        messageKey?: string;
+        error?: string;
+        errorKey?: string;
     } | null>(null);
     const [showWizard, setShowWizard] = useState(false);
 
@@ -96,16 +99,18 @@ export function AIConfigSettings() {
         try {
             const result = await testAIConnection(config);
             setTestResult(result);
+            const translatedMessage = result.messageKey ? t(result.messageKey) : result.message;
+            const translatedError = result.errorKey ? t(result.errorKey) : (result.error || result.message);
 
             if (result.success) {
                 toast({
                     title: t('connectionSuccess'),
-                    description: result.message,
+                    description: translatedMessage,
                 });
             } else {
                 toast({
                     title: t('connectionFailed'),
-                    description: result.error || result.message,
+                    description: translatedError,
                     variant: "destructive"
                 });
             }
@@ -113,7 +118,7 @@ export function AIConfigSettings() {
             console.error('Test connection error:', error);
             toast({
                 title: t('connectionFailed'),
-                description: error instanceof Error ? error.message : 'Unknown error',
+                description: error instanceof Error ? error.message : t('unknownError'),
                 variant: "destructive"
             });
         } finally {
@@ -140,13 +145,13 @@ export function AIConfigSettings() {
             await saveAIConfig(config);
             toast({
                 title: t('configSaved'),
-                description: 'AI configuration has been saved successfully',
+                description: t('configSavedDesc'),
             });
         } catch (error) {
             console.error('Save config error:', error);
             toast({
                 title: t('configSaveFailed'),
-                description: error instanceof Error ? error.message : 'Unknown error',
+                description: error instanceof Error ? error.message : t('unknownError'),
                 variant: "destructive"
             });
         } finally {
@@ -237,7 +242,11 @@ export function AIConfigSettings() {
                     ) : (
                         <XCircle className="h-4 w-4" />
                     )}
-                    <span className="text-sm">{testResult.message}</span>
+                    <span className="text-sm">
+                        {testResult.success
+                            ? (testResult.messageKey ? t(testResult.messageKey) : testResult.message)
+                            : (testResult.errorKey ? t(testResult.errorKey) : (testResult.error || (testResult.messageKey ? t(testResult.messageKey) : testResult.message)))}
+                    </span>
                 </div>
             )}
 

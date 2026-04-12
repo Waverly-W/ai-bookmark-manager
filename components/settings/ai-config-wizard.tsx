@@ -38,6 +38,9 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
     const [testResult, setTestResult] = useState<{
         success: boolean;
         message: string;
+        messageKey?: string;
+        error?: string;
+        errorKey?: string;
     } | null>(null);
 
     // 重置向导状态
@@ -76,22 +79,24 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
         try {
             const result = await testAIConnection(config);
             setTestResult(result);
+            const translatedMessage = result.messageKey ? t(result.messageKey) : result.message;
+            const translatedError = result.errorKey ? t(result.errorKey) : (result.error || result.message);
 
             if (result.success) {
                 toast({
                     title: t('connectionSuccess'),
-                    description: result.message,
+                    description: translatedMessage,
                 });
             } else {
                 toast({
                     title: t('connectionFailed'),
-                    description: result.error || result.message,
+                    description: translatedError,
                     variant: 'destructive'
                 });
             }
         } catch (error) {
             console.error('Test connection error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorMessage = error instanceof Error ? error.message : t('unknownError');
             setTestResult({
                 success: false,
                 message: errorMessage
@@ -121,7 +126,7 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
             console.error('Save config error:', error);
             toast({
                 title: t('configSaveFailed'),
-                description: error instanceof Error ? error.message : 'Unknown error',
+                description: error instanceof Error ? error.message : t('unknownError'),
                 variant: 'destructive'
             });
         }
@@ -357,7 +362,11 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                         ) : (
                             <XCircle className="h-5 w-5" />
                         )}
-                        <span className="text-sm">{testResult.message}</span>
+                        <span className="text-sm">
+                            {testResult.success
+                                ? (testResult.messageKey ? t(testResult.messageKey) : testResult.message)
+                                : (testResult.errorKey ? t(testResult.errorKey) : (testResult.error || (testResult.messageKey ? t(testResult.messageKey) : testResult.message)))}
+                        </span>
                     </div>
                 )}
 

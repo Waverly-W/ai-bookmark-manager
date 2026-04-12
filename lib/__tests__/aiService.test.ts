@@ -1,5 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+vi.mock('wxt/browser', () => ({
+  browser: {
+    storage: {
+      local: {
+        get: vi.fn().mockResolvedValue({}),
+        set: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined),
+      },
+      sync: {
+        remove: vi.fn().mockResolvedValue(undefined),
+      },
+    },
+  },
+}));
+
+vi.mock('wxt/storage', () => ({
+  storage: {
+    getItem: vi.fn().mockResolvedValue(undefined),
+    setItem: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // 简单的并发控制器测试
 class ConcurrencyController {
   private running = 0;
@@ -120,3 +142,72 @@ describe('AbortSignal handling', () => {
   });
 });
 
+describe('AI connection response handling', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should extract reasoning_content when content is empty', async () => {
+    const { extractResponseText } = await import('@/lib/aiService');
+
+    const result = extractResponseText({
+      content: '',
+      reasoning_content: 'The user is asking me to say "Hello"',
+      tool_calls: null,
+    });
+
+    expect(result).toBe('The user is asking me to say "Hello"');
+  });
+
+  it('should treat a completion with reasoning_content as a successful test connection', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        choices: [
+          {
+            finish_reason: 'length',
+            message: {
+              content: '',
+              reasoning_content: 'The user is asking me to say "Hello"',
+              tool_calls: null,
+            },
+          },
+        ],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const { testAIConnection } = await import('@/lib/aiService');
+    const result = await testAIConnection({
+      apiUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      modelId: 'mimo-v2-omni',
+    });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('Connection successful.');
+  });
+
+  it('should keep detailed API errors for the UI', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('upstream proxy rejected request', {
+        status: 400,
+        statusText: 'Bad Request',
+      })
+    );
+
+    const { testAIConnection } = await import('@/lib/aiService');
+    const result = await testAIConnection({
+      apiUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      modelId: 'mimo-v2-omni',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Connection failed');
+    expect(result.error).toContain('400 Bad Request');
+    expect(result.error).toContain('upstream proxy rejected request');
+  });
+});
