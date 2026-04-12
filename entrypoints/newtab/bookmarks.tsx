@@ -5,13 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FaFolder, FaSearch, FaArrowLeft, FaHistory, FaTimes } from 'react-icons/fa';
-import { Edit, Trash2, X, CheckSquare, Sparkles, Loader2, BarChart2 } from 'lucide-react';
+import { Edit, Trash2, X, CheckSquare, Sparkles, Loader2, BarChart2, MoreHorizontal } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem } from '@/components/ui/breadcrumb';
 import { BookmarkCard, BookmarkCardItem } from '@/components/ui/bookmark-card';
 import { BookmarkEditDialog } from '@/components/ui/bookmark-edit-dialog';
 import { BookmarkDeleteDialog } from '@/components/ui/bookmark-delete-dialog';
 import { FolderEditDialog } from '@/components/ui/folder-edit-dialog';
 import { FolderDeleteDialog } from '@/components/ui/folder-delete-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
     AlertDialog,
@@ -108,20 +109,6 @@ const searchBookmarksByTag = (
     }
 
     return results;
-};
-
-// 统计书签数量（递归）
-const countBookmarks = (nodes: BookmarkNode[]): number => {
-    let count = 0;
-    for (const node of nodes) {
-        if (node.url) {
-            count++;
-        }
-        if (node.children) {
-            count += countBookmarks(node.children);
-        }
-    }
-    return count;
 };
 
 // 根据ID查找书签节点
@@ -1130,147 +1117,124 @@ export const Bookmarks: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            {/* 页面标题区域 */}
-            <div className={cn(
-                "space-y-5 rounded-[1.75rem] border border-border/70 bg-card/86 p-5 shadow-sm",
-                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-card/92"
-            )}>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className={cn(
-                                "rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
-                                themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
-                            )}>
-                                {t('allBookmarks')}
-                            </span>
-                            <span className={cn(
-                                "rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-muted-foreground",
-                                themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
-                            )}>
-                                {countBookmarks(allBookmarks)} {t('bookmarksTotal')}
-                            </span>
-                            {isSelectionMode && (
-                                <span className={cn(
-                                    "rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-primary",
-                                    themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
+            <div className="flex items-start gap-3">
+                <div className="relative min-w-0 flex-1 max-w-xl">
+                    <form onSubmit={handleSearchSubmit}>
+                        <div className="relative group">
+                            <FaSearch className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground transition-colors group-focus-within:text-primary" />
+                            <Input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder={t('searchPlaceholder')}
+                                variant="filled"
+                                className={cn(
+                                    "h-12 w-full rounded-full border-transparent bg-surface-2 pl-11 text-base shadow-sm transition-all duration-300 ease-md-emphasized placeholder:text-muted-foreground/70 hover:bg-surface-2/88 focus-visible:border-border/80 focus-visible:bg-background",
+                                    themeId === 'blueprint' && "rounded-[var(--input-radius)] border border-border/60 bg-input/85 font-mono"
+                                )}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onFocus={() => setShowSearchHistory(true)}
+                                onBlur={() => setTimeout(() => setShowSearchHistory(false), 200)}
+                            />
+                        </div>
+                    </form>
+
+                    {/* 搜索历史下拉面板 */}
+                    {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
+                        <Card className={cn(
+                            "absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.5rem] border border-border/70 bg-surface-container shadow-panel animate-in fade-in zoom-in-95 duration-200",
+                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                        )}>
+                            <CardContent className="p-2 space-y-1">
+                                <div className={cn(
+                                    "flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground",
+                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
                                 )}>
-                                    {t('selectedCount', { count: selectedItems.size })}
-                                </span>
-                            )}
-                        </div>
-                        <div>
-                            <h1 className={cn(
-                                "font-display text-3xl font-semibold tracking-tight text-foreground",
-                                themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]"
-                            )}>{t('bookmarks')}</h1>
-                            <p className={cn(
-                                "mt-1 max-w-2xl text-sm text-muted-foreground",
-                                themeId === 'blueprint' && "font-mono"
-                            )}>
-                                {t('searchPlaceholder')}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant={isSelectionMode ? "subtle" : "outline"}
-                            onClick={toggleSelectionMode}
-                            className={cn("gap-2", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
-                        >
-                            {isSelectionMode ? (
-                                <>
-                                    <X className="h-4 w-4" />
-                                    {t('cancel')}
-                                </>
-                            ) : (
-                                <>
-                                    <CheckSquare className="h-4 w-4" />
-                                    {t('batchManage')}
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </div>
-
-                {/* 搜索框 */}
-                <div className="flex justify-start w-full max-w-xl">
-                    <div className="relative w-full">
-                        <form onSubmit={handleSearchSubmit}>
-                            <div className="relative group">
-                                <FaSearch className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground transition-colors group-focus-within:text-primary" />
-                                <Input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    placeholder={t('searchPlaceholder')}
-                                    variant="filled"
-                                    className={cn(
-                                        "h-12 w-full rounded-full border-transparent bg-surface-2 pl-11 text-base shadow-sm transition-all duration-300 ease-md-emphasized placeholder:text-muted-foreground/70 hover:bg-surface-2/88 focus-visible:border-border/80 focus-visible:bg-background",
-                                        themeId === 'blueprint' && "rounded-[var(--input-radius)] border border-border/60 bg-input/85 font-mono"
-                                    )}
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onFocus={() => setShowSearchHistory(true)}
-                                    onBlur={() => setTimeout(() => setShowSearchHistory(false), 200)}
-                                />
-                            </div>
-                        </form>
-
-                        {/* 搜索历史下拉面板 */}
-                        {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
-                            <Card className={cn(
-                                "absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.5rem] border border-border/70 bg-surface-container shadow-panel animate-in fade-in zoom-in-95 duration-200",
-                                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
-                            )}>
-                                <CardContent className="p-2 space-y-1">
-                                    <div className={cn(
-                                        "flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground",
-                                        themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
-                                    )}>
-                                        <span>{t('searchHistory')}</span>
+                                    <span>{t('searchHistory')}</span>
+                                    <button
+                                        onClick={clearSearchHistory}
+                                        className="hover:text-destructive transition-colors"
+                                    >
+                                        {t('clear')}
+                                    </button>
+                                </div>
+                                {searchHistory.map((term, index) => (
+                                    <div
+                                        key={index}
+                                        className={cn(
+                                            "group flex cursor-pointer items-center justify-between rounded-full px-4 py-3 transition-colors duration-200 hover:bg-on-surface/5",
+                                            themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono"
+                                        )}
+                                        onClick={() => {
+                                            setSearchTerm(term);
+                                            setShowSearchHistory(false);
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <FaHistory className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                            <span className="text-sm truncate text-foreground/90">{term}</span>
+                                        </div>
                                         <button
-                                            onClick={clearSearchHistory}
-                                            className="hover:text-destructive transition-colors"
+                                            onClick={(e) => removeHistoryItem(e, term)}
+                                            className={cn(
+                                                "opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-all",
+                                                themeId === 'blueprint' && "rounded-[var(--badge-radius)]"
+                                            )}
                                         >
-                                            {t('clear')}
+                                            <span className="sr-only">{t('delete')}</span>
+                                            <FaTimes className="w-3 h-3" />
                                         </button>
                                     </div>
-                                    {searchHistory.map((term, index) => (
-                                        <div
-                                            key={index}
-                                            className={cn(
-                                                "group flex cursor-pointer items-center justify-between rounded-full px-4 py-3 transition-colors duration-200 hover:bg-on-surface/5",
-                                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono"
-                                            )}
-                                            onClick={() => {
-                                                setSearchTerm(term);
-                                                setShowSearchHistory(false);
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <FaHistory className="h-3.5 w-3.5 text-muted-foreground/70" />
-                                                <span className="text-sm truncate text-foreground/90">{term}</span>
-                                            </div>
-                                            <button
-                                                onClick={(e) => removeHistoryItem(e, term)}
-                                                className={cn(
-                                                    "opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-all",
-                                                    themeId === 'blueprint' && "rounded-[var(--badge-radius)]"
-                                                )}
-                                            >
-                                                <span className="sr-only">{t('delete')}</span>
-                                                <FaTimes className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        )}
-                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "ml-auto shrink-0 text-muted-foreground hover:text-primary",
+                                themeId === 'blueprint' && "rounded-[var(--button-radius)]"
+                            )}
+                            aria-label={t('moreActions', 'More actions')}
+                        >
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        align="end"
+                        className={cn(
+                            "w-56 p-2",
+                            themeId === 'blueprint' && "blueprint-panel border-dashed"
+                        )}
+                    >
+                        <button
+                            type="button"
+                            onClick={toggleSelectionMode}
+                            className={cn(
+                                "flex w-full items-center gap-3 rounded-[var(--button-radius)] px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-2 hover:text-primary",
+                                themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                            )}
+                        >
+                            {isSelectionMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+                            <span>
+                                {isSelectionMode ? t('cancel') : t('batchManage')}
+                            </span>
+                        </button>
+                        {isSelectionMode && (
+                            <div className={cn(
+                                "px-3 pt-2 text-xs text-muted-foreground",
+                                themeId === 'blueprint' && "font-mono"
+                            )}>
+                                {t('selectedCount', { count: selectedItems.size })}
+                            </div>
+                        )}
+                    </PopoverContent>
+                </Popover>
             </div>
-
-
 
             {/* 面包屑导航 */}
             {!isSearching && (
