@@ -25,7 +25,12 @@ import {
     saveCustomAutoTagPrompt,
     restoreDefaultAutoTagPrompt,
     isUsingCustomAutoTagPrompt,
-    getDefaultAutoTagPrompt
+    getDefaultAutoTagPrompt,
+    getCurrentBackupConflictPrompt,
+    saveCustomBackupConflictPrompt,
+    restoreDefaultBackupConflictPrompt,
+    isUsingCustomBackupConflictPrompt,
+    getDefaultBackupConflictPrompt
 } from "@/lib/aiPromptUtils";
 import { Loader2, RotateCcw, Save, Info } from "lucide-react";
 
@@ -33,6 +38,7 @@ import { bookmarkRenameScenario } from "@/lib/ai/scenarios/bookmarkRename";
 import { folderRecommendationScenario } from "@/lib/ai/scenarios/folderRecommendation";
 import { contextualBookmarkRenameScenario } from "@/lib/ai/scenarios/contextualBookmarkRename";
 import { autoTaggingScenario } from "@/lib/ai/scenarios/autoTagging";
+import { backupConflictResolutionScenario } from "@/lib/ai/scenarios/backupConflictResolution";
 
 export function AIPromptSettings() {
     const { t, i18n } = useTranslation();
@@ -65,6 +71,9 @@ export function AIPromptSettings() {
                 } else if (activeTab === 'tagging') {
                     currentPrompt = await getCurrentAutoTagPrompt(i18n.language);
                     usingCustom = await isUsingCustomAutoTagPrompt();
+                } else if (activeTab === 'conflict') {
+                    currentPrompt = await getCurrentBackupConflictPrompt(i18n.language);
+                    usingCustom = await isUsingCustomBackupConflictPrompt();
                 }
 
                 setPrompt(currentPrompt);
@@ -113,6 +122,8 @@ export function AIPromptSettings() {
                 await saveCustomFolderRecommendationPrompt(prompt);
             } else if (activeTab === 'tagging') {
                 await saveCustomAutoTagPrompt(prompt);
+            } else if (activeTab === 'conflict') {
+                await saveCustomBackupConflictPrompt(prompt);
             }
 
             setIsCustom(true);
@@ -150,6 +161,9 @@ export function AIPromptSettings() {
             } else if (activeTab === 'tagging') {
                 await restoreDefaultAutoTagPrompt();
                 defaultPrompt = getDefaultAutoTagPrompt(i18n.language);
+            } else if (activeTab === 'conflict') {
+                await restoreDefaultBackupConflictPrompt();
+                defaultPrompt = getDefaultBackupConflictPrompt(i18n.language);
             }
 
             setPrompt(defaultPrompt);
@@ -179,6 +193,8 @@ export function AIPromptSettings() {
             return folderRecommendationScenario.getSystemPrompt(i18n.language);
         } else if (activeTab === 'tagging') {
             return autoTaggingScenario.getSystemPrompt(i18n.language);
+        } else if (activeTab === 'conflict') {
+            return backupConflictResolutionScenario.getSystemPrompt(i18n.language);
         }
         return '';
     };
@@ -197,11 +213,12 @@ export function AIPromptSettings() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="basic">{t('basicRename')}</TabsTrigger>
                     <TabsTrigger value="contextual">{t('contextualRename')}</TabsTrigger>
                     <TabsTrigger value="folder">{t('folderRecommendation')}</TabsTrigger>
                     <TabsTrigger value="tagging">{t('autoTagging')}</TabsTrigger>
+                    <TabsTrigger value="conflict">{t('backupConflictPrompt')}</TabsTrigger>
                 </TabsList>
 
                 <div className="mt-4 space-y-6">

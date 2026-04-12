@@ -7,7 +7,8 @@ import {
     parseBatchRenameResponse,
     getDefaultPrompt,
     getCurrentAutoTagPrompt,
-    formatAutoTagPrompt
+    formatAutoTagPrompt,
+    getCurrentBackupConflictPrompt
 } from './aiPromptUtils';
 import { getFolderForDomain } from './recommendationStorage'; // Import storage utils
 import { AIScenario } from './ai/types';
@@ -15,7 +16,12 @@ import { bookmarkRenameScenario, formatBookmarkRenameSystemPrompt, BookmarkRenam
 import { folderRecommendationScenario, formatFolderRecommendationSystemPrompt } from "./ai/scenarios/folderRecommendation";
 import { contextualBookmarkRenameScenario, formatContextualBookmarkRenameSystemPrompt } from "./ai/scenarios/contextualBookmarkRename";
 import { autoTaggingScenario, formatAutoTaggingSystemPrompt } from "./ai/scenarios/autoTagging";
+import {
+    backupConflictResolutionScenario,
+    formatBackupConflictResolutionSystemPrompt
+} from "./ai/scenarios/backupConflictResolution";
 import { getTopTags } from './tagStorage';
+import type { MergeConflict, AIConflictResolution } from './webdavSync';
 
 /**
  * AI API响应接口
@@ -1077,6 +1083,64 @@ export const batchTagBookmarks = async (
                 error: error instanceof Error ? error.message : 'Unknown error'
             })
         );
+    }
+};
+
+export const resolveBackupConflictsWithAI = async (
+    config: AIConfig,
+    conflicts: MergeConflict[],
+    preferredSource: 'local' | 'remote',
+    locale: string = 'zh_CN'
+): Promise<{
+    success: boolean;
+    resolutions?: AIConflictResolution[];
+    error?: string;
+}> => {
+    try {
+        const userPromptTemplate = await getCurrentBackupConflictPrompt(locale);
+        const systemPrompt = formatBackupConflictResolutionSystemPrompt(preferredSource, locale);
+
+        const result = await executeScenario(
+            config,
+            backupConflictResolutionScenario,
+            {
+                preferredSource,
+                conflicts: conflicts.map((conflict) => ({
+                    conflictId: conflict.id,
+                    section: conflict.section,
+                    entityKey: conflict.entityKey,
+                    field: conflict.field,
+                    localValue: conflict.localValue,
+                    remoteValue: conflict.remoteValue
+                }))
+            },
+            userPromptTemplate.replace(/{preferredSource}/g, preferredSource),
+            systemPrompt,
+            locale,
+            {
+                maxTokens: 1800,
+                temperature: 0.1,
+                label: 'backup-conflict-resolution'
+            }
+        );
+
+        const resolutions: AIConflictResolution[] = result.resolutions.map((resolution) => ({
+            conflictId: resolution.conflictId,
+            chosenSource: resolution.chosenSource,
+            mergedValue: JSON.parse(resolution.mergedValueJson),
+            reason: resolution.reason
+        }));
+
+        return {
+            success: true,
+            resolutions
+        };
+    } catch (error) {
+        console.error('AI backup conflict resolution failed:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
     }
 };
 

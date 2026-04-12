@@ -246,6 +246,30 @@ Requirements:
 3. Return only the JSON tags array with no extra explanation`;
 
 /**
+ * 默认的备份冲突解决 Prompt 模板（中文）
+ */
+export const DEFAULT_BACKUP_CONFLICT_PROMPT_ZH = `请解决备份恢复中的冲突项。
+
+要求：
+1. 优先保证结果可用且不丢失关键信息
+2. 如果两边都合理，优先遵循 {preferredSource}
+3. 标签冲突尽量合并而不是丢弃
+4. 只有在必要时才组合 local / remote 值
+5. mergedValueJson 必须是合法 JSON 字符串`;
+
+/**
+ * 默认的备份冲突解决 Prompt 模板（英文）
+ */
+export const DEFAULT_BACKUP_CONFLICT_PROMPT_EN = `Resolve backup restore conflicts.
+
+Requirements:
+1. Prioritize correctness and preserving important information
+2. When both sides are reasonable, prefer {preferredSource}
+3. Merge tags when possible instead of dropping data
+4. Use hybrid values only when necessary
+5. mergedValueJson must be a valid JSON string`;
+
+/**
  * 存储键名
  */
 export const STORAGE_KEYS = {
@@ -256,7 +280,9 @@ export const STORAGE_KEYS = {
     CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiContextualRenamePrompt',
     USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT: 'aiUseCustomContextualRenamePrompt',
     CUSTOM_AUTO_TAG_PROMPT: 'aiAutoTagPrompt',
-    USE_CUSTOM_AUTO_TAG_PROMPT: 'aiUseCustomAutoTagPrompt'
+    USE_CUSTOM_AUTO_TAG_PROMPT: 'aiUseCustomAutoTagPrompt',
+    CUSTOM_BACKUP_CONFLICT_PROMPT: 'aiBackupConflictPrompt',
+    USE_CUSTOM_BACKUP_CONFLICT_PROMPT: 'aiUseCustomBackupConflictPrompt'
 };
 
 /**
@@ -355,6 +381,13 @@ export const clearCustomPrompt = async (): Promise<void> => {
  */
 export const getDefaultAutoTagPrompt = (locale: string = 'zh_CN'): string => {
     return locale.startsWith('zh') ? DEFAULT_AUTO_TAG_PROMPT_ZH : DEFAULT_AUTO_TAG_PROMPT_EN;
+};
+
+/**
+ * 获取默认的备份冲突解决 Prompt
+ */
+export const getDefaultBackupConflictPrompt = (locale: string = 'zh_CN'): string => {
+    return locale.startsWith('zh') ? DEFAULT_BACKUP_CONFLICT_PROMPT_ZH : DEFAULT_BACKUP_CONFLICT_PROMPT_EN;
 };
 
 /**
@@ -867,6 +900,71 @@ export const isUsingCustomContextualRenamePrompt = async (): Promise<boolean> =>
         return useCustom || false;
     } catch (error) {
         console.error('Failed to check custom contextual rename prompt status:', error);
+        return false;
+    }
+};
+
+/**
+ * 获取当前的备份冲突解决 Prompt
+ */
+export const getCurrentBackupConflictPrompt = async (locale: string = 'zh_CN'): Promise<string> => {
+    try {
+        const result = await browser.storage.local.get([
+            STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT,
+            STORAGE_KEYS.CUSTOM_BACKUP_CONFLICT_PROMPT
+        ]);
+        const useCustom = result[STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT];
+        const customPrompt = result[STORAGE_KEYS.CUSTOM_BACKUP_CONFLICT_PROMPT];
+
+        if (useCustom && customPrompt) {
+            return customPrompt;
+        }
+
+        return getDefaultBackupConflictPrompt(locale);
+    } catch (error) {
+        console.error('Failed to get current backup conflict prompt:', error);
+        return getDefaultBackupConflictPrompt(locale);
+    }
+};
+
+/**
+ * 保存自定义备份冲突解决 Prompt
+ */
+export const saveCustomBackupConflictPrompt = async (prompt: string): Promise<void> => {
+    try {
+        await browser.storage.local.set({
+            [STORAGE_KEYS.CUSTOM_BACKUP_CONFLICT_PROMPT]: prompt,
+            [STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT]: true
+        });
+    } catch (error) {
+        console.error('Failed to save custom backup conflict prompt:', error);
+        throw new Error('Failed to save custom backup conflict prompt template');
+    }
+};
+
+/**
+ * 恢复默认的备份冲突解决 Prompt
+ */
+export const restoreDefaultBackupConflictPrompt = async (): Promise<void> => {
+    try {
+        await browser.storage.local.set({
+            [STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT]: false
+        });
+    } catch (error) {
+        console.error('Failed to restore default backup conflict prompt:', error);
+        throw new Error('Failed to restore default backup conflict prompt template');
+    }
+};
+
+/**
+ * 检查是否使用自定义备份冲突解决 Prompt
+ */
+export const isUsingCustomBackupConflictPrompt = async (): Promise<boolean> => {
+    try {
+        const result = await browser.storage.local.get(STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT);
+        return result[STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT] || false;
+    } catch (error) {
+        console.error('Failed to check custom backup conflict prompt status:', error);
         return false;
     }
 };
