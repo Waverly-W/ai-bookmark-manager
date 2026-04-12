@@ -473,7 +473,7 @@ const listWebDAVCollections = async (config: WebDAVBackupConfig): Promise<string
     const parser = new DOMParser();
     const documentNode = parser.parseFromString(xml, 'application/xml');
     const responseNodes = Array.from(documentNode.getElementsByTagNameNS('*', 'response'));
-    const basePath = new URL(normalizeWebDAVBaseUrl(config.baseUrl)).pathname;
+    const normalizedBasePath = trimTrailingSlash(new URL(normalizeWebDAVBaseUrl(config.baseUrl)).pathname);
 
     return responseNodes
         .map((node) => {
@@ -483,13 +483,20 @@ const listWebDAVCollections = async (config: WebDAVBackupConfig): Promise<string
             }
 
             const fullUrl = new URL(href, config.baseUrl);
-            if (fullUrl.pathname === basePath) {
+            const normalizedResourcePath = trimTrailingSlash(fullUrl.pathname);
+
+            if (normalizedResourcePath === normalizedBasePath) {
                 return null;
             }
 
-            const relativePath = fullUrl.pathname.startsWith(basePath)
-                ? fullUrl.pathname.slice(basePath.length)
-                : fullUrl.pathname;
+            const relativePath = normalizedResourcePath.startsWith(`${normalizedBasePath}/`)
+                ? normalizedResourcePath.slice(normalizedBasePath.length + 1)
+                : normalizedResourcePath.replace(/^\//, '');
+
+            if (!relativePath || relativePath.includes('/')) {
+                return null;
+            }
+
             const folderName = trimTrailingSlash(relativePath).split('/').filter(Boolean).pop() || '';
             return folderName || null;
         })
@@ -1148,6 +1155,18 @@ export const listWebDAVBackups = async (config: WebDAVBackupConfig): Promise<Bac
     );
 
     return summaries.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+};
+
+export const deleteWebDAVBackup = async (
+    config: WebDAVBackupConfig,
+    folderName: string
+): Promise<void> => {
+    const normalizedConfig = {
+        ...config,
+        baseUrl: normalizeWebDAVBaseUrl(config.baseUrl)
+    };
+
+    await deleteWebDAVDirectory(normalizedConfig, folderName);
 };
 
 export const loadWebDAVBackup = async (

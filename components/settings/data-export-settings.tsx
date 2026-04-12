@@ -10,6 +10,7 @@ import {
     RefreshCw,
     Save,
     Sparkles,
+    Trash2,
     Upload
 } from 'lucide-react';
 
@@ -38,6 +39,7 @@ import {
     collectLocalBackupSnapshot,
     createWebDAVBackup,
     DEFAULT_WEBDAV_BACKUP_CONFIG,
+    deleteWebDAVBackup,
     getWebDAVBackupConfig,
     listWebDAVBackups,
     loadWebDAVBackup,
@@ -104,10 +106,12 @@ const VersionCard: React.FC<{
     loading: boolean;
     overwriteLabel: string;
     incrementalLabel: string;
+    deleteLabel: string;
     bookmarksLabel: string;
+    onDelete: () => void;
     onOverwrite: () => void;
     onIncremental: () => void;
-}> = ({ version, loading, overwriteLabel, incrementalLabel, bookmarksLabel, onOverwrite, onIncremental }) => (
+}> = ({ version, loading, overwriteLabel, incrementalLabel, deleteLabel, bookmarksLabel, onDelete, onOverwrite, onIncremental }) => (
     <Card className="border-border/70">
         <CardHeader className="space-y-2">
             <div className="flex items-start justify-between gap-4">
@@ -126,6 +130,14 @@ const VersionCard: React.FC<{
             </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row">
+            <Button
+                variant="outline"
+                disabled={loading}
+                onClick={onDelete}
+            >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                {deleteLabel}
+            </Button>
             <Button
                 variant="outline"
                 className="flex-1"
@@ -158,6 +170,7 @@ export function DataExportSettings() {
     const [backupRunning, setBackupRunning] = useState(false);
     const [versionsLoading, setVersionsLoading] = useState(false);
     const [restoreVersionId, setRestoreVersionId] = useState<string | null>(null);
+    const [deleteVersionId, setDeleteVersionId] = useState<string | null>(null);
     const [versions, setVersions] = useState<BackupVersionSummary[]>([]);
     const [connectionStatus, setConnectionStatus] = useState<{
         success: boolean;
@@ -353,6 +366,31 @@ export function DataExportSettings() {
             );
         } finally {
             setRestoreVersionId(null);
+        }
+    };
+
+    const handleDeleteVersion = async (version: BackupVersionSummary) => {
+        if (!window.confirm(t('webdavDeleteConfirm', { version: version.folderName }))) {
+            return;
+        }
+
+        setDeleteVersionId(version.folderName);
+        try {
+            await deleteWebDAVBackup(config, version.folderName);
+            await refreshVersions(config);
+            toast({
+                title: t('webdavDeleteSuccess'),
+                description: t('webdavDeleteSuccessDesc', { version: version.folderName })
+            });
+        } catch (error) {
+            console.error('Failed to delete backup version:', error);
+            toast({
+                title: t('webdavDeleteFailed'),
+                description: error instanceof Error ? error.message : t('unknownError'),
+                variant: 'destructive'
+            });
+        } finally {
+            setDeleteVersionId(null);
         }
     };
 
@@ -648,10 +686,16 @@ export function DataExportSettings() {
                                     <VersionCard
                                         key={version.folderName}
                                         version={version}
-                                        loading={restoreVersionId === version.folderName || restoreApplying}
+                                        loading={
+                                            restoreVersionId === version.folderName ||
+                                            deleteVersionId === version.folderName ||
+                                            restoreApplying
+                                        }
                                         overwriteLabel={t('overwriteRestore')}
                                         incrementalLabel={t('incrementalRestore')}
+                                        deleteLabel={t('delete')}
                                         bookmarksLabel={t('bookmarks')}
+                                        onDelete={() => handleDeleteVersion(version)}
                                         onOverwrite={() => handleOverwriteRestore(version)}
                                         onIncremental={() => handleIncrementalRestore(version)}
                                     />
