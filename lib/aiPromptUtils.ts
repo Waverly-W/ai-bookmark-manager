@@ -505,15 +505,6 @@ export const validatePrompt = (prompt: string): {
         errors.push('Prompt template is too long (maximum 2000 characters)');
     }
 
-    // 检查是否包含占位符（建议但不强制）
-    const hasUrlPlaceholder = prompt.includes('{url}');
-    const hasTitlePlaceholder = prompt.includes('{title}');
-
-    if (!hasUrlPlaceholder && !hasTitlePlaceholder) {
-        // 这只是警告，不是错误
-        console.warn('Prompt template does not contain {url} or {title} placeholders');
-    }
-
     return {
         valid: errors.length === 0,
         errors
