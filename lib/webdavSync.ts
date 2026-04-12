@@ -180,6 +180,7 @@ interface FlatBookmarkFolderEntity {
     type: 'folder';
     rootIndex: number;
     folderPath: string[];
+    sequence: number;
 }
 
 interface FlatBookmarkLeafEntity {
@@ -189,6 +190,7 @@ interface FlatBookmarkLeafEntity {
     url: string;
     title: string;
     tags: string[];
+    sequence: number;
 }
 
 type FlatBookmarkEntity = FlatBookmarkFolderEntity | FlatBookmarkLeafEntity;
@@ -558,6 +560,7 @@ const encodePathSegments = (segments: string[]): string => segments.map((segment
 
 const flattenBookmarks = (roots: BackupBookmarkRoot[]): Record<string, FlatBookmarkEntity> => {
     const output: Record<string, FlatBookmarkEntity> = {};
+    let sequence = 0;
 
     const visit = (rootIndex: number, folderPath: string[], node: BackupBookmarkNode) => {
         if (node.type === 'folder') {
@@ -566,7 +569,8 @@ const flattenBookmarks = (roots: BackupBookmarkRoot[]): Record<string, FlatBookm
             output[entityKey] = {
                 type: 'folder',
                 rootIndex,
-                folderPath: nextPath
+                folderPath: nextPath,
+                sequence: sequence++
             };
 
             node.children.forEach((child) => visit(rootIndex, nextPath, child));
@@ -580,7 +584,8 @@ const flattenBookmarks = (roots: BackupBookmarkRoot[]): Record<string, FlatBookm
             folderPath,
             url: node.url,
             title: node.title,
-            tags: normalizeTags(node.tags)
+            tags: normalizeTags(node.tags),
+            sequence: sequence++
         };
     };
 
@@ -639,13 +644,7 @@ const rebuildBookmarksFromFlatEntities = (
 
     Object.values(entities)
         .sort((left, right) => {
-            if (left.rootIndex !== right.rootIndex) {
-                return left.rootIndex - right.rootIndex;
-            }
-
-            const leftPath = left.folderPath.join('/');
-            const rightPath = right.folderPath.join('/');
-            return leftPath.localeCompare(rightPath);
+            return left.sequence - right.sequence;
         })
         .forEach((entity) => {
             if (entity.type === 'folder') {
@@ -662,28 +661,7 @@ const rebuildBookmarksFromFlatEntities = (
             });
         });
 
-    const sortNodes = (nodes: BackupBookmarkNode[]) => {
-        nodes.sort((left, right) => {
-            if (left.type !== right.type) {
-                return left.type === 'folder' ? -1 : 1;
-            }
-
-            if (left.type === 'bookmark' && right.type === 'bookmark') {
-                return `${left.title}|${left.url}`.localeCompare(`${right.title}|${right.url}`);
-            }
-
-            return left.title.localeCompare(right.title);
-        });
-
-        nodes.forEach((node) => {
-            if (node.type === 'folder') {
-                sortNodes(node.children);
-            }
-        });
-    };
-
     const normalizedRoots = Array.from(rootMap.values()).sort((left, right) => left.rootIndex - right.rootIndex);
-    normalizedRoots.forEach((root) => sortNodes(root.children));
 
     return {
         roots: normalizedRoots
@@ -977,6 +955,10 @@ export const mergeBackupSnapshots = (
     const mergedBookmarks: Record<string, FlatBookmarkEntity> = {};
     const conflicts: MergeConflict[] = [];
     let autoMergedFields = 0;
+    const localMaxSequence = Math.max(
+        -1,
+        ...Object.values(localBookmarks).map((entity) => entity.sequence)
+    );
 
     const bookmarkKeys = new Set<string>([
         ...Object.keys(localBookmarks),
@@ -988,7 +970,10 @@ export const mergeBackupSnapshots = (
         const remoteEntity = remoteBookmarks[key];
 
         if (!localEntity) {
-            mergedBookmarks[key] = deepClone(remoteEntity);
+            mergedBookmarks[key] = {
+                ...deepClone(remoteEntity),
+                sequence: localMaxSequence + 1 + remoteEntity.sequence
+            };
             autoMergedFields += 1;
             return;
         }

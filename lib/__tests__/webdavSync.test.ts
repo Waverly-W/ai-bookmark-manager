@@ -320,4 +320,62 @@ describe('webdavSync merge helpers', () => {
             customPrompt: 'Merged conflict prompt'
         });
     });
+
+    it('preserves folder order instead of re-sorting alphabetically during merge', () => {
+        const local = createSnapshot({
+            bookmarks: {
+                roots: [
+                    {
+                        rootIndex: 0,
+                        title: 'Bookmarks Bar',
+                        children: [
+                            {
+                                type: 'folder',
+                                title: 'Zeta',
+                                children: []
+                            },
+                            {
+                                type: 'folder',
+                                title: 'Alpha',
+                                children: []
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        const remote = createSnapshot({
+            bookmarks: {
+                roots: [
+                    {
+                        rootIndex: 0,
+                        title: 'Bookmarks Bar',
+                        children: [
+                            {
+                                type: 'folder',
+                                title: 'Zeta',
+                                children: []
+                            },
+                            {
+                                type: 'folder',
+                                title: 'Alpha',
+                                children: []
+                            },
+                            {
+                                type: 'folder',
+                                title: 'Middle',
+                                children: []
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        const result = mergeBackupSnapshots(local, remote);
+        const orderedTitles = result.mergedSnapshot.bookmarks.roots[0].children.map((node) => node.title);
+
+        expect(orderedTitles).toEqual(['Zeta', 'Alpha', 'Middle']);
+    });
 });
