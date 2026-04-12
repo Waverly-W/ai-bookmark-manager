@@ -62,42 +62,57 @@ function collectFolders(nodes: any[], parentPath = ''): BookmarkFolder[] {
     return folders;
 }
 
+const createAllBookmarksTreeOption = (): BookmarkFolder => ({
+    id: 'all',
+    title: 'All Bookmarks',
+    path: 'All Bookmarks',
+    level: 0,
+    children: []
+});
+
+const createAllBookmarksFlatOption = (): BookmarkFolder => ({
+    id: 'all',
+    title: 'All Bookmarks',
+    path: 'All Bookmarks',
+    level: 0
+});
+
+/**
+ * 一次读取书签树并同时返回树状和扁平目录数据，避免重复调用 bookmarks.getTree()
+ */
+export async function getBookmarkFolderData(): Promise<{
+    tree: BookmarkFolder[];
+    flat: BookmarkFolder[];
+}> {
+    try {
+        const bookmarkTree = await browser.bookmarks.getTree();
+        const rootNodes = bookmarkTree[0]?.children || [];
+        const folderTree = buildFolderTree(rootNodes);
+        const flatFolders = collectFolders(rootNodes);
+
+        return {
+            tree: [createAllBookmarksTreeOption(), ...folderTree],
+            flat: [createAllBookmarksFlatOption(), ...flatFolders]
+        };
+    } catch (error) {
+        console.error('Error getting bookmark folder data:', error);
+        return {
+            tree: [createAllBookmarksTreeOption()],
+            flat: [createAllBookmarksFlatOption()]
+        };
+    }
+}
+
 /**
  * 获取书签文件夹树结构
  */
 export async function getBookmarkFolderTree(): Promise<BookmarkFolder[]> {
     try {
-        const bookmarkTree = await browser.bookmarks.getTree();
-        const rootNodes = bookmarkTree[0]?.children || [];
-
-        // 添加"全部书签"选项
-        const allOption: BookmarkFolder = {
-            id: 'all',
-            title: 'All Bookmarks',
-            path: 'All Bookmarks',
-            level: 0,
-            children: []
-        };
-
-        // 构建文件夹树
-        const folderTree = buildFolderTree(rootNodes);
-
-        if (Array.isArray(folderTree)) {
-            return [allOption, ...folderTree];
-        } else {
-            return [allOption];
-        }
+        const { tree } = await getBookmarkFolderData();
+        return tree;
     } catch (error) {
         console.error('Error getting bookmark folder tree:', error);
-        return [
-            {
-                id: 'all',
-                title: 'All Bookmarks',
-                path: 'All Bookmarks',
-                level: 0,
-                children: []
-            }
-        ];
+        return [createAllBookmarksTreeOption()];
     }
 }
 
@@ -106,37 +121,11 @@ export async function getBookmarkFolderTree(): Promise<BookmarkFolder[]> {
  */
 export async function getBookmarkFolders(): Promise<BookmarkFolder[]> {
     try {
-        const bookmarkTree = await browser.bookmarks.getTree();
-        const rootNodes = bookmarkTree[0]?.children || [];
-
-        // 添加"全部书签"选项
-        const allFolders: BookmarkFolder[] = [
-            {
-                id: 'all',
-                title: 'All Bookmarks',
-                path: 'All Bookmarks',
-                level: 0
-            }
-        ];
-
-        // 获取所有文件夹
-        const folders = collectFolders(rootNodes);
-
-        if (Array.isArray(allFolders) && Array.isArray(folders)) {
-            return [...allFolders, ...folders];
-        } else {
-            return [];
-        }
+        const { flat } = await getBookmarkFolderData();
+        return flat;
     } catch (error) {
         console.error('Error getting bookmark folders:', error);
-        return [
-            {
-                id: 'all',
-                title: 'All Bookmarks',
-                path: 'All Bookmarks',
-                level: 0
-            }
-        ];
+        return [createAllBookmarksFlatOption()];
     }
 }
 

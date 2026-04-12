@@ -467,7 +467,12 @@ export const renameBookmarkWithAI = async (
             { url: bookmarkUrl, title: currentTitle },
             userPromptTemplate,
             systemPrompt,
-            locale
+            locale,
+            {
+                maxTokens: 80,
+                temperature: 0.2,
+                label: 'bookmark-rename'
+            }
         );
 
         return {
@@ -833,11 +838,14 @@ export const recommendFolderWithAI = async (
     url: string,
     title: string,
     allFolders: string[],
-    locale: string = 'zh_CN'
+    locale: string = 'zh_CN',
+    options?: {
+        forceRemote?: boolean;
+    }
 ): Promise<{ success: boolean; recommendations?: Array<{ folderId: string; folderPath: string; reason?: string }>; error?: string }> => {
     try {
         // 1. [Hybrid] Check Domain Rule first
-        const boundFolderId = await getFolderForDomain(url);
+        const boundFolderId = options?.forceRemote ? null : await getFolderForDomain(url);
         if (boundFolderId) {
             // Find path in allFolders string list: "[ID: <id>] <path>"
             const idTag = `[ID: ${boundFolderId}]`;
@@ -874,7 +882,12 @@ export const recommendFolderWithAI = async (
             { url, title, allFolders },
             userPromptTemplate,
             systemPrompt,
-            locale
+            locale,
+            {
+                maxTokens: 220,
+                temperature: 0.2,
+                label: 'folder-recommendation'
+            }
         );
 
         return {
