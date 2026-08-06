@@ -43,8 +43,13 @@ interface AIResponse {
 }
 
 interface ResponsesAPIResponse {
+    status?: string;
+    incomplete_details?: {
+        reason?: string;
+    } | null;
     output_text?: string;
     output?: Array<{
+        type?: string;
         content?: Array<{
             type?: string;
             text?: string;
@@ -155,6 +160,7 @@ const extractResponsesAPIText = (data: ResponsesAPIResponse): string => {
     if (Array.isArray(data.output)) {
         const text = data.output
             .flatMap((item) => item.content || [])
+            .filter((part) => part?.type === 'output_text')
             .map((part) => typeof part?.text === 'string' ? part.text : '')
             .join('')
             .trim();
@@ -165,6 +171,25 @@ const extractResponsesAPIText = (data: ResponsesAPIResponse): string => {
     }
 
     return '';
+};
+
+const throwIfResponsesAPIIncomplete = (data: ResponsesAPIResponse): void => {
+    if (data.status !== 'incomplete') {
+        return;
+    }
+
+    const reason = data.incomplete_details?.reason;
+    if (reason === 'max_output_tokens') {
+        throw new AIRuntimeError(
+            'response_format',
+            'AI response was incomplete because max_output_tokens was exhausted'
+        );
+    }
+
+    throw new AIRuntimeError(
+        'response_format',
+        `AI response was incomplete${reason ? `: ${reason}` : ''}`
+    );
 };
 
 export const extractAIResponseContent = (data: AIResponse | ResponsesAPIResponse, config: AIConfig): string => {
@@ -463,6 +488,9 @@ const callAIAPI = async (
         }
 
         const data: AIResponse | ResponsesAPIResponse = await response.json();
+        if (getApiType(config) === 'responses') {
+            throwIfResponsesAPIIncomplete(data as ResponsesAPIResponse);
+        }
         const responseContent = extractAIResponseContent(data, config);
 
         if (!responseContent) {
@@ -1202,7 +1230,7 @@ export const renameBookmarkContextuallyWithAI = async (
             systemPrompt,
             locale,
             {
-                maxTokens: 80,
+                maxTokens: 256,
                 temperature: 0.2,
                 label: 'contextual-rename'
             }

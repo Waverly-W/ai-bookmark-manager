@@ -305,6 +305,56 @@ describe('Responses API compatibility', () => {
     expect(result.success).toBe(true);
     expect(result.recommendations?.[0].folderId).toBe('3');
   });
+
+  it('should not treat reasoning_text as the final Responses API answer', async () => {
+    const { extractAIResponseContent } = await import('@/lib/aiService');
+
+    const result = extractAIResponseContent({
+      status: 'incomplete',
+      incomplete_details: { reason: 'max_output_tokens' },
+      output: [{
+        type: 'reasoning',
+        content: [{ type: 'reasoning_text', text: '分析书签命名模式……' }],
+      }],
+    }, {
+      apiUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      modelId: 'deepseek-v4-flash',
+      apiType: 'responses',
+    } as any);
+
+    expect(result).toBe('');
+  });
+
+  it('should report max output token exhaustion instead of a JSON parse error', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        status: 'incomplete',
+        incomplete_details: { reason: 'max_output_tokens' },
+        output: [{
+          type: 'reasoning',
+          content: [{ type: 'reasoning_text', text: '分析书签命名模式……' }],
+        }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const { renameBookmarkContextuallyWithAI } = await import('@/lib/aiService');
+    const result = await renameBookmarkContextuallyWithAI({
+      apiUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      modelId: 'deepseek-v4-flash',
+      apiType: 'responses',
+    } as any, 'https://example.com', 'Example', '工具', [], 'zh_CN');
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(requestBody.max_output_tokens).toBe(256);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('max_output_tokens');
+    expect(result.error).not.toContain('not valid JSON');
+  });
 });
 
 describe('AI folder recommendation normalization', () => {

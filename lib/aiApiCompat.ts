@@ -26,8 +26,13 @@ export interface AIChatResponse {
 }
 
 export interface AIResponsesAPIResponse {
+    status?: string;
+    incomplete_details?: {
+        reason?: string;
+    } | null;
     output_text?: string;
     output?: Array<{
+        type?: string;
         content?: Array<{
             type?: string;
             text?: string;
@@ -167,6 +172,7 @@ export const extractResponsesAPIText = (data: AIResponsesAPIResponse): string =>
     if (Array.isArray(data.output)) {
         const text = data.output
             .flatMap((item) => item.content || [])
+            .filter((part) => part?.type === 'output_text')
             .map((part) => typeof part?.text === 'string' ? part.text : '')
             .join('')
             .trim();
