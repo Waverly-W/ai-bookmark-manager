@@ -3,10 +3,13 @@ import { browser } from "wxt/browser";
 /**
  * AI配置接口
  */
+export type AIServiceApiType = 'chat_completions' | 'responses';
+
 export interface AIConfig {
     apiUrl: string;      // API代理URL
     apiKey: string;      // API密钥（加密存储）
     modelId: string;     // 模型ID
+    apiType?: AIServiceApiType; // API类型（默认 Chat Completions）
 }
 
 /**
@@ -76,6 +79,7 @@ export const getAIConfig = async (): Promise<AIConfig> => {
             // 解密API Key
             return {
                 ...savedConfig,
+                apiType: savedConfig.apiType ?? 'chat_completions',
                 apiKey: decodeApiKey(savedConfig.apiKey)
             };
         }
@@ -84,7 +88,8 @@ export const getAIConfig = async (): Promise<AIConfig> => {
         return {
             apiUrl: 'https://api.openai.com/v1',
             apiKey: '',
-            modelId: 'gpt-3.5-turbo'
+            modelId: 'gpt-3.5-turbo',
+            apiType: 'chat_completions'
         };
     } catch (error) {
         console.error('Failed to get AI config:', error);
@@ -92,7 +97,8 @@ export const getAIConfig = async (): Promise<AIConfig> => {
         return {
             apiUrl: 'https://api.openai.com/v1',
             apiKey: '',
-            modelId: 'gpt-3.5-turbo'
+            modelId: 'gpt-3.5-turbo',
+            apiType: 'chat_completions'
         };
     }
 };
@@ -118,6 +124,10 @@ export const validateAIConfig = (config: AIConfig): {
 
     if (!config.modelId || config.modelId.trim() === '') {
         errors.push('modelIdRequired');
+    }
+
+    if (config.apiType && config.apiType !== 'chat_completions' && config.apiType !== 'responses') {
+        errors.push('apiTypeRequired');
     }
 
     // 验证URL格式

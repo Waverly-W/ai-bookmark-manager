@@ -40,6 +40,17 @@ interface AIResponse {
         };
     }>;
 }
+
+interface ResponsesAPIResponse {
+    output_text?: string;
+    output?: Array<{
+        content?: Array<{
+            type?: string;
+            text?: string;
+        }>;
+    }>;
+}
+
 // 请求可选参数（供超时、重试、取消等）
 export interface AIRequestOptions {
     timeoutMs?: number;
@@ -54,6 +65,26 @@ interface AIGenerationOptions {
     temperature?: number;
     label?: string;
 }
+
+interface FolderRecommendationItem {
+    folderId?: string;
+    id?: string;
+    folderPath?: string;
+    path?: string;
+    reason?: string;
+}
+
+interface AvailableFolder {
+    id: string;
+    path: string;
+}
+
+const JSON_RETRY_SUFFIX = '\nReturn valid json only. The response must be json.';
+type AIResponseFormat = { type: "text" | "json_object" | "json_schema"; json_schema?: any };
+
+const getApiType = (config: AIConfig): NonNullable<AIConfig['apiType']> => {
+    return config.apiType ?? 'chat_completions';
+};
 
 export const extractResponseText = (message?: AIResponse['choices'][number]['message']): string => {
     if (!message) {
@@ -102,14 +133,152 @@ const hasUsableResponse = (choice?: AIResponse['choices'][number]): boolean => {
     return choice.finish_reason === 'stop' || choice.finish_reason === 'length';
 };
 
+const shouldRetryWithExplicitJsonInstruction = (
+    status: number,
+    errorText: string,
+    responseFormat?: AIResponseFormat
+): boolean => {
+    if (status !== 400 || !responseFormat || responseFormat.type === 'text') {
+        return false;
+    }
+
+    const normalizedError = errorText.toLowerCase();
+    return normalizedError.includes('json_object') && normalizedError.includes("contain the word 'json'");
+};
+
+const extractResponsesAPIText = (data: ResponsesAPIResponse): string => {
+    if (typeof data.output_text === 'string' && data.output_text.trim().length > 0) {
+        return data.output_text.trim();
+    }
+
+    if (Array.isArray(data.output)) {
+        const text = data.output
+            .flatMap((item) => item.content || [])
+            .map((part) => typeof part?.text === 'string' ? part.text : '')
+            .join('')
+            .trim();
+
+        if (text.length > 0) {
+            return text;
+        }
+    }
+
+    return '';
+};
+
+export const extractAIResponseContent = (data: AIResponse | ResponsesAPIResponse, config: AIConfig): string => {
+    if (getApiType(config) === 'responses') {
+        return extractResponsesAPIText(data as ResponsesAPIResponse);
+    }
+
+    const chatData = data as AIResponse;
+    return extractResponseText(chatData.choices?.[0]?.message);
+};
+
+const hasUsableAIResponse = (data: AIResponse | ResponsesAPIResponse, config: AIConfig): boolean => {
+    if (extractAIResponseContent(data, config).length > 0) {
+        return true;
+    }
+
+    if (getApiType(config) === 'responses') {
+        return false;
+    }
+
+    return hasUsableResponse((data as AIResponse).choices?.[0]);
+};
+
 
 // 通用异步工具：延迟
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // 统一 API 端点构造（处理尾斜杠）
-const buildEndpoint = (apiUrl: string, path: string = 'chat/completions'): string => {
+export const buildEndpoint = (apiUrl: string, path: string = 'chat/completions'): string => {
     const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
     return `${baseUrl}/${path}`;
+};
+
+export const buildAIEndpoint = (config: AIConfig): string => {
+    return buildEndpoint(config.apiUrl, getApiType(config) === 'responses' ? 'responses' : 'chat/completions');
+};
+
+const buildMessages = (userPrompt: string, systemPrompt?: string) => {
+    const messages: any[] = [];
+
+    if (systemPrompt) {
+        messages.push({
+            role: 'system',
+            content: systemPrompt
+        });
+    }
+
+    messages.push({
+        role: 'user',
+        content: userPrompt
+    });
+
+    return messages;
+};
+
+const toResponsesTextFormat = (responseFormat?: AIResponseFormat): any | undefined => {
+    if (!responseFormat || responseFormat.type === 'text') {
+        return undefined;
+    }
+
+    if (responseFormat.type === 'json_schema') {
+        return {
+            type: 'json_schema',
+            ...(responseFormat.json_schema || {})
+        };
+    }
+
+    return { type: 'json_object' };
+};
+
+export const buildAIRequestBody = (
+    config: AIConfig,
+    userPrompt: string,
+    systemPrompt: string | undefined,
+    maxTokens: number,
+    responseFormat?: AIResponseFormat,
+    generation?: AIGenerationOptions
+): any => {
+    const temperature = generation?.temperature ?? 0.7;
+
+    if (getApiType(config) === 'responses') {
+        const requestBody: any = {
+            model: config.modelId,
+            input: userPrompt,
+            temperature,
+            max_output_tokens: maxTokens,
+            store: false
+        };
+
+        if (systemPrompt) {
+            requestBody.instructions = systemPrompt;
+        }
+
+        const textFormat = toResponsesTextFormat(responseFormat);
+        if (textFormat) {
+            requestBody.text = {
+                format: textFormat
+            };
+        }
+
+        return requestBody;
+    }
+
+    const requestBody: any = {
+        model: config.modelId,
+        messages: buildMessages(userPrompt, systemPrompt),
+        temperature,
+        max_tokens: maxTokens
+    };
+
+    if (responseFormat) {
+        requestBody.response_format = responseFormat;
+    }
+
+    return requestBody;
 };
 
 // 简单的并发控制器
@@ -225,62 +394,66 @@ const callAIAPI = async (
     systemPrompt?: string,
     maxTokens: number = 1000, // Increased default for JSON
     options?: AIRequestOptions,
-    responseFormat?: { type: "text" | "json_object" | "json_schema"; json_schema?: any },
+    responseFormat?: AIResponseFormat,
     generation?: AIGenerationOptions
 ): Promise<string> => {
     const { apiUrl, apiKey, modelId } = config;
     const requestLabel = generation?.label || 'generic';
 
     // 构建完整的API URL
-    const endpoint = buildEndpoint(apiUrl);
+    const endpoint = buildAIEndpoint(config);
 
     try {
-        const messages: any[] = [];
+        const sendRequest = async (userPrompt: string) => {
+            const requestBody = buildAIRequestBody(
+                config,
+                userPrompt,
+                systemPrompt,
+                maxTokens,
+                responseFormat,
+                generation
+            );
 
-        if (systemPrompt) {
-            messages.push({
-                role: 'system',
-                content: systemPrompt
-            });
-        }
+            const startTime = performance.now();
+            const response = await fetchWithRetry(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(requestBody)
+            }, options);
 
-        messages.push({
-            role: 'user',
-            content: prompt
-        });
-
-        // 构建请求体
-        const requestBody: any = {
-            model: modelId,
-            messages: messages,
-            temperature: generation?.temperature ?? 0.7,
-            max_tokens: maxTokens
+            return {
+                requestBody,
+                response,
+                elapsedMs: Math.round(performance.now() - startTime)
+            };
         };
 
-        // 如果有 response_format，添加到请求体
-        if (responseFormat) {
-            requestBody.response_format = responseFormat;
-        }
-
-        const startTime = performance.now();
-        const response = await fetchWithRetry(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(requestBody)
-        }, options);
-        const elapsedMs = Math.round(performance.now() - startTime);
+        let { requestBody, response, elapsedMs } = await sendRequest(prompt);
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`API request failed: ${response.status} ${response.statusText}. ${errorText}`);
+            if (shouldRetryWithExplicitJsonInstruction(response.status, errorText, responseFormat)) {
+                const retriedRequest = await sendRequest(`${prompt}${JSON_RETRY_SUFFIX}`);
+                requestBody = retriedRequest.requestBody;
+                response = retriedRequest.response;
+                elapsedMs = retriedRequest.elapsedMs;
+
+                if (!response.ok) {
+                    const retryErrorText = await response.text();
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}. ${retryErrorText}`);
+                }
+            } else {
+                throw new Error(`API request failed: ${response.status} ${response.statusText}. ${errorText}`);
+            }
         }
 
-        const data: AIResponse = await response.json();
+        const data: AIResponse | ResponsesAPIResponse = await response.json();
+        const responseContent = extractAIResponseContent(data, config);
 
-        if (!data.choices || data.choices.length === 0) {
+        if (!responseContent) {
             throw new Error('No response from AI');
         }
 
@@ -289,10 +462,11 @@ const callAIAPI = async (
             promptChars: prompt.length,
             systemPromptChars: systemPrompt?.length || 0,
             maxTokens,
-            temperature: requestBody.temperature
+            temperature: requestBody.temperature,
+            apiType: getApiType(config)
         });
 
-        return extractResponseText(data.choices[0].message);
+        return responseContent;
     } catch (error) {
         console.error('AI API call failed:', error);
         throw error;
@@ -356,18 +530,15 @@ export const executeScenario = async <InputType, OutputType>(
  */
 export const testAIConnection = async (config: AIConfig): Promise<TestConnectionResult> => {
     try {
-        const endpoint = buildEndpoint(config.apiUrl);
-        const requestBody = {
-            model: config.modelId,
-            messages: [
-                {
-                    role: 'user',
-                    content: 'Reply with exactly "Hello".'
-                }
-            ],
-            temperature: 0,
-            max_tokens: 32
-        };
+        const endpoint = buildAIEndpoint(config);
+        const requestBody = buildAIRequestBody(
+            config,
+            'Reply with exactly "Hello".',
+            undefined,
+            32,
+            undefined,
+            { temperature: 0, label: 'connection-test' }
+        );
 
         const response = await fetchWithRetry(endpoint, {
             method: 'POST',
@@ -388,9 +559,8 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
             };
         }
 
-        const data: AIResponse = await response.json();
-        const firstChoice = data.choices?.[0];
-        if (hasUsableResponse(firstChoice)) {
+        const data: AIResponse | ResponsesAPIResponse = await response.json();
+        if (hasUsableAIResponse(data, config)) {
             return {
                 success: true,
                 message: 'Connection successful. The model accepted the request and returned a completion.',
@@ -415,6 +585,69 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
             errorKey: error instanceof Error ? undefined : 'unknownError'
         };
     }
+};
+
+const normalizeFolderPath = (path: string): string => {
+    return path
+        .trim()
+        .replace(/\s*>\s*/g, '/')
+        .replace(/\/+/g, '/')
+        .replace(/^\/|\/$/g, '')
+        .toLowerCase();
+};
+
+const parseAvailableFolders = (allFolders: string[]): AvailableFolder[] => {
+    return allFolders
+        .map((folder) => {
+            const match = folder.match(/^\[ID:\s*([^\]]+)\]\s*(.+)$/);
+            if (!match) {
+                return null;
+            }
+
+            return {
+                id: match[1].trim(),
+                path: match[2].trim()
+            };
+        })
+        .filter((folder): folder is AvailableFolder => Boolean(folder));
+};
+
+const normalizeFolderRecommendations = (
+    recommendations: FolderRecommendationItem[] | undefined,
+    allFolders: string[]
+): Array<{ folderId: string; folderPath: string; reason?: string }> => {
+    if (!Array.isArray(recommendations) || recommendations.length === 0) {
+        return [];
+    }
+
+    const availableFolders = parseAvailableFolders(allFolders);
+    const foldersById = new Map(availableFolders.map((folder) => [folder.id, folder]));
+    const foldersByPath = new Map(availableFolders.map((folder) => [normalizeFolderPath(folder.path), folder]));
+    const normalized: Array<{ folderId: string; folderPath: string; reason?: string }> = [];
+    const seenIds = new Set<string>();
+
+    for (const recommendation of recommendations) {
+        const candidateId = String(recommendation.folderId ?? recommendation.id ?? '').trim();
+        const candidatePath = String(recommendation.folderPath ?? recommendation.path ?? '').trim();
+
+        let matchedFolder = candidateId ? foldersById.get(candidateId) : undefined;
+        if (!matchedFolder && candidatePath) {
+            matchedFolder = foldersByPath.get(normalizeFolderPath(candidatePath));
+        }
+
+        if (!matchedFolder || seenIds.has(matchedFolder.id)) {
+            continue;
+        }
+
+        seenIds.add(matchedFolder.id);
+        normalized.push({
+            folderId: matchedFolder.id,
+            folderPath: matchedFolder.path,
+            reason: recommendation.reason
+        });
+    }
+
+    return normalized;
 };
 
 /**
@@ -659,24 +892,25 @@ export const batchRenameBookmarksWithConsistency = async (
                 );
 
                 // Call AI
-                const endpoint = buildEndpoint(config.apiUrl);
+                const endpoint = buildAIEndpoint(config);
+                const requestBody = buildAIRequestBody(
+                    config,
+                    batchPrompt,
+                    undefined,
+                    1500,
+                    undefined,
+                    {
+                        temperature: 0.3,
+                        label: 'batch-rename-consistency'
+                    }
+                );
                 const response = await fetchWithRetry(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${config.apiKey}`
                     },
-                    body: JSON.stringify({
-                        model: config.modelId,
-                        messages: [
-                            {
-                                role: 'user',
-                                content: batchPrompt
-                            }
-                        ],
-                        temperature: 0.3,
-                        max_tokens: 1500 // 5 items * ~300 tokens
-                    })
+                    body: JSON.stringify(requestBody)
                 }, options);
 
                 if (!response.ok) {
@@ -684,7 +918,7 @@ export const batchRenameBookmarksWithConsistency = async (
                 }
 
                 const data = await response.json();
-                const aiResponse = data.choices?.[0]?.message?.content || '';
+                const aiResponse = extractAIResponseContent(data, config);
 
                 // Parse results for this chunk
                 // Note: parseBatchRenameResponse expects 1-based indexes relative to the batch
@@ -898,7 +1132,7 @@ export const recommendFolderWithAI = async (
 
         return {
             success: true,
-            recommendations: result.recommendations
+            recommendations: normalizeFolderRecommendations(result.recommendations, allFolders)
         };
     } catch (error) {
         console.error('AI folder recommendation failed:', error);

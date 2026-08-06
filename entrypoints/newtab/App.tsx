@@ -12,6 +12,7 @@ import { BatchRenamePage } from "@/entrypoints/newtab/batch-rename.tsx";
 import { BatchTagPage } from "@/entrypoints/newtab/batch-tag.tsx";
 import { ToolsPage } from "@/entrypoints/newtab/tools.tsx";
 import { StatisticsPage } from "@/entrypoints/newtab/statistics.tsx";
+import { TemplateUrlsPage } from "@/entrypoints/newtab/template-urls.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useTranslation } from 'react-i18next';
 import { Toaster } from "@/components/ui/toaster";
@@ -107,6 +108,7 @@ export default () => {
                             <div className={`h-full min-h-[calc(100vh-3rem)] rounded-[2rem] border border-border/40 bg-background/88 p-6 shadow-panel backdrop-blur-md transition-all duration-300 hover:bg-background/92 md:min-h-[calc(100vh-3rem)] md:p-8 ${themeId === 'blueprint' ? 'blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/84 hover:bg-background/88' : ''}`}>
                                 {sidebarType === SidebarType.home && <Home onNavigate={setSidebarType} />}
                                 {sidebarType === SidebarType.statistics && <StatisticsPage />}
+                                {sidebarType === SidebarType.templateUrls && <TemplateUrlsPage />}
                                 {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
                                 {sidebarType === SidebarType.batchTag && <BatchTagPage />}
                                 {sidebarType === SidebarType.tools && <ToolsPage navigateTo={setSidebarType} />}
@@ -117,6 +119,7 @@ export default () => {
                         <div className="animate-in fade-in duration-300">
                             {sidebarType === SidebarType.home && <Home onNavigate={setSidebarType} />}
                             {sidebarType === SidebarType.statistics && <StatisticsPage />}
+                            {sidebarType === SidebarType.templateUrls && <TemplateUrlsPage />}
                             {sidebarType === SidebarType.batchRename && <BatchRenamePage />}
                             {sidebarType === SidebarType.batchTag && <BatchTagPage />}
                             {sidebarType === SidebarType.tools && <ToolsPage navigateTo={setSidebarType} />}

@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { AI_PRESETS, applyPreset, type AIPreset } from '@/lib/ai-presets';
-import { AIConfig, saveAIConfig } from '@/lib/aiConfigUtils';
+import { AI_PRESETS, type AIPreset } from '@/lib/ai-presets';
+import { AIConfig, AIServiceApiType, saveAIConfig } from '@/lib/aiConfigUtils';
 import { testAIConnection } from '@/lib/aiService';
 import { Loader2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,7 +33,8 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
     const [config, setConfig] = useState<AIConfig>({
         apiUrl: '',
         apiKey: '',
-        modelId: ''
+        modelId: '',
+        apiType: 'chat_completions'
     });
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<{
@@ -47,7 +49,7 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
     const resetWizard = () => {
         setCurrentStep(1);
         setSelectedPreset(null);
-        setConfig({ apiUrl: '', apiKey: '', modelId: '' });
+        setConfig({ apiUrl: '', apiKey: '', modelId: '', apiType: 'chat_completions' });
         setTestResult(null);
     };
 
@@ -57,7 +59,7 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
 
         if (presetId === 'custom') {
             // 自定义配置，清空预填
-            setConfig({ apiUrl: '', apiKey: '', modelId: '' });
+            setConfig({ apiUrl: '', apiKey: '', modelId: '', apiType: 'chat_completions' });
         } else {
             // 应用预设配置
             const preset = AI_PRESETS.find(p => p.id === presetId);
@@ -65,7 +67,8 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                 setConfig({
                     apiUrl: preset.config.apiUrl,
                     apiKey: config.apiKey, // 保留已输入的API Key
-                    modelId: preset.config.modelId
+                    modelId: preset.config.modelId,
+                    apiType: preset.config.apiType ?? 'chat_completions'
                 });
             }
         }
@@ -140,7 +143,8 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
             case 2:
                 return config.apiKey.trim() !== '' &&
                     config.apiUrl.trim() !== '' &&
-                    config.modelId.trim() !== '';
+                    config.modelId.trim() !== '' &&
+                    !!config.apiType;
             case 3:
                 return testResult?.success === true;
             default:
@@ -289,6 +293,47 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                     {selectedPreset === 'custom' && (
                         <>
                             <div className="space-y-2">
+                                <Label>{t('apiType')}</Label>
+                                <RadioGroup
+                                    value={config.apiType ?? 'chat_completions'}
+                                    onValueChange={(value) => setConfig({ ...config, apiType: value as AIServiceApiType })}
+                                    className="grid grid-cols-1 gap-3 md:grid-cols-2"
+                                >
+                                    <label
+                                        htmlFor="wizard-apiTypeChatCompletions"
+                                        className={cn(
+                                            "flex cursor-pointer items-start gap-3 rounded-[1rem] border px-4 py-3 text-sm transition-colors",
+                                            (config.apiType ?? 'chat_completions') === 'chat_completions'
+                                                ? 'border-primary bg-primary/10'
+                                                : 'border-border bg-secondary/10 hover:bg-secondary/20'
+                                        )}
+                                    >
+                                        <RadioGroupItem id="wizard-apiTypeChatCompletions" value="chat_completions" className="mt-1" />
+                                        <span className="space-y-1">
+                                            <span className="block font-medium">{t('apiTypeChatCompletions')}</span>
+                                            <span className="block text-xs text-muted-foreground">{t('apiTypeChatCompletionsDesc')}</span>
+                                        </span>
+                                    </label>
+
+                                    <label
+                                        htmlFor="wizard-apiTypeResponses"
+                                        className={cn(
+                                            "flex cursor-pointer items-start gap-3 rounded-[1rem] border px-4 py-3 text-sm transition-colors",
+                                            config.apiType === 'responses'
+                                                ? 'border-primary bg-primary/10'
+                                                : 'border-border bg-secondary/10 hover:bg-secondary/20'
+                                        )}
+                                    >
+                                        <RadioGroupItem id="wizard-apiTypeResponses" value="responses" className="mt-1" />
+                                        <span className="space-y-1">
+                                            <span className="block font-medium">{t('apiTypeResponses')}</span>
+                                            <span className="block text-xs text-muted-foreground">{t('apiTypeResponsesDesc')}</span>
+                                        </span>
+                                    </label>
+                                </RadioGroup>
+                            </div>
+
+                            <div className="space-y-2">
                                 <Label htmlFor="wizard-apiUrl">{t('apiUrl')}</Label>
                                 <Input
                                     id="wizard-apiUrl"
@@ -335,6 +380,12 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">{t('apiUrl')}:</span>
                             <span className="font-mono text-xs">{config.apiUrl}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{t('apiType')}:</span>
+                            <span className="font-mono text-xs">
+                                {config.apiType === 'responses' ? t('apiTypeResponses') : t('apiTypeChatCompletions')}
+                            </span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">{t('modelId')}:</span>

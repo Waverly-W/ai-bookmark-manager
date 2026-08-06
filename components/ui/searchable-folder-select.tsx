@@ -13,6 +13,7 @@ interface SearchableFolderSelectProps {
     onSelect: (folderId: string) => void;
     className?: string;
     placeholder?: string;
+    popoverContentClassName?: string;
 }
 
 interface FlattenedFolder {
@@ -82,7 +83,8 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
     selectedId,
     onSelect,
     className,
-    placeholder = "选择文件夹"
+    placeholder = "选择文件夹",
+    popoverContentClassName
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -154,7 +156,13 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
                     <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 text-muted-foreground" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] overflow-hidden rounded-[1.5rem] border border-border/70 bg-popover/98 p-0 shadow-panel backdrop-blur-xl" align="start">
+            <PopoverContent
+                className={cn(
+                    "w-[--radix-popover-trigger-width] overflow-hidden rounded-[1.5rem] border border-border/70 bg-popover/98 p-0 shadow-panel backdrop-blur-xl",
+                    popoverContentClassName
+                )}
+                align="start"
+            >
                 <div className="flex flex-col bg-card">
                     {/* 搜索框 - Material Filled Style */}
                     <div className="flex items-center border-b border-border/50 bg-surface-2/80 px-4 py-3">

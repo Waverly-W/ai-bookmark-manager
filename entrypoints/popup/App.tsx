@@ -160,7 +160,7 @@ function App() {
         try {
             const recommendationStart = performance.now();
             const boundFolderId = await getFolderForDomain(currentUrl);
-            if (boundFolderId && flatFolders.some(f => f.id === boundFolderId)) {
+            if (boundFolderId && boundFolderId !== '1' && flatFolders.some(f => f.id === boundFolderId)) {
                 targetFolderId = boundFolderId;
                 setSelectedFolder(targetFolderId);
             } else {
@@ -169,12 +169,19 @@ function App() {
                     .map(f => `[ID: ${f.id}] ${f.path}`);
 
                 const recResult = await recommendFolderWithAI(
-                    config, currentUrl, initialTitle, folderList, i18n.language
+                    config,
+                    currentUrl,
+                    initialTitle,
+                    folderList,
+                    i18n.language,
+                    { forceRemote: true }
                 );
 
                 if (recResult.success && recResult.recommendations && recResult.recommendations.length > 0) {
-                    const bestRec = recResult.recommendations[0];
-                    if (flatFolders.some(f => f.id === bestRec.folderId)) {
+                    const bestRec = recResult.recommendations.find(recommendation =>
+                        flatFolders.some(f => f.id === recommendation.folderId)
+                    );
+                    if (bestRec) {
                         targetFolderId = bestRec.folderId;
                         setSelectedFolder(targetFolderId);
                     }

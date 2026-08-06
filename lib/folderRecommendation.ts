@@ -5,7 +5,8 @@ import {
     formatFolderListForPrompt,
     formatFolderRecommendationPrompt
 } from './aiPromptUtils';
-import { AIRequestOptions } from './aiService';
+import type { AIRequestOptions } from './aiService';
+import { buildAIEndpoint, buildAIRequestBody, extractAIResponseContent } from './aiApiCompat';
 
 /**
  * 页面上下文信息
@@ -58,12 +59,8 @@ async function callAIForRecommendation(
     prompt: string,
     options?: AIRequestOptions
 ): Promise<string> {
-    const { apiUrl, apiKey, modelId } = config;
-
-    // 构建 API 端点
-    const endpoint = apiUrl.endsWith('/')
-        ? `${apiUrl}chat/completions`
-        : `${apiUrl}/chat/completions`;
+    const { apiKey } = config;
+    const endpoint = buildAIEndpoint(config);
 
     // 创建 AbortController 用于超时控制
     const controller = new AbortController();
@@ -71,19 +68,17 @@ async function callAIForRecommendation(
 
     try {
         // 构建请求体
-        const requestBody: any = {
-            model: modelId,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            temperature: 0.3, // 降低温度以提高一致性
-            max_tokens: 150,
-            // 启用 JSON Mode 确保返回标准 JSON 格式
-            response_format: { type: 'json_object' }
-        };
+        const requestBody = buildAIRequestBody(
+            config,
+            prompt,
+            undefined,
+            150,
+            { type: 'json_object' },
+            {
+                temperature: 0.3,
+                label: 'folder-recommendation'
+            }
+        );
 
         console.log('[FolderRecommendation] 启用 JSON Mode，请求体:', JSON.stringify(requestBody, null, 2));
 
@@ -106,11 +101,12 @@ async function callAIForRecommendation(
 
         const data = await response.json();
 
-        if (!data.choices || data.choices.length === 0) {
+        const content = extractAIResponseContent(data, config);
+        if (!content) {
             throw new Error('No response from AI');
         }
 
-        return data.choices[0].message.content.trim();
+        return content;
     } catch (error) {
         clearTimeout(timeoutId);
         throw error;

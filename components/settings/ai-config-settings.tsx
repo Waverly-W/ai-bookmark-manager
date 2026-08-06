@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { AIConfig, saveAIConfig, getAIConfig, validateAIConfig } from "@/lib/aiConfigUtils";
+import { AIConfig, AIServiceApiType, saveAIConfig, getAIConfig, validateAIConfig } from "@/lib/aiConfigUtils";
 import { testAIConnection } from "@/lib/aiService";
 import { Loader2, CheckCircle2, XCircle, Wand2 } from "lucide-react";
 import { AIConfigWizard } from './ai-config-wizard';
@@ -17,7 +18,8 @@ export function AIConfigSettings() {
     const [config, setConfig] = useState<AIConfig>({
         apiUrl: '',
         apiKey: '',
-        modelId: ''
+        modelId: '',
+        apiType: 'chat_completions'
     });
 
     const [loading, setLoading] = useState(true);
@@ -185,6 +187,48 @@ export function AIConfigSettings() {
                         {t('useConfigWizard')}
                     </Button>
                 </div>
+            </div>
+
+            {/* API Type */}
+            <div className="space-y-2">
+                <Label>{t('apiType')}</Label>
+                <RadioGroup
+                    value={config.apiType ?? 'chat_completions'}
+                    onValueChange={(value) => handleInputChange('apiType', value as AIServiceApiType)}
+                    className="grid grid-cols-1 gap-3 md:grid-cols-2"
+                >
+                    <label
+                        htmlFor="apiTypeChatCompletions"
+                        className={cn(
+                            "flex cursor-pointer items-start gap-3 rounded-[1rem] border px-4 py-3 text-sm transition-colors",
+                            (config.apiType ?? 'chat_completions') === 'chat_completions'
+                                ? "border-primary bg-primary/10"
+                                : "border-border bg-secondary/10 hover:bg-secondary/20"
+                        )}
+                    >
+                        <RadioGroupItem id="apiTypeChatCompletions" value="chat_completions" className="mt-1" />
+                        <span className="space-y-1">
+                            <span className="block font-medium">{t('apiTypeChatCompletions')}</span>
+                            <span className="block text-xs text-muted-foreground">{t('apiTypeChatCompletionsDesc')}</span>
+                        </span>
+                    </label>
+
+                    <label
+                        htmlFor="apiTypeResponses"
+                        className={cn(
+                            "flex cursor-pointer items-start gap-3 rounded-[1rem] border px-4 py-3 text-sm transition-colors",
+                            config.apiType === 'responses'
+                                ? "border-primary bg-primary/10"
+                                : "border-border bg-secondary/10 hover:bg-secondary/20"
+                        )}
+                    >
+                        <RadioGroupItem id="apiTypeResponses" value="responses" className="mt-1" />
+                        <span className="space-y-1">
+                            <span className="block font-medium">{t('apiTypeResponses')}</span>
+                            <span className="block text-xs text-muted-foreground">{t('apiTypeResponsesDesc')}</span>
+                        </span>
+                    </label>
+                </RadioGroup>
             </div>
 
             {/* API URL */}

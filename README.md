@@ -123,8 +123,11 @@ npm run dev:firefox
 ### 生产构建
 
 ```bash
-# Chrome 构建
+# 同时构建 Chrome 插件和 Firefox Add-on
 npm run build
+
+# Chrome 构建
+npm run build:chrome
 
 # Firefox 构建
 npm run build:firefox
@@ -136,10 +139,10 @@ npm run zip
 ### 加载扩展
 
 1. 运行 `npm run build`
-2. 打开 Chrome 浏览器，访问 `chrome://extensions/`
-3. 开启右上角的「开发者模式」
-4. 点击「加载已解压的扩展程序」
-5. 选择项目中的 `dist/chrome-mv3` 目录
+2. Chrome：打开 `chrome://extensions/`，开启「开发者模式」，点击「加载已解压的扩展程序」，选择 `dist/chrome-mv3`
+3. Firefox：打开 `about:debugging`，点击「此 Firefox」，点击「临时载入附加组件」，选择 `dist/firefox-mv2`；如果弹出的是文件选择器，则进入该目录并选择 `manifest.json`
+
+Firefox 的临时附加组件会在重启浏览器后失效；开发调试时也可以直接运行 `npm run dev:firefox`，由 WXT 启动 Firefox 并临时载入扩展。
 
 ---
 

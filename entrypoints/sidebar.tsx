@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { X, Settings, Home, Wrench, PieChart, Sparkles } from "lucide-react";
+import { X, Settings, Home, Wrench, PieChart, Sparkles, Link2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider.tsx";
@@ -8,6 +8,7 @@ import { useTheme } from "@/components/theme-provider.tsx";
 export enum SidebarType {
     'home' = 'home',
     'statistics' = 'statistics',
+    'templateUrls' = 'templateUrls',
     'batchRename' = 'batchRename',
     'batchTag' = 'batchTag',
     'settings' = 'settings',
@@ -30,6 +31,7 @@ const Sidebar = (
     const primaryItems = useMemo(() => ([
         { type: SidebarType.home, label: t('home'), icon: Home },
         { type: SidebarType.statistics, label: t('statistics'), icon: PieChart },
+        { type: SidebarType.templateUrls, label: t('templateUrls'), icon: Link2 },
         { type: SidebarType.tools, label: t('tools'), icon: Wrench },
     ]), [t]);
 
@@ -111,9 +113,7 @@ const Sidebar = (
 
                 <TooltipProvider delayDuration={0}>
                     <nav className="mt-8 flex flex-col items-center gap-2">
-                        {renderNavItem(primaryItems[0])}
-                        {renderNavItem(primaryItems[1])}
-                        {renderNavItem(primaryItems[2])}
+                        {primaryItems.map(renderNavItem)}
                     </nav>
 
                     <div className={cn("my-6 h-px bg-border/70", themeId === 'blueprint' && "bg-border/40")} />
@@ -129,12 +129,13 @@ const Sidebar = (
                 themeId === 'blueprint' && "blueprint-panel border-dashed"
             )}>
                 <div className="flex items-center justify-around h-16 px-2">
-                    {[
-                        { type: SidebarType.home, label: t('home'), icon: Home },
-                        { type: SidebarType.statistics, label: t('statistics'), icon: PieChart },
-                        { type: SidebarType.tools, label: t('tools'), icon: Wrench },
-                        { type: SidebarType.settings, label: t('settings'), icon: Settings },
-                    ].map((item) => {
+                        {[
+                            { type: SidebarType.home, label: t('home'), icon: Home },
+                            { type: SidebarType.statistics, label: t('statistics'), icon: PieChart },
+                            { type: SidebarType.templateUrls, label: t('templateUrls'), icon: Link2 },
+                            { type: SidebarType.tools, label: t('tools'), icon: Wrench },
+                            { type: SidebarType.settings, label: t('settings'), icon: Settings },
+                        ].map((item) => {
                         const Icon = item.icon;
                         const isActive = isNavItemActive(item.type);
 

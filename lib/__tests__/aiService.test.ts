@@ -211,3 +211,222 @@ describe('AI connection response handling', () => {
     expect(result.error).toContain('upstream proxy rejected request');
   });
 });
+
+describe('Responses API compatibility', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should test connections through the Responses API endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        output_text: 'Hello',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const { testAIConnection } = await import('@/lib/aiService');
+    const result = await testAIConnection({
+      apiUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      modelId: 'gpt-5.1-mini',
+      apiType: 'responses',
+    } as any);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toBe('https://example.com/v1/responses');
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(requestBody).toMatchObject({
+      model: 'gpt-5.1-mini',
+      input: 'Reply with exactly "Hello".',
+      temperature: 0,
+      max_output_tokens: 32,
+      store: false,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should execute JSON scenarios through Responses API response text', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        output_text: JSON.stringify({
+          recommendations: [
+            { folderId: '3', folderPath: '技术/前端' },
+          ],
+        }),
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const { recommendFolderWithAI } = await import('@/lib/aiService');
+    const result = await recommendFolderWithAI(
+      {
+        apiUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        modelId: 'gpt-5.1-mini',
+        apiType: 'responses',
+      } as any,
+      'https://react.dev',
+      'React',
+      ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
+      'zh_CN',
+      { forceRemote: true }
+    );
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toBe('https://example.com/v1/responses');
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(requestBody.input).toEqual(expect.any(String));
+    expect(requestBody.instructions).toEqual(expect.any(String));
+    expect(requestBody.text).toEqual({
+      format: { type: 'json_object' },
+    });
+    expect(result.success).toBe(true);
+    expect(result.recommendations?.[0].folderId).toBe('3');
+  });
+});
+
+describe('AI folder recommendation normalization', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should skip invalid recommendations and return the first valid folder id', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                recommendations: [
+                  { folderId: 'missing-folder', folderPath: '不存在' },
+                  { folderId: '3', folderPath: '技术/前端' },
+                ],
+              }),
+            },
+          },
+        ],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const { recommendFolderWithAI } = await import('@/lib/aiService');
+    const result = await recommendFolderWithAI(
+      {
+        apiUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        modelId: 'mimo-v2-omni',
+      },
+      'https://react.dev',
+      'React',
+      ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
+      'zh_CN',
+      { forceRemote: true }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.recommendations?.[0].folderId).toBe('3');
+  });
+
+  it('should resolve a missing folder id from a matching folder path', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                recommendations: [
+                  { folderPath: '技术/前端', reason: '内容关于前端开发' },
+                ],
+              }),
+            },
+          },
+        ],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const { recommendFolderWithAI } = await import('@/lib/aiService');
+    const result = await recommendFolderWithAI(
+      {
+        apiUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        modelId: 'mimo-v2-omni',
+      },
+      'https://react.dev',
+      'React',
+      ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
+      'zh_CN',
+      { forceRemote: true }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.recommendations?.[0]).toMatchObject({
+      folderId: '3',
+      folderPath: '技术/前端',
+      reason: '内容关于前端开发',
+    });
+  });
+
+  it('should retry with an explicit json instruction when provider rejects json_object requests', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          error: {
+            message: "Response input messages must contain the word 'json' in some form to use '***.format' of type 'json_object'.",
+            type: 'invalid_request_error',
+          },
+        }), {
+          status: 400,
+          statusText: 'Bad Request',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  recommendations: [
+                    { folderId: '3', folderPath: '技术/前端' },
+                  ],
+                }),
+              },
+            },
+          ],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    const { recommendFolderWithAI } = await import('@/lib/aiService');
+    const result = await recommendFolderWithAI(
+      {
+        apiUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        modelId: 'mimo-v2-omni',
+      },
+      'https://react.dev',
+      'React',
+      ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
+      'zh_CN',
+      { forceRemote: true }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retryBody = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
+    expect(retryBody.messages[1].content.toLowerCase()).toContain('json');
+    expect(result.success).toBe(true);
+    expect(result.recommendations?.[0].folderId).toBe('3');
+  });
+});

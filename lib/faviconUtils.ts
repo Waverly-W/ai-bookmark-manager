@@ -78,6 +78,10 @@ function getFaviconGrabberUrl(url: string): string {
  * // 返回: chrome-extension://xxxxx/_favicon/?pageUrl=https%3A%2F%2Fwww.google.com&size=32
  */
 function getChromeBuiltInFaviconUrl(url: string, size: number = 32): string {
+    if (!import.meta.env.CHROME) {
+        return '';
+    }
+
     try {
         const faviconUrl = new URL(browser.runtime.getURL('/_favicon/' as any));
         faviconUrl.searchParams.set('pageUrl', url);

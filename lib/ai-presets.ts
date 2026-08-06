@@ -11,6 +11,7 @@ export interface AIPreset {
     config: {
         apiUrl: string;
         modelId: string;
+        apiType?: AIConfig['apiType'];
     };
     helpUrl: string; // 获取API Key的帮助链接
     docsUrl?: string; // 文档链接
@@ -27,7 +28,8 @@ export const AI_PRESETS: AIPreset[] = [
         icon: '🤖',
         config: {
             apiUrl: 'https://api.openai.com/v1',
-            modelId: 'gpt-4o-mini'
+            modelId: 'gpt-4o-mini',
+            apiType: 'responses'
         },
         helpUrl: 'https://platform.openai.com/api-keys',
         docsUrl: 'https://platform.openai.com/docs'
@@ -39,7 +41,8 @@ export const AI_PRESETS: AIPreset[] = [
         icon: '🧠',
         config: {
             apiUrl: 'https://api.anthropic.com/v1',
-            modelId: 'claude-3-5-sonnet-20241022'
+            modelId: 'claude-3-5-sonnet-20241022',
+            apiType: 'chat_completions'
         },
         helpUrl: 'https://console.anthropic.com/settings/keys',
         docsUrl: 'https://docs.anthropic.com'
@@ -65,7 +68,8 @@ export const applyPreset = (presetId: string, apiKey: string): AIConfig => {
     return {
         apiUrl: preset.config.apiUrl,
         apiKey: apiKey,
-        modelId: preset.config.modelId
+        modelId: preset.config.modelId,
+        apiType: preset.config.apiType ?? 'chat_completions'
     };
 };
 
@@ -76,7 +80,8 @@ export const isPresetConfig = (config: AIConfig): string | null => {
     for (const preset of AI_PRESETS) {
         if (
             config.apiUrl === preset.config.apiUrl &&
-            config.modelId === preset.config.modelId
+            config.modelId === preset.config.modelId &&
+            (config.apiType ?? 'chat_completions') === (preset.config.apiType ?? 'chat_completions')
         ) {
             return preset.id;
         }
