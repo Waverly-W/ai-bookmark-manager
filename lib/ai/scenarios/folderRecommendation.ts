@@ -74,7 +74,9 @@ const RESPONSE_SCHEMA: JSONSchema = {
                     folderPath: { type: "string" },
                     reason: { type: "string" }
                 },
-                required: ["folderId", "folderPath"]
+                // The legacy parser accepts either a folder ID or a folder path and
+                // resolves the missing value against the current bookmark tree.
+                required: []
             },
             description: "List of recommended folders with IDs and paths"
         }
@@ -100,8 +102,21 @@ export const folderRecommendationScenario: AIScenario<FolderRecommendationInput,
         return template;
     },
     parseResponse: (response: any) => {
+        if (!Array.isArray(response.recommendations)) {
+            throw new Error('recommendations must be an array');
+        }
+
+        for (const recommendation of response.recommendations) {
+            if (!recommendation || typeof recommendation !== 'object') {
+                throw new Error('recommendation items must be objects');
+            }
+            if (!recommendation.folderId && !recommendation.folderPath) {
+                throw new Error('recommendation items require folderId or folderPath');
+            }
+        }
+
         return {
-            recommendations: response.recommendations || []
+            recommendations: response.recommendations
         };
     }
 };

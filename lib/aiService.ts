@@ -22,6 +22,7 @@ import {
 } from "./ai/scenarios/backupConflictResolution";
 import { getTopTags } from './tagStorage';
 import type { MergeConflict, AIConflictResolution } from './webdavSync';
+import { AIRuntimeError, normalizeAIError, parseAIJsonResponse } from './aiRuntimeUtils';
 
 /**
  * AI API响应接口
@@ -314,21 +315,25 @@ async function fetchWithRetry(
     let lastError: unknown;
     for (let attempt = 0; attempt <= retries; attempt++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        let timedOut = false;
+        const timeoutId = setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+        }, timeoutMs);
 
         // 合并外部信号到我们的 controller
         const externalSignal = init.signal ?? opts?.signal;
+        const abortFromExternal = () => controller.abort();
         if (externalSignal) {
             if (externalSignal.aborted) {
                 controller.abort();
             } else {
-                externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+                externalSignal.addEventListener('abort', abortFromExternal, { once: true });
             }
         }
 
         try {
             const response = await fetch(url, { ...init, signal: controller.signal });
-            clearTimeout(timeoutId);
 
             if (!response.ok && attempt < retries && (response.status === 429 || response.status >= 500)) {
                 await sleep(backoffMs * Math.pow(2, attempt));
@@ -336,14 +341,21 @@ async function fetchWithRetry(
             }
 
             return response;
-        } catch (e: any) {
-            clearTimeout(timeoutId);
-            lastError = e;
-            const aborted = e?.name === 'AbortError';
-            if (aborted || attempt >= retries) {
-                throw e;
+        } catch (error) {
+            const normalizedError = normalizeAIError(error, {
+                timedOut,
+                timeoutMs,
+                cancelled: Boolean(externalSignal?.aborted && !timedOut)
+            });
+            lastError = normalizedError;
+
+            if (normalizedError.code === 'cancelled' || normalizedError.code === 'timeout' || attempt >= retries) {
+                throw normalizedError;
             }
             await sleep(backoffMs * Math.pow(2, attempt));
+        } finally {
+            clearTimeout(timeoutId);
+            externalSignal?.removeEventListener('abort', abortFromExternal);
         }
     }
 
@@ -468,8 +480,7 @@ const callAIAPI = async (
 
         return responseContent;
     } catch (error) {
-        console.error('AI API call failed:', error);
-        throw error;
+        throw normalizeAIError(error);
     }
 };
 
@@ -513,13 +524,15 @@ export const executeScenario = async <InputType, OutputType>(
         }
     );
 
-    // 4. 解析结果
+    // 4. 解析并校验结果
     try {
-        const jsonResponse = JSON.parse(responseContent);
+        const jsonResponse = parseAIJsonResponse(responseContent, scenario.responseSchema.schema);
         return scenario.parseResponse(jsonResponse);
     } catch (error) {
-        console.error('Failed to parse AI response as JSON:', error, responseContent);
-        throw new Error('AI response was not valid JSON');
+        if (error instanceof AIRuntimeError) {
+            throw error;
+        }
+        throw new AIRuntimeError('response_format', 'AI response could not be parsed', error);
     }
 };
 
@@ -576,13 +589,17 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
             errorKey: 'connectionTestNoUsableContent'
         };
     } catch (error) {
-        console.error('Test connection failed:', error);
+        const normalizedError = normalizeAIError(error);
+        console.warn('[AI] Connection test failed', {
+            code: normalizedError.code,
+            message: normalizedError.message
+        });
         return {
             success: false,
             message: 'Connection failed',
             messageKey: 'connectionFailed',
-            error: error instanceof Error ? error.message : 'Unknown error',
-            errorKey: error instanceof Error ? undefined : 'unknownError'
+            error: normalizedError.message,
+            errorKey: normalizedError.code === 'unknown' ? 'unknownError' : undefined
         };
     }
 };
@@ -719,10 +736,14 @@ export const renameBookmarkWithAI = async (
             newTitle: result.newTitle
         };
     } catch (error) {
-        console.error('AI rename failed:', error);
+        const normalizedError = normalizeAIError(error);
+        console.warn('[AI] Rename failed', {
+            code: normalizedError.code,
+            message: normalizedError.message
+        });
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: normalizedError.message
         };
     }
 };
@@ -1135,10 +1156,14 @@ export const recommendFolderWithAI = async (
             recommendations: normalizeFolderRecommendations(result.recommendations, allFolders)
         };
     } catch (error) {
-        console.error('AI folder recommendation failed:', error);
+        const normalizedError = normalizeAIError(error);
+        console.warn('[AI] Folder recommendation failed', {
+            code: normalizedError.code,
+            message: normalizedError.message
+        });
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: normalizedError.message
         };
     }
 };
@@ -1188,10 +1213,14 @@ export const renameBookmarkContextuallyWithAI = async (
             newTitle: result.newTitle
         };
     } catch (error) {
-        console.error('AI contextual rename failed:', error);
+        const normalizedError = normalizeAIError(error);
+        console.warn('[AI] Contextual rename failed', {
+            code: normalizedError.code,
+            message: normalizedError.message
+        });
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: normalizedError.message
         };
     }
 };
@@ -1229,10 +1258,14 @@ export const autoTagBookmark = async (
             tags: result.tags
         };
     } catch (error) {
-        console.error('AI auto-tagging failed:', error);
+        const normalizedError = normalizeAIError(error);
+        console.warn('[AI] Auto-tagging failed', {
+            code: normalizedError.code,
+            message: normalizedError.message
+        });
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: normalizedError.message
         };
     }
 };

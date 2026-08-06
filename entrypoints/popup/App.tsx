@@ -16,6 +16,7 @@ import { addRecentFolder, saveDomainMapping, getFolderForDomain } from "@/lib/re
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
 import { recommendFolderWithAI, renameBookmarkContextuallyWithAI, autoTagBookmark } from "@/lib/aiService";
+import { runPopupAIWorkflow } from "@/lib/popupAIWorkflow";
 import { getAllTags, saveTagsForBookmark } from "@/lib/tagStorage";
 
 // New Components
@@ -153,98 +154,119 @@ function App() {
         flatFolders: BookmarkFolder[]
     ) => {
         const workflowStart = performance.now();
-        // 自动选文件夹
-        let targetFolderId = '1'; // Default to Bookmarks Bar
-        setIsRecommending(true);
+        const workflowResult = await runPopupAIWorkflow({
+            recommend: async () => {
+                const recommendationStart = performance.now();
+                setIsRecommending(true);
 
-        try {
-            const recommendationStart = performance.now();
-            const boundFolderId = await getFolderForDomain(currentUrl);
-            if (boundFolderId && boundFolderId !== '1' && flatFolders.some(f => f.id === boundFolderId)) {
-                targetFolderId = boundFolderId;
-                setSelectedFolder(targetFolderId);
-            } else {
-                const folderList = flatFolders
-                    .filter(f => f.id !== 'all')
-                    .map(f => `[ID: ${f.id}] ${f.path}`);
+                try {
+                    let targetFolderId = '1';
+                    const boundFolderId = await getFolderForDomain(currentUrl);
 
-                const recResult = await recommendFolderWithAI(
-                    config,
-                    currentUrl,
-                    initialTitle,
-                    folderList,
-                    i18n.language,
-                    { forceRemote: true }
-                );
+                    if (boundFolderId && boundFolderId !== '1' && flatFolders.some(f => f.id === boundFolderId)) {
+                        targetFolderId = boundFolderId;
+                        setSelectedFolder(targetFolderId);
+                        return { success: true, targetFolderId };
+                    }
 
-                if (recResult.success && recResult.recommendations && recResult.recommendations.length > 0) {
-                    const bestRec = recResult.recommendations.find(recommendation =>
+                    const folderList = flatFolders
+                        .filter(f => f.id !== 'all')
+                        .map(f => `[ID: ${f.id}] ${f.path}`);
+                    const recResult = await recommendFolderWithAI(
+                        config,
+                        currentUrl,
+                        initialTitle,
+                        folderList,
+                        i18n.language,
+                        { forceRemote: true }
+                    );
+
+                    if (!recResult.success) {
+                        return {
+                            success: false,
+                            targetFolderId,
+                            error: recResult.error
+                        };
+                    }
+
+                    const bestRec = recResult.recommendations?.find(recommendation =>
                         flatFolders.some(f => f.id === recommendation.folderId)
                     );
                     if (bestRec) {
                         targetFolderId = bestRec.folderId;
                         setSelectedFolder(targetFolderId);
                     }
+
+                    return { success: true, targetFolderId };
+                } catch (error) {
+                    return {
+                        success: false,
+                        targetFolderId: '1',
+                        error: error instanceof Error ? error.message : 'Folder recommendation failed'
+                    };
+                } finally {
+                    setIsRecommending(false);
+                    logPopupTiming('folder recommendation workflow', recommendationStart);
+                }
+            },
+            rename: async (targetFolderId) => {
+                const renameStart = performance.now();
+                setIsRenaming(true);
+
+                try {
+                    const otherTitles = await getBookmarkTitlesInFolder(targetFolderId);
+                    const targetFolderName = flatFolders.find(f => f.id === targetFolderId)?.title || 'Unknown';
+                    const renameResult = await renameBookmarkContextuallyWithAI(
+                        config,
+                        currentUrl,
+                        initialTitle,
+                        targetFolderName,
+                        otherTitles,
+                        i18n.language
+                    );
+
+                    if (renameResult.success && renameResult.newTitle) {
+                        setTitle(renameResult.newTitle);
+                    }
+                    logPopupTiming('contextual rename workflow', renameStart, {
+                        siblingTitleCount: otherTitles.length,
+                        targetFolderId
+                    });
+                    return { success: renameResult.success, error: renameResult.error };
+                } catch (error) {
+                    return { success: false, error: error instanceof Error ? error.message : 'Rename failed' };
+                } finally {
+                    setIsRenaming(false);
+                }
+            },
+            tag: async () => {
+                const tagStart = performance.now();
+                setIsAutoTagging(true);
+
+                try {
+                    const tagResult = await autoTagBookmark(config, currentUrl, initialTitle, i18n.language);
+
+                    if (tagResult.success && tagResult.tags) {
+                        setTags(tagResult.tags);
+                        setSuggestedTags((prev) => [...new Set([...prev, ...tagResult.tags!])]);
+                    }
+                    logPopupTiming('auto tagging workflow', tagStart);
+                    return { success: tagResult.success, error: tagResult.error };
+                } catch (error) {
+                    return { success: false, error: error instanceof Error ? error.message : 'Tagging failed' };
+                } finally {
+                    setIsAutoTagging(false);
                 }
             }
-            logPopupTiming('folder recommendation workflow', recommendationStart, {
-                targetFolderId
-            });
-        } catch (e) {
-            console.error('[AI Workflow] Recommendation failed', e);
-        } finally {
-            setIsRecommending(false);
+        });
+
+        if (!workflowResult.success) {
+            console.warn('[AI Workflow] Stopped after recommendation failure', workflowResult.error);
+            return;
         }
 
-        const targetFolderName = flatFolders.find(f => f.id === targetFolderId)?.title || 'Unknown';
-        const renameStart = performance.now();
-        const tagStart = performance.now();
-        setIsRenaming(true);
-        setIsAutoTagging(true);
-        const otherTitlesPromise = getBookmarkTitlesInFolder(targetFolderId);
-
-        const renamePromise = (async () => {
-            try {
-                const otherTitles = await otherTitlesPromise;
-                const renameResult = await renameBookmarkContextuallyWithAI(
-                    config, currentUrl, initialTitle, targetFolderName, otherTitles, i18n.language
-                );
-
-                if (renameResult.success && renameResult.newTitle) {
-                    setTitle(renameResult.newTitle);
-                }
-                logPopupTiming('contextual rename workflow', renameStart, {
-                    siblingTitleCount: otherTitles.length,
-                    targetFolderId
-                });
-            } catch (e) {
-                console.error('[AI Workflow] Rename failed', e);
-            } finally {
-                setIsRenaming(false);
-            }
-        })();
-
-        const tagPromise = (async () => {
-            try {
-                const tagResult = await autoTagBookmark(config, currentUrl, initialTitle, i18n.language);
-
-                if (tagResult.success && tagResult.tags) {
-                    setTags(tagResult.tags);
-                    setSuggestedTags((prev) => [...new Set([...prev, ...tagResult.tags!])]);
-                }
-                logPopupTiming('auto tagging workflow', tagStart, {
-                    targetFolderId
-                });
-            } catch (e) {
-                console.error('[AI Workflow] Tagging failed', e);
-            } finally {
-                setIsAutoTagging(false);
-            }
-        })();
-
-        await Promise.allSettled([renamePromise, tagPromise]);
         logPopupTiming('full AI workflow', workflowStart, {
-            targetFolderId
+            targetFolderId: workflowResult.targetFolderId
         });
     };
 

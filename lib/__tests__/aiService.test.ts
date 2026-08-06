@@ -210,6 +210,23 @@ describe('AI connection response handling', () => {
     expect(result.error).toContain('400 Bad Request');
     expect(result.error).toContain('upstream proxy rejected request');
   });
+
+  it('should return an actionable message for network DOMExceptions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+      new DOMException('', 'NetworkError')
+    );
+
+    const { testAIConnection } = await import('@/lib/aiService');
+    const result = await testAIConnection({
+      apiUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      modelId: 'mimo-v2-omni',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('network request failed');
+    expect(result.error).not.toContain('[object DOMException]');
+  });
 });
 
 describe('Responses API compatibility', () => {
@@ -428,5 +445,55 @@ describe('AI folder recommendation normalization', () => {
     expect(retryBody.messages[1].content.toLowerCase()).toContain('json');
     expect(result.success).toBe(true);
     expect(result.recommendations?.[0].folderId).toBe('3');
+  });
+
+  it('should reject concatenated JSON responses with a useful format error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        choices: [{ message: { content: '{"commentary":"x"}{"recommendations":[]}' } }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    );
+
+    const { recommendFolderWithAI } = await import('@/lib/aiService');
+    const result = await recommendFolderWithAI(
+      {
+        apiUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        modelId: 'mimo-v2-omni',
+      },
+      'https://react.dev',
+      'React',
+      ['[ID: 1] 书签栏'],
+      'zh_CN',
+      { forceRemote: true }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('exactly one JSON value');
+  });
+
+  it('should reject a valid JSON object with an unexpected command field', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        choices: [{ message: { content: '{"cmd":"pwd"}' } }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    );
+
+    const { recommendFolderWithAI } = await import('@/lib/aiService');
+    const result = await recommendFolderWithAI(
+      {
+        apiUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        modelId: 'mimo-v2-omni',
+      },
+      'https://react.dev',
+      'React',
+      ['[ID: 1] 书签栏'],
+      'zh_CN',
+      { forceRemote: true }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('does not match schema');
   });
 });
