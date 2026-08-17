@@ -1173,7 +1173,8 @@ export const recommendFolderWithAI = async (
             systemPrompt,
             locale,
             {
-                maxTokens: 220,
+                // Responses API models can consume output tokens while reasoning before emitting JSON.
+                maxTokens: 768,
                 temperature: 0.2,
                 label: 'folder-recommendation'
             }
@@ -1489,3 +1490,59 @@ export const batchClassifyBookmarks = async (
         };
     }
 };
+
+import { markdownFormatScenario } from './ai/scenarios/markdownFormat';
+import { formatMarkdown as formatObsidianMarkdownCore } from './clipper/llm/formatter';
+import { createChatCompletionsClient } from './clipper/llm/chat-completions';
+import { createResponsesClient } from './clipper/llm/responses';
+
+/**
+ * 将提取到的 Markdown 内容调用 AI 整理为 Obsidian 兼容规范格式
+ * @param config AI配置
+ * @param markdown 待整理 Markdown
+ * @param options 可选超时与信号
+ */
+export const formatArticleMarkdownWithAI = async (
+    config: AIConfig,
+    markdown: string,
+    options?: AIRequestOptions
+): Promise<{ success: boolean; formattedMarkdown?: string; warning?: string | null; error?: string }> => {
+    try {
+        const modelSettings = {
+            protocol: (config.apiType === 'responses' ? 'responses' : 'chat-completions') as 'chat-completions' | 'responses',
+            baseUrl: config.apiUrl,
+            apiKey: config.apiKey,
+            model: config.modelId,
+            timeoutMs: options?.timeoutMs ?? 60000,
+            automaticFormatting: true
+        };
+
+        const client = modelSettings.protocol === 'responses'
+            ? createResponsesClient(modelSettings)
+            : createChatCompletionsClient(modelSettings);
+
+        const result = await formatObsidianMarkdownCore(markdown, client, {
+            signal: options?.signal
+        });
+
+        if (result.ok) {
+            return {
+                success: true,
+                formattedMarkdown: result.markdown
+            };
+        } else {
+            return {
+                success: true,
+                formattedMarkdown: result.markdown,
+                warning: result.warning
+            };
+        }
+    } catch (error) {
+        console.error('AI article markdown format failed:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+};
+

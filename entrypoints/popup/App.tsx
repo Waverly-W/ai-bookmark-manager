@@ -11,7 +11,7 @@ import {
     getBookmarkTitlesInFolder,
     getBookmarkFolderData
 } from "@/lib/bookmarkUtils";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Sparkles, FolderTree } from "lucide-react";
 import { addRecentFolder, saveDomainMapping, getFolderForDomain } from "@/lib/recommendationStorage";
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
@@ -478,21 +478,48 @@ function App() {
                 </section>
             </div>
 
-            <Button
-                className={cn(
-                    "mt-auto h-11 w-full rounded-full text-sm font-semibold shadow-md",
-                    themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-primary/35 font-mono uppercase tracking-[0.14em] shadow-sm"
-                )}
-                onClick={handleSave}
-                disabled={isCreating}
-            >
-                {isCreating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <Check className="mr-2 h-4 w-4" />
-                )}
-                {t('addBookmark')}
-            </Button>
+            <div className="flex gap-2 mt-auto">
+                <Button
+                    variant="outline"
+                    className={cn(
+                        "h-11 flex-1 rounded-full text-xs font-medium shadow-sm border-primary/30 hover:bg-primary/5",
+                        themeId === 'blueprint' && "rounded-[var(--button-radius)] border-dashed font-mono uppercase tracking-[0.1em]"
+                    )}
+                    onClick={async () => {
+                        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+                        const tab = tabs[0];
+                        // @ts-ignore
+                        if (browser.sidePanel?.open && tab?.windowId) {
+                            // @ts-ignore
+                            await browser.sidePanel.open({ windowId: tab.windowId });
+                            window.close();
+                        } else {
+                            await browser.tabs.create({ url: browser.runtime.getURL('/sidepanel.html' as any) });
+                            window.close();
+                        }
+                    }}
+                    title="打开侧边栏剪藏当前文章到 Obsidian"
+                >
+                    <FolderTree className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                    剪藏到 Obsidian
+                </Button>
+
+                <Button
+                    className={cn(
+                        "h-11 flex-1 rounded-full text-xs font-semibold shadow-md",
+                        themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-primary/35 font-mono uppercase tracking-[0.14em] shadow-sm"
+                    )}
+                    onClick={handleSave}
+                    disabled={isCreating}
+                >
+                    {isCreating ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    {t('addBookmark')}
+                </Button>
+            </div>
         </PopupLayout>
     );
 }

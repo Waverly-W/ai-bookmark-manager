@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Palette, Sparkles, FileText, Database } from "lucide-react";
+import { Bookmark, Palette, Sparkles, FileText, Database, FolderTree } from "lucide-react";
 import { useTheme } from "@/components/theme-provider.tsx";
 
 interface SettingsSidebarProps {
@@ -36,7 +36,11 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
             label: t('promptsTab'),
             icon: FileText
         },
-
+        {
+            id: "obsidian",
+            label: "Obsidian 剪藏",
+            icon: FolderTree
+        },
         {
             id: "data",
             label: t('dataManagementTab'),

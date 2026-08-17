@@ -1,7 +1,7 @@
 import { defineConfig } from 'wxt';
 import react from '@vitejs/plugin-react';
 
-const basePermissions = ["storage", "tabs", "contextMenus", "bookmarks"];
+const basePermissions = ["storage", "tabs", "contextMenus", "bookmarks", "activeTab", "scripting", "sidePanel"];
 const hostPermissions = ["https://*/*", "http://*/*"];
 
 // See https://wxt.dev/api/config.html
@@ -10,9 +10,13 @@ export default defineConfig({
     manifest: ({ browser }) => ({
         permissions: browser === "firefox" ? [...basePermissions, ...hostPermissions] : [...basePermissions, "favicon"],
         ...(browser === "firefox" ? {} : {
-            host_permissions: hostPermissions
+            host_permissions: hostPermissions,
+            optional_host_permissions: ["https://*/*", "http://*/*"]
         }),
         action: {},
+        side_panel: {
+            default_path: "sidepanel.html"
+        },
         name: '__MSG_extName__',
         description: '__MSG_extDescription__',
         default_locale: "en",

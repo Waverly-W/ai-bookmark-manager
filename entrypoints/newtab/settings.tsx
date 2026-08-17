@@ -6,6 +6,7 @@ import { BookmarkSettings } from "@/components/settings/bookmark-settings.tsx";
 
 import { AIConfigSettings } from "@/components/settings/ai-config-settings.tsx";
 import { AIPromptSettings } from "@/components/settings/ai-prompt-settings.tsx";
+import { ObsidianSettings } from "@/components/settings/obsidian-settings.tsx";
 
 import { DataExportSettings } from "@/components/settings/data-export-settings.tsx";
 import { BackgroundSettings } from "@/components/settings/background-settings.tsx";
@@ -86,6 +87,12 @@ export function SettingsPage() {
                     {activeTab === "prompts" && (
                         <div className="panel-shell p-6">
                             <AIPromptSettings />
+                        </div>
+                    )}
+
+                    {activeTab === "obsidian" && (
+                        <div className="panel-shell p-6">
+                            <ObsidianSettings />
                         </div>
                     )}
 
