@@ -94,6 +94,17 @@ async function routeClipperRequest(
           job: await operation.orchestrator.formatWithAI(request.payload.jobId),
         },
       };
+    case 'UPLOAD_IMAGES':
+      return {
+        type: 'JOB_UPDATED',
+        payload: {
+          job: await operation.orchestrator.uploadImages(
+            request.payload.jobId,
+            undefined,
+            request.payload.deniedImageOrigins,
+          ),
+        },
+      };
     case 'CONFIRM_AND_SAVE':
       return {
         type: 'JOB_UPDATED',

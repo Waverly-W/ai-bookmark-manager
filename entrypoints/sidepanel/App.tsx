@@ -44,6 +44,7 @@ import {
   MousePointerClick,
   AlertTriangle,
   FolderSearch,
+  UploadCloud,
   Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -64,6 +65,13 @@ export interface RuntimeClient {
   extractActive(signal?: AbortSignal): Promise<ClippingJob>;
   preparePreview(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
   formatWithAI(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
+  uploadImages(
+    jobId: string,
+    options?: {
+      signal?: AbortSignal;
+      deniedImageOrigins?: readonly string[];
+    },
+  ): Promise<ClippingJob>;
   prepareImagePermissions(job: ClippingJob, markdown: string): Promise<{
     missingOrigins: string[];
     rejectedSourceUrls: string[];
@@ -226,7 +234,8 @@ export function createRuntimeClient(): RuntimeClient {
         },
       });
       if (created.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
-      return created.payload.job;
+      const readyJob = await this.preparePreview(created.payload.job.jobId);
+      return readyJob;
     },
     async preparePreview(jobId) {
       const response = await send({ type: 'PREPARE_PREVIEW', payload: { jobId } });
@@ -235,6 +244,14 @@ export function createRuntimeClient(): RuntimeClient {
     },
     async formatWithAI(jobId) {
       const response = await send({ type: 'FORMAT_WITH_AI', payload: { jobId } });
+      if (response.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
+      return response.payload.job;
+    },
+    async uploadImages(jobId, options) {
+      const response = await send({
+        type: 'UPLOAD_IMAGES',
+        payload: { jobId, deniedImageOrigins: [...(options?.deniedImageOrigins ?? [])] },
+      });
       if (response.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
       return response.payload.job;
     },
@@ -283,7 +300,8 @@ export function createRuntimeClient(): RuntimeClient {
         },
       });
       if (created.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
-      return created.payload.job;
+      const readyJob = await this.preparePreview(created.payload.job.jobId);
+      return readyJob;
     },
     async cancelRegionSelection() {
       const tabId = await activeTabId();
@@ -358,6 +376,7 @@ export default function App({ client }: { client?: RuntimeClient }) {
   const [vault, setVault] = useState<VaultAccess | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<EditorTab>('source');
   const [isAiFormatting, setIsAiFormatting] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingRegion, setIsSelectingRegion] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -463,6 +482,49 @@ export default function App({ client }: { client?: RuntimeClient }) {
       });
     } finally {
       setIsAiFormatting(false);
+    }
+  };
+
+  // Upload Images Only
+  const handleUploadImages = async () => {
+    if (!job) return;
+    try {
+      setErrorMessage(null);
+      await syncDraft();
+
+      setIsUploadingImages(true);
+      const totalImages = job.imageReferences.length;
+      setProgress({ stage: 'uploading', completed: Object.keys(job.uploadedImageUrls || {}).length, total: totalImages });
+
+      // Request Image Permissions if needed
+      const imgPerm = await runtimeClient.prepareImagePermissions(job, draft.markdown);
+      let deniedOrigins: string[] = [];
+      if (imgPerm.missingOrigins.length > 0) {
+        const result = await runtimeClient.requestImagePermissions(imgPerm.missingOrigins);
+        deniedOrigins = result.denied;
+      }
+
+      const updatedJob = await runtimeClient.uploadImages(job.jobId, {
+        deniedImageOrigins: deniedOrigins,
+      });
+      setJob(updatedJob);
+      setDraft(editableDraft(updatedJob));
+      const uploadedCount = Object.keys(updatedJob.uploadedImageUrls || {}).length;
+      setProgress({ stage: 'ready' });
+      toast({
+        title: '图片转存完成',
+        description: `共 ${totalImages} 张图片，已转存 ${uploadedCount} 张`,
+      });
+    } catch (err: any) {
+      setProgress({ stage: 'ready' });
+      setErrorMessage(err.message || '图片转存失败');
+      toast({
+        variant: 'destructive',
+        title: '图片转存失败',
+        description: err.message,
+      });
+    } finally {
+      setIsUploadingImages(false);
     }
   };
 
@@ -613,6 +675,8 @@ export default function App({ client }: { client?: RuntimeClient }) {
       {/* Main Markdown Editor & Preview */}
       <Editor
         markdown={draft.markdown}
+        imageReferences={job?.imageReferences}
+        uploadedImageUrls={job?.uploadedImageUrls}
         activeTab={activeTab}
         onMarkdownChange={(val) => setDraft((d) => ({ ...d, markdown: val }))}
         onMarkdownBlur={() => syncDraft('markdown')}
@@ -660,16 +724,29 @@ export default function App({ client }: { client?: RuntimeClient }) {
           </div>
         </div>
 
-        {/* Primary Save Button */}
-        <Button
-          size="sm"
-          className="w-full h-8 text-xs font-semibold flex items-center justify-center gap-1.5"
-          onClick={handleSave}
-          disabled={isSaving || !draft.markdown}
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? '处理中…' : '上传图片并保存到 Obsidian'}
-        </Button>
+        {/* Action Buttons: Upload Images & Save to Obsidian */}
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs font-medium flex items-center justify-center gap-1.5"
+            onClick={handleUploadImages}
+            disabled={isUploadingImages || isSaving || !draft.markdown || !job || job.imageReferences.length === 0}
+            title={job && job.imageReferences.length === 0 ? '页面无图片' : '仅上传图片至配置的图床'}
+          >
+            <UploadCloud className="h-3.5 w-3.5" />
+            {isUploadingImages ? '上传中…' : '上传图片'}
+          </Button>
+          <Button
+            size="sm"
+            className="h-8 text-xs font-semibold flex items-center justify-center gap-1.5"
+            onClick={handleSave}
+            disabled={isSaving || isUploadingImages || !draft.markdown}
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? '处理中…' : '上传图片并保存到 Obsidian'}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import type { ImageReference } from '@/lib/clipper/contracts/article';
 
 function safeHttpUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;
@@ -112,7 +113,27 @@ const components: Components = {
   },
 };
 
-export function RenderedPreview({ markdown }: { markdown: string }) {
+interface RenderedPreviewProps {
+  markdown: string;
+  imageReferences?: readonly ImageReference[];
+  uploadedImageUrls?: Readonly<Record<string, string>>;
+}
+
+export function RenderedPreview({ markdown, imageReferences = [], uploadedImageUrls = {} }: RenderedPreviewProps) {
+  // Resolve image tokens in preview: replace with uploaded URL first, or original source URL
+  const resolvedMarkdown = React.useMemo(() => {
+    let text = markdown;
+    if (imageReferences && imageReferences.length > 0) {
+      for (const ref of imageReferences) {
+        const targetUrl = uploadedImageUrls[ref.sourceUrl] || ref.sourceUrl;
+        if (targetUrl) {
+          text = text.split(ref.token).join(targetUrl);
+        }
+      }
+    }
+    return text;
+  }, [markdown, imageReferences, uploadedImageUrls]);
+
   return (
     <div className="rendered-preview prose prose-sm dark:prose-invert max-w-none break-words">
       <ReactMarkdown
@@ -122,7 +143,7 @@ export function RenderedPreview({ markdown }: { markdown: string }) {
         components={components}
         urlTransform={(url) => safeLinkUrl(url) ?? ''}
       >
-        {markdown}
+        {resolvedMarkdown}
       </ReactMarkdown>
     </div>
   );

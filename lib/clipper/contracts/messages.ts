@@ -83,6 +83,9 @@ export const runtimeRequestSchema = z.discriminatedUnion('type', [
     .object({ type: z.literal('FORMAT_WITH_AI'), payload: jobPayloadSchema })
     .strict(),
   z
+    .object({ type: z.literal('UPLOAD_IMAGES'), payload: confirmJobPayloadSchema })
+    .strict(),
+  z
     .object({ type: z.literal('CONFIRM_AND_SAVE'), payload: confirmJobPayloadSchema })
     .strict(),
   z.object({ type: z.literal('RETRY_JOB'), payload: jobPayloadSchema }).strict(),
@@ -191,6 +194,7 @@ export type RuntimeSuccessResponseByRequest = {
   PATCH_JOB: JobUpdatedResponse;
   PREPARE_PREVIEW: JobUpdatedResponse;
   FORMAT_WITH_AI: JobUpdatedResponse;
+  UPLOAD_IMAGES: JobUpdatedResponse;
   CONFIRM_AND_SAVE: JobUpdatedResponse;
   RETRY_JOB: JobUpdatedResponse;
   DISCARD_JOB: JobDiscardedResponse;

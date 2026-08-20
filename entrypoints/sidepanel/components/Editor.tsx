@@ -1,11 +1,14 @@
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs.tsx';
 import { RenderedPreview } from './RenderedPreview';
+import type { ImageReference } from '@/lib/clipper/contracts/article';
 
 export type EditorTab = 'source' | 'rendered';
 
 interface EditorProps {
   markdown: string;
+  imageReferences?: readonly ImageReference[];
+  uploadedImageUrls?: Readonly<Record<string, string>>;
   activeTab: EditorTab;
   onMarkdownChange(value: string): void;
   onMarkdownBlur(): void;
@@ -45,7 +48,11 @@ export function Editor(props: EditorProps) {
         </TabsContent>
 
         <TabsContent value="rendered" className="flex-1 p-3 m-0 overflow-y-auto min-h-0 max-h-[500px]">
-          <RenderedPreview markdown={props.markdown} />
+          <RenderedPreview
+            markdown={props.markdown}
+            imageReferences={props.imageReferences}
+            uploadedImageUrls={props.uploadedImageUrls}
+          />
         </TabsContent>
       </Tabs>
     </div>

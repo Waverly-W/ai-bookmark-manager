@@ -198,7 +198,10 @@ export class ClippingJobOrchestrator {
 
   async formatWithAI(jobId: string, signal?: AbortSignal): Promise<ClippingJob> {
     return withJobLock(jobId, async () => {
-      const job = requireJob(await this.jobs.get(jobId), jobId);
+      let job = requireJob(await this.jobs.get(jobId), jobId);
+      if (job.state === 'extracted') {
+        job = await this.preparePreview(jobId, signal);
+      }
       if (job.state !== 'formatted') {
         throw new JobRepositoryError('INVALID_JOB', 'Only a reviewed job can be formatted with AI.');
       }
@@ -207,6 +210,83 @@ export class ClippingJobOrchestrator {
       return this.jobs.patch(jobId, {
         markdown: formatted.markdown,
         modelWarning: formatted.warning,
+      });
+    });
+  }
+
+  async uploadImages(
+    jobId: string,
+    signal?: AbortSignal,
+    deniedImageOrigins: readonly string[] = [],
+  ): Promise<ClippingJob> {
+    return withJobLock(jobId, async () => {
+      let job = requireJob(await this.jobs.get(jobId), jobId);
+      if (job.state === 'completed') return job;
+      if (job.state === 'extracted') {
+        job = await this.preparePreview(jobId, signal);
+      }
+      signal?.throwIfAborted();
+
+      const permissionSafe = excludeDeniedImageOrigins(
+        job.markdown,
+        job.imageReferences,
+        deniedImageOrigins,
+      );
+      const resumed = replacePreviouslyUploaded(
+        permissionSafe.markdown,
+        permissionSafe.references,
+        job.uploadedImageUrls,
+      );
+      const permissionSafeMarkdown = resumed.markdown;
+      const permittedReferences = resumed.remaining;
+      const deniedCount = permissionSafe.deniedCount;
+
+      const checkpointedUrls = { ...job.uploadedImageUrls };
+      let checkpointQueue: Promise<void> = Promise.resolve();
+      const uploaded = await this.images.upload(
+        permissionSafeMarkdown,
+        permittedReferences,
+        {
+          onUploaded: (sourceUrl, publicUrl, currentMap) => {
+            checkpointQueue = checkpointQueue.then(async () => {
+              Object.assign(
+                checkpointedUrls,
+                currentMap ?? { [sourceUrl]: publicUrl },
+              );
+              await this.jobs.patch(jobId, {
+                uploadedImageUrls: { ...checkpointedUrls },
+              });
+            });
+            return checkpointQueue;
+          },
+          signal,
+        },
+      );
+      await checkpointQueue;
+      signal?.throwIfAborted();
+
+      const mergedUrls = {
+        ...checkpointedUrls,
+        ...uploaded.urlMap,
+      };
+
+      // Replace uploaded image tokens in the markdown
+      const updatedMarkdown = replacePreviouslyUploaded(
+        job.markdown,
+        job.imageReferences,
+        mergedUrls,
+      ).markdown;
+
+      return this.jobs.patch(jobId, {
+        markdown: updatedMarkdown,
+        uploadedImageUrls: mergedUrls,
+        imageWarning: combinedImageWarning(
+          job.imageWarning,
+          deniedCount > 0 ? deniedImageWarning(deniedCount) : null,
+          uploaded.failed && uploaded.failed > 0
+            ? failedImageWarning(uploaded.failed)
+            : null,
+        ),
       });
     });
   }
