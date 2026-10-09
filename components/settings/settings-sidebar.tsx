@@ -38,7 +38,7 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
         },
         {
             id: "obsidian",
-            label: "Obsidian 剪藏",
+            label: t('obsidianSettingsTab'),
             icon: FolderTree
         },
         {

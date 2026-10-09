@@ -157,10 +157,10 @@ export class SettingsRepository {
     return this.mutate((latest) => ({ ...latest, vault }));
   }
 
-  async saveClipping(automaticFormatting: boolean): Promise<Settings> {
+  async saveClipping(autoFormatWithAI: boolean): Promise<Settings> {
     return this.mutate((latest) => ({
       ...latest,
-      model: { ...latest.model, automaticFormatting },
+      model: { ...latest.model, autoFormatWithAI },
     }));
   }
 
@@ -179,7 +179,7 @@ export class SettingsRepository {
   async exportSafe(): Promise<SafeSettings> {
     const settings = await this.load();
     const model: SafeSettings['model'] = {
-      automaticFormatting: settings.model.automaticFormatting,
+      autoFormatWithAI: settings.model.autoFormatWithAI,
     };
     const imageHost: SafeSettings['imageHost'] =
       settings.imageHost.kind === 'picgo'

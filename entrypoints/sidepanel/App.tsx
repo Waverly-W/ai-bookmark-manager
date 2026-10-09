@@ -16,6 +16,8 @@ import {
 import { extractArticle } from '@/lib/clipper/extraction/readability';
 import { normalizeDocument } from '@/lib/clipper/extraction/normalize-document';
 import { convertArticleToMarkdown } from '@/lib/clipper/markdown/converter';
+import { createSettingsRepository } from '@/lib/clipper/settings/repository';
+import { shouldResumeJob, summarizePendingJob } from '@/lib/clipper/jobs/resume';
 import { VaultHandleRepository } from '@/lib/clipper/vault/database';
 import { parseRelativeDirectory } from '@/lib/clipper/vault/path';
 import {
@@ -41,6 +43,8 @@ import {
   Copy,
   ExternalLink,
   RotateCcw,
+  History,
+  X,
   MousePointerClick,
   AlertTriangle,
   FolderSearch,
@@ -59,10 +63,17 @@ export interface VaultAccess {
   requestPermission(): Promise<void>;
 }
 
+export interface ExtractOptions {
+  signal?: AbortSignal;
+  /** Called right before the (slow) automatic AI formatting starts; never called when it is disabled. */
+  onFormatting?(): void;
+}
+
 export interface RuntimeClient {
   getMostRecentIncomplete(signal?: AbortSignal): Promise<ClippingJob | undefined>;
+  getActiveTabUrl(): Promise<string | undefined>;
   getJob(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
-  extractActive(signal?: AbortSignal): Promise<ClippingJob>;
+  extractActive(options?: ExtractOptions): Promise<ClippingJob>;
   preparePreview(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
   formatWithAI(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
   uploadImages(
@@ -86,7 +97,7 @@ export interface RuntimeClient {
     patch: EditableJobPatch,
     signal?: AbortSignal,
   ): Promise<ClippingJob>;
-  selectRegion(signal?: AbortSignal): Promise<ClippingJob>;
+  selectRegion(options?: ExtractOptions): Promise<ClippingJob>;
   cancelRegionSelection(): Promise<void>;
   confirmAndSave(
     jobId: string,
@@ -177,6 +188,14 @@ async function activeTabId(): Promise<number> {
   return tab.id;
 }
 
+async function autoFormatEnabled(): Promise<boolean> {
+  try {
+    return (await createSettingsRepository(browser.storage).load()).model.autoFormatWithAI;
+  } catch {
+    return false;
+  }
+}
+
 function selectedRegionArticle(html: string, pageUrl: string): ExtractedArticle {
   const url = new URL(pageUrl);
   const document = new DOMParser().parseFromString(html, 'text/html');
@@ -211,7 +230,12 @@ export function createRuntimeClient(): RuntimeClient {
       if (response.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
       return response.payload.job;
     },
-    async extractActive(signal) {
+    async getActiveTabUrl() {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      return tab?.url;
+    },
+    async extractActive(options) {
+      const signal = options?.signal;
       const tabId = await activeTabId();
       signal?.throwIfAborted();
       const response = await send({ type: 'EXTRACT_ARTICLE', payload: { tabId } });
@@ -234,6 +258,7 @@ export function createRuntimeClient(): RuntimeClient {
         },
       });
       if (created.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
+      if (await autoFormatEnabled()) options?.onFormatting?.();
       const readyJob = await this.preparePreview(created.payload.job.jobId);
       return readyJob;
     },
@@ -274,7 +299,8 @@ export function createRuntimeClient(): RuntimeClient {
       if (response.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
       return response.payload.job;
     },
-    async selectRegion(signal) {
+    async selectRegion(options) {
+      const signal = options?.signal;
       const tabId = await activeTabId();
       const selectionId = crypto.randomUUID();
       signal?.throwIfAborted();
@@ -300,6 +326,7 @@ export function createRuntimeClient(): RuntimeClient {
         },
       });
       if (created.type !== 'JOB_UPDATED') throw new Error('Expected JOB_UPDATED response.');
+      if (await autoFormatEnabled()) options?.onFormatting?.();
       const readyJob = await this.preparePreview(created.payload.job.jobId);
       return readyJob;
     },
@@ -381,6 +408,9 @@ export default function App({ client }: { client?: RuntimeClient }) {
   const [isSelectingRegion, setIsSelectingRegion] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // An unfinished clip of another page, offered instead of being restored silently.
+  const [pendingJob, setPendingJob] = useState<ClippingJob | null>(null);
+  const showFormatting = () => setProgress({ stage: 'formatting' });
 
   // Initialize
   useEffect(() => {
@@ -390,8 +420,25 @@ export default function App({ client }: { client?: RuntimeClient }) {
         const existingVault = await runtimeClient.loadVault();
         if (mounted) setVault(existingVault);
 
+        const [incomplete, activeUrl] = await Promise.all([
+          runtimeClient.getMostRecentIncomplete(),
+          runtimeClient.getActiveTabUrl(),
+        ]);
+
+        // Only resume work that belongs to the page being viewed; a clip of another
+        // page is offered through the banner so the current page is never hidden.
+        if (shouldResumeJob(incomplete, activeUrl)) {
+          if (mounted) {
+            setJob(incomplete);
+            setDraft(editableDraft(incomplete));
+            setProgress({ stage: 'ready' });
+          }
+          return;
+        }
+
+        if (incomplete && mounted) setPendingJob(incomplete);
         setProgress({ stage: 'extracting' });
-        const initialJob = (await runtimeClient.getMostRecentIncomplete()) ?? (await runtimeClient.extractActive());
+        const initialJob = await runtimeClient.extractActive({ onFormatting: showFormatting });
         if (mounted) {
           setJob(initialJob);
           setDraft(editableDraft(initialJob));
@@ -423,12 +470,39 @@ export default function App({ client }: { client?: RuntimeClient }) {
     }
   };
 
+  // Switch to the unfinished clip of another page; an untouched fresh extraction is dropped.
+  const handleResumePending = async () => {
+    if (!pendingJob) return;
+    try {
+      const abandoned = job && isEditableJob(job) && !changedEditableFields(job, draft) ? job : undefined;
+      setJob(pendingJob);
+      setDraft(editableDraft(pendingJob));
+      setPendingJob(null);
+      setErrorMessage(null);
+      setProgress({ stage: 'ready' });
+      if (abandoned) await runtimeClient.discardJob(abandoned.jobId);
+    } catch (err) {
+      console.warn('Discarding the replaced extraction failed:', err);
+    }
+  };
+
+  const handleDiscardPending = async () => {
+    if (!pendingJob) return;
+    try {
+      await runtimeClient.discardJob(pendingJob.jobId);
+      setPendingJob(null);
+      toast({ title: '已丢弃未完成的剪藏' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: '丢弃失败', description: err.message });
+    }
+  };
+
   // Re-extract
   const handleReExtract = async () => {
     try {
       setErrorMessage(null);
       setProgress({ stage: 'extracting' });
-      const newJob = await runtimeClient.extractActive();
+      const newJob = await runtimeClient.extractActive({ onFormatting: showFormatting });
       setJob(newJob);
       setDraft(editableDraft(newJob));
       setProgress({ stage: 'ready' });
@@ -444,7 +518,7 @@ export default function App({ client }: { client?: RuntimeClient }) {
     try {
       setErrorMessage(null);
       setIsSelectingRegion(true);
-      const newJob = await runtimeClient.selectRegion();
+      const newJob = await runtimeClient.selectRegion({ onFormatting: showFormatting });
       setJob(newJob);
       setDraft(editableDraft(newJob));
       setProgress({ stage: 'ready' });
@@ -642,6 +716,34 @@ export default function App({ client }: { client?: RuntimeClient }) {
 
       {/* Progress & Alert Banner */}
       <Progress progress={progress} />
+
+      {pendingJob && (() => {
+        const { title, host } = summarizePendingJob(pendingJob);
+        return (
+          <div className="p-2 rounded bg-muted/60 border flex items-center gap-2 text-[11px]">
+            <History className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <div className="text-muted-foreground">另有一篇未完成的剪藏</div>
+              <div className="truncate font-medium" title={`${title}${host ? `（${host}）` : ''}`}>
+                {title}{host ? `（${host}）` : ''}
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={handleResumePending}>
+              继续编辑
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={handleDiscardPending}
+              aria-label="丢弃未完成的剪藏"
+              title="丢弃"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        );
+      })()}
 
       {errorMessage && (
         <div className="p-2 rounded bg-destructive/10 border border-destructive/30 text-destructive flex items-center gap-1.5 text-[11px]">

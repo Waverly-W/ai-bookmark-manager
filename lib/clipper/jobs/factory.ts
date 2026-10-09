@@ -202,7 +202,7 @@ export async function createOperationContext(
     },
   };
   const orchestrator = new ClippingJobOrchestrator(jobs, formatter, images, writer, {
-    automaticModelFormatting: settings.model.automaticFormatting,
+    automaticModelFormatting: settings.model.autoFormatWithAI,
   });
 
   return {

@@ -32,9 +32,11 @@ export const r2PublicBaseUrlSchema = configuredHttpUrlSchema(
   'R2 public base URL',
 );
 
-// 模型服务统一使用「AI 设置」中的配置，这里只保留剪藏专属开关
+// 模型服务统一使用「AI 设置」中的配置，这里只保留剪藏专属开关。
+// 字段名与旧版 `automaticFormatting`（曾默认开启且无界面入口）刻意不同：
+// 旧数据里的值会被忽略，所有用户回到默认关闭，需要自行主动开启。
 export const modelSettingsSchema = z.object({
-  automaticFormatting: z.boolean(),
+  autoFormatWithAI: z.boolean().default(false),
 });
 
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
@@ -94,7 +96,7 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings: Settings = settingsSchema.parse({
   version: 1,
   model: {
-    automaticFormatting: true,
+    autoFormatWithAI: false,
   },
   imageHost: {
     kind: 'picgo',
