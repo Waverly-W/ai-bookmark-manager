@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useMemo, useCallback } from 'react';
 import { FaFolder, FaBookmark, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { cn } from '@/lib/utils';
@@ -66,8 +67,10 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
     selectedId,
     onSelect,
     className,
-    placeholder = "选择文件夹"
+    placeholder
 }) => {
+    const { t } = useTranslation();
+    const placeholderText = placeholder ?? t('selectFolder');
     const [isOpen, setIsOpen] = useState(false);
 
     // 获取当前选中的文件夹信息
@@ -119,7 +122,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
 
     // 生成显示值
     const getDisplayValue = () => {
-        if (!selectedFolder) return placeholder;
+        if (!selectedFolder) return placeholderText;
         return selectedFolder.title;
     };
 
@@ -168,7 +171,7 @@ export const CascadingFolderSelect: React.FC<CascadingFolderSelectProps> = ({
                 <div
                     className="flex max-h-80 overflow-hidden bg-popover"
                     role="tree"
-                    aria-label="文件夹选择器"
+                    aria-label={t('folderSelectorAria')}
                 >
                     {panels.map((panel, index) => (
                         <div

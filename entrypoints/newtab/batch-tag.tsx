@@ -405,7 +405,7 @@ export const BatchTagPage: React.FC = () => {
         <div className="container mx-auto max-w-5xl space-y-6 p-6 md:p-8 animate-in fade-in duration-300">
             <div className="space-y-4 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm">
                 <div className="space-y-2">
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                         {t('batchTagTitle')}
                     </span>
                     <h1 className="font-display text-3xl font-semibold tracking-tight">{t('batchTagTitle')}</h1>

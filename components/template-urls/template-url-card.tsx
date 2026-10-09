@@ -4,7 +4,6 @@ import { ExternalLink, Pencil, Play, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 import type { TemplateUrlItem } from '@/lib/templateUrlStorage';
 
@@ -22,25 +21,24 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
     onDelete
 }) => {
     const { t } = useTranslation('common');
-    const { themeId } = useTheme();
 
     return (
         <Card className={cn(
             "flex h-full flex-col overflow-hidden border-border/70 bg-card/92 transition-all duration-300 hover:-translate-y-1 hover:shadow-md",
-            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+            "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
         )}>
             <CardHeader className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2">
                         <CardTitle className={cn(
                             "line-clamp-2 text-xl",
-                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                            "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                         )}>
                             {template.name}
                         </CardTitle>
                         <CardDescription className={cn(
                             "line-clamp-2 min-h-[2.5rem]",
-                            themeId === 'blueprint' && "font-mono"
+                            "blueprint:font-mono"
                         )}>
                             {template.description || t('templateUrlsDescription')}
                         </CardDescription>
@@ -48,7 +46,7 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
 
                     <Badge variant="outline" className={cn(
                         "shrink-0 border-border/70 bg-background/75 text-muted-foreground",
-                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
+                        "blueprint:rounded-[var(--badge-radius)] blueprint:font-mono"
                     )}>
                         {template.openMode === 'new-tab'
                             ? t('templateUrlOpenModeNewTab')
@@ -58,11 +56,11 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
 
                 <div className={cn(
                     "rounded-[1rem] border border-border/70 bg-surface-2/70 p-3",
-                    themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                    "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                 )}>
                     <p className={cn(
-                        "mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground",
-                        themeId === 'blueprint' && "font-mono"
+                        "mb-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground",
+                        "blueprint:font-mono"
                     )}>
                         {t('templateUrlTemplate')}
                     </p>
@@ -81,7 +79,7 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
                                 variant="secondary"
                                 className={cn(
                                     "bg-primary/10 text-primary",
-                                    themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-primary/30 font-mono"
+                                    "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-primary/30 blueprint:font-mono"
                                 )}
                             >
                                 {`{${placeholder}}`}
@@ -92,7 +90,7 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
                             variant="outline"
                             className={cn(
                                 "border-border/70 bg-background/70 text-muted-foreground",
-                                themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
+                                "blueprint:rounded-[var(--badge-radius)] blueprint:font-mono"
                             )}
                         >
                             {t('templateUrlNoPlaceholders')}
@@ -110,7 +108,7 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
 
             <CardFooter className="mt-auto flex flex-col gap-3 sm:flex-row">
                 <Button
-                    className={cn("w-full justify-between", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                    className={cn("w-full justify-between", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                     onClick={() => onRun(template)}
                 >
                     <span>{t('runTemplateUrl')}</span>
@@ -119,7 +117,7 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
                 <div className="flex w-full gap-2">
                     <Button
                         variant="outline"
-                        className={cn("flex-1 justify-between", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                        className={cn("flex-1 justify-between", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                         onClick={() => onEdit(template)}
                     >
                         <span>{t('edit')}</span>
@@ -127,7 +125,7 @@ export const TemplateUrlCard: React.FC<TemplateUrlCardProps> = ({
                     </Button>
                     <Button
                         variant="outline"
-                        className={cn("flex-1 justify-between text-destructive hover:text-destructive", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                        className={cn("flex-1 justify-between text-destructive hover:text-destructive", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                         onClick={() => onDelete(template)}
                     >
                         <span>{t('delete')}</span>

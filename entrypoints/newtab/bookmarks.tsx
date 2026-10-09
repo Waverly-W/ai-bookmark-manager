@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { browser } from 'wxt/browser';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,9 +30,14 @@ import {
     getBookmarkRootSetting,
     filterBookmarksByRoot,
     updateChromeBookmark,
-    deleteChromeBookmark,
     broadcastBookmarkUpdate
 } from '@/lib/bookmarkUtils';
+import {
+    deleteBookmarkWithSnapshot,
+    restoreBookmarkSnapshot,
+    type BookmarkSnapshot
+} from '@/lib/bookmarkTrash';
+import { undoToastAction, UNDO_TOAST_DURATION_MS } from '@/components/ui/toast-undo';
 import { preloadFavicons, cleanupFaviconCache } from '@/lib/faviconUtils';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
@@ -41,8 +46,7 @@ import { batchClassifyBookmarks } from '@/lib/aiService';
 import { getAIConfig } from '@/lib/aiConfigUtils';
 import { getBookmarkFolders, moveChromeBookmark } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
-import { getTagsMapForBookmarks, removeTagsForBookmark, removeTagsForBookmarks, saveTagsForBookmark } from '@/lib/tagStorage';
-import { useTheme } from '@/components/theme-provider.tsx';
+import { getTagsMapForBookmarks, saveTagsForBookmark } from '@/lib/tagStorage';
 import { cn } from '@/lib/utils';
 
 // 书签节点类型定义 - 使用 entrypoints/types.ts 中的定义
@@ -183,7 +187,6 @@ const collectBookmarkIdsForNode = (node: BookmarkNode | null): string[] => {
 };
 
 export const Bookmarks: React.FC = () => {
-    const { themeId } = useTheme();
     const [allBookmarks, setAllBookmarks] = useState<BookmarkNode[]>([]);
     const [tagsMap, setTagsMap] = useState<Record<string, string[]>>({});
     const [currentItems, setCurrentItems] = useState<BookmarkCardItem[]>([]);
@@ -308,7 +311,11 @@ export const Bookmarks: React.FC = () => {
         },
     ]);
 
-    const loadBookmarks = async () => {
+    // 撤销恢复后需要停留在当前文件夹，所以用 ref 读取最新的导航路径
+    const navigationHistoryRef = useRef(navigationHistory);
+    navigationHistoryRef.current = navigationHistory;
+
+    const loadBookmarks = async (options?: { keepNavigation?: boolean }) => {
         try {
             setLoading(true);
             setError(null);
@@ -332,12 +339,18 @@ export const Bookmarks: React.FC = () => {
 
 
 
-            // 设置当前显示的项目（根级别）
-            const rootItems = convertToCardItems(filteredBookmarks);
-            setCurrentItems(rootItems);
-
-            // 重置导航历史
-            setNavigationHistory([{ id: 'root', title: t('allBookmarks') }]);
+            // 默认回到根级别；撤销删除后则停留在原来所在的文件夹（找不到时回到根级别）
+            const path = options?.keepNavigation ? navigationHistoryRef.current : undefined;
+            const currentFolder = path && path.length > 1
+                ? findNodeById(filteredBookmarks, path[path.length - 1].id)
+                : undefined;
+            if (path && currentFolder && !currentFolder.url) {
+                setCurrentItems(convertToCardItems(currentFolder.children ?? []));
+                setNavigationHistory(path);
+            } else {
+                setCurrentItems(convertToCardItems(filteredBookmarks));
+                setNavigationHistory([{ id: 'root', title: t('allBookmarks') }]);
+            }
 
             // 预加载favicon（异步，不阻塞UI）
             const bookmarkUrls = collectBookmarkUrls(filteredBookmarks);
@@ -488,14 +501,31 @@ export const Bookmarks: React.FC = () => {
         }
     };
 
+    // 撤销删除：快照按删除顺序传入，恢复时倒序执行以还原原有位置
+    const undoDelete = async (snapshots: BookmarkSnapshot[]) => {
+        try {
+            for (const snapshot of [...snapshots].reverse()) {
+                await restoreBookmarkSnapshot(snapshot);
+            }
+            await loadBookmarks({ keepNavigation: true });
+            toast({ title: t('undoRestored') });
+        } catch (error) {
+            console.error('Failed to undo delete:', error);
+            toast({
+                title: t('undoFailed'),
+                description: error instanceof Error ? error.message : undefined,
+                variant: 'destructive'
+            });
+        }
+    };
+
     // 处理删除确认
     const handleDeleteConfirm = async () => {
         if (!deletingBookmark) return;
 
         setIsDeleting(true);
         try {
-            await deleteChromeBookmark(deletingBookmark.id);
-            await removeTagsForBookmark(deletingBookmark.id);
+            const snapshot = await deleteBookmarkWithSnapshot(deletingBookmark.id);
 
             // 从本地状态中移除书签
             const removeBookmarkFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
@@ -540,7 +570,9 @@ export const Bookmarks: React.FC = () => {
             // 显示成功消息
             toast({
                 title: t('bookmarkDeleted'),
-                description: `"${deletingBookmark.title}" ${t('bookmarkDeleted')}`,
+                description: t('undoDeletedDesc', { name: deletingBookmark.title }),
+                duration: UNDO_TOAST_DURATION_MS,
+                action: undoToastAction(t('undo'), () => undoDelete([snapshot])),
             });
 
             // 立即重置所有状态
@@ -700,8 +732,7 @@ export const Bookmarks: React.FC = () => {
         setIsDeletingFolder(true);
         try {
             const bookmarkIdsToRemove = collectBookmarkIdsForNode(findNodeById(allBookmarks, deletingFolder.id));
-            await deleteChromeBookmark(deletingFolder.id);
-            await removeTagsForBookmarks(bookmarkIdsToRemove);
+            const snapshot = await deleteBookmarkWithSnapshot(deletingFolder.id);
 
             // 从本地状态中移除文件夹
             const removeFolderFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
@@ -757,7 +788,9 @@ export const Bookmarks: React.FC = () => {
             // 显示成功消息
             toast({
                 title: t('folderDeleted'),
-                description: `"${deletingFolder.title}" ${t('folderDeleted')}`,
+                description: t('undoDeletedDesc', { name: deletingFolder.title }),
+                duration: UNDO_TOAST_DURATION_MS,
+                action: undoToastAction(t('undo'), () => undoDelete([snapshot])),
             });
 
             // 立即重置所有状态
@@ -909,8 +942,11 @@ export const Bookmarks: React.FC = () => {
                 idsToDelete.flatMap(id => collectBookmarkIdsForNode(findNodeById(allBookmarks, id)))
             ));
 
-            await Promise.all(idsToDelete.map(id => deleteChromeBookmark(id)));
-            await removeTagsForBookmarks(bookmarkIdsToRemove);
+            // 依次删除：每个快照记录的位置是删除当时的位置，撤销时需按相反顺序恢复
+            const snapshots: BookmarkSnapshot[] = [];
+            for (const id of idsToDelete) {
+                snapshots.push(await deleteBookmarkWithSnapshot(id));
+            }
 
             // 更新本地状态
             const removeBookmarksFromTree = (nodes: BookmarkNode[]): BookmarkNode[] => {
@@ -935,7 +971,8 @@ export const Bookmarks: React.FC = () => {
             toast({
                 title: t('batchDeleteSuccess'),
                 description: t('batchDeleteSuccessDesc', { count: selectedItems.size }),
-                duration: 3000,
+                duration: UNDO_TOAST_DURATION_MS,
+                action: undoToastAction(t('undo'), () => undoDelete(snapshots)),
             });
 
             // 重置状态
@@ -1045,7 +1082,7 @@ export const Bookmarks: React.FC = () => {
 
             toast({
                 title: t('processingCompleted'),
-                description: t('batchRenameSuccessDesc', { count: successCount }).replace('删除', '移动'),
+                description: t('batchMoveSuccessDesc', { count: successCount }),
             });
 
             // 刷新书签
@@ -1106,7 +1143,7 @@ export const Bookmarks: React.FC = () => {
                     <CardContent className="p-8">
                         <div className="text-center">
                             <p className="mb-4 text-sm text-destructive">{error}</p>
-                            <Button onClick={loadBookmarks} variant="outline">
+                            <Button onClick={() => loadBookmarks()} variant="outline">
                                 {t('retry')}
                             </Button>
                     </div>
@@ -1129,7 +1166,7 @@ export const Bookmarks: React.FC = () => {
                                 variant="filled"
                                 className={cn(
                                     "h-12 w-full rounded-full border-transparent bg-surface-2 pl-11 text-base shadow-sm transition-all duration-300 ease-md-emphasized placeholder:text-muted-foreground/70 hover:bg-surface-2/88 focus-visible:border-border/80 focus-visible:bg-background",
-                                    themeId === 'blueprint' && "rounded-[var(--input-radius)] border border-border/60 bg-input/85 font-mono"
+                                    "blueprint:rounded-[var(--input-radius)] blueprint:border blueprint:border-border/60 blueprint:bg-input/85 blueprint:font-mono"
                                 )}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -1143,12 +1180,12 @@ export const Bookmarks: React.FC = () => {
                     {showSearchHistory && searchHistory.length > 0 && !searchTerm && (
                         <Card className={cn(
                             "absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.5rem] border border-border/70 bg-surface-container shadow-panel animate-in fade-in zoom-in-95 duration-200",
-                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                            "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                         )}>
                             <CardContent className="p-2 space-y-1">
                                 <div className={cn(
                                     "flex items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground",
-                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                                    "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                                 )}>
                                     <span>{t('searchHistory')}</span>
                                     <button
@@ -1163,7 +1200,7 @@ export const Bookmarks: React.FC = () => {
                                         key={index}
                                         className={cn(
                                             "group flex cursor-pointer items-center justify-between rounded-full px-4 py-3 transition-colors duration-200 hover:bg-on-surface/5",
-                                            themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono"
+                                            "blueprint:rounded-[var(--button-radius)] blueprint:font-mono"
                                         )}
                                         onClick={() => {
                                             setSearchTerm(term);
@@ -1178,7 +1215,7 @@ export const Bookmarks: React.FC = () => {
                                             onClick={(e) => removeHistoryItem(e, term)}
                                             className={cn(
                                                 "opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-all",
-                                                themeId === 'blueprint' && "rounded-[var(--badge-radius)]"
+                                                "blueprint:rounded-[var(--badge-radius)]"
                                             )}
                                         >
                                             <span className="sr-only">{t('delete')}</span>
@@ -1197,7 +1234,7 @@ export const Bookmarks: React.FC = () => {
                             size="icon"
                             className={cn(
                                 "ml-auto shrink-0 text-muted-foreground hover:text-primary",
-                                themeId === 'blueprint' && "rounded-[var(--button-radius)]"
+                                "blueprint:rounded-[var(--button-radius)]"
                             )}
                             aria-label={t('moreActions', 'More actions')}
                         >
@@ -1208,7 +1245,7 @@ export const Bookmarks: React.FC = () => {
                         align="end"
                         className={cn(
                             "w-56 p-2",
-                            themeId === 'blueprint' && "blueprint-panel border-dashed"
+                            "blueprint:blueprint-panel blueprint:border-dashed"
                         )}
                     >
                         <button
@@ -1216,7 +1253,7 @@ export const Bookmarks: React.FC = () => {
                             onClick={toggleSelectionMode}
                             className={cn(
                                 "flex w-full items-center gap-3 rounded-[var(--button-radius)] px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-2 hover:text-primary",
-                                themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                                "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                             )}
                         >
                             {isSelectionMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
@@ -1227,7 +1264,7 @@ export const Bookmarks: React.FC = () => {
                         {isSelectionMode && (
                             <div className={cn(
                                 "px-3 pt-2 text-xs text-muted-foreground",
-                                themeId === 'blueprint' && "font-mono"
+                                "blueprint:font-mono"
                             )}>
                                 {t('selectedCount', { count: selectedItems.size })}
                             </div>
@@ -1366,11 +1403,11 @@ export const Bookmarks: React.FC = () => {
                 isSelectionMode && (
                     <div className={cn(
                         "fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 transform items-center space-x-2 rounded-full border border-border/70 bg-card/94 px-6 py-2.5 shadow-panel backdrop-blur-md animate-in slide-in-from-bottom-10 fade-in duration-300 ease-md-emphasized",
-                        themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-card/96"
+                        "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-card/96"
                     )}>
                         <span className={cn(
                             "text-sm font-medium mr-2 text-secondary-foreground",
-                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                            "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                         )}>
                             {t('selectedCount', { count: selectedItems.size })}
                         </span>
@@ -1383,7 +1420,7 @@ export const Bookmarks: React.FC = () => {
                             onClick={handleSelectAll}
                             className={cn(
                                 "hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4",
-                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.12em]"
+                                "blueprint:rounded-[var(--button-radius)] blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                             )}
                         >
                             <CheckSquare className="w-4 h-4 mr-2" />
@@ -1399,7 +1436,7 @@ export const Bookmarks: React.FC = () => {
                             disabled={isClassifying}
                             className={cn(
                                 "hover:bg-secondary-foreground/10 text-secondary-foreground rounded-full px-4",
-                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.12em]"
+                                "blueprint:rounded-[var(--button-radius)] blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                             )}
                         >
                             {isClassifying ? (
@@ -1417,7 +1454,7 @@ export const Bookmarks: React.FC = () => {
                             size="sm"
                             className={cn(
                                 "rounded-full px-4 text-destructive hover:bg-destructive/10 hover:text-destructive",
-                                themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.12em]"
+                                "blueprint:rounded-[var(--button-radius)] blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                             )}
                             onClick={() => setShowBatchDeleteDialog(true)}
                             disabled={selectedItems.size === 0}
@@ -1433,7 +1470,7 @@ export const Bookmarks: React.FC = () => {
                             size="icon"
                             className={cn(
                                 "h-8 w-8 rounded-full hover:bg-secondary-foreground/10 text-secondary-foreground",
-                                themeId === 'blueprint' && "rounded-[var(--button-radius)]"
+                                "blueprint:rounded-[var(--button-radius)]"
                             )}
                             onClick={toggleSelectionMode}
                         >

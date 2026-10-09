@@ -20,7 +20,6 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 import {
     validateTemplateUrl,
@@ -72,7 +71,6 @@ export const TemplateUrlFormDialog: React.FC<TemplateUrlFormDialogProps> = ({
     onSubmit
 }) => {
     const { t } = useTranslation('common');
-    const { themeId } = useTheme();
     const [name, setName] = React.useState('');
     const [description, setDescription] = React.useState('');
     const [urlTemplate, setUrlTemplate] = React.useState('');
@@ -132,10 +130,10 @@ export const TemplateUrlFormDialog: React.FC<TemplateUrlFormDialogProps> = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]")}>
+                    <DialogTitle className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]")}>
                         {template ? t('editTemplateUrl') : t('createTemplateUrl')}
                     </DialogTitle>
-                    <DialogDescription className={cn(themeId === 'blueprint' && "font-mono")}>
+                    <DialogDescription className={cn("blueprint:font-mono")}>
                         {template ? t('editTemplateUrlDescription') : t('createTemplateUrlDescription')}
                     </DialogDescription>
                 </DialogHeader>
@@ -192,7 +190,7 @@ export const TemplateUrlFormDialog: React.FC<TemplateUrlFormDialogProps> = ({
                         <Label>{t('templateUrlDetectedPlaceholders')}</Label>
                         <div className={cn(
                             "flex min-h-11 flex-wrap items-center gap-2 rounded-[var(--input-radius)] border border-border/70 bg-surface-2/55 px-3 py-3",
-                            themeId === 'blueprint' && "border-dashed"
+                            "blueprint:border-dashed"
                         )}>
                             {validation.placeholders.length > 0 ? (
                                 validation.placeholders.map((placeholder) => (
@@ -201,7 +199,7 @@ export const TemplateUrlFormDialog: React.FC<TemplateUrlFormDialogProps> = ({
                                         variant="secondary"
                                         className={cn(
                                             "bg-primary/10 text-primary",
-                                            themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-primary/30 font-mono"
+                                            "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-primary/30 blueprint:font-mono"
                                         )}
                                     >
                                         {`{${placeholder}}`}
@@ -210,7 +208,7 @@ export const TemplateUrlFormDialog: React.FC<TemplateUrlFormDialogProps> = ({
                             ) : (
                                 <span className={cn(
                                     "text-sm text-muted-foreground",
-                                    themeId === 'blueprint' && "font-mono"
+                                    "blueprint:font-mono"
                                 )}>
                                     {t('templateUrlNoPlaceholders')}
                                 </span>
@@ -241,7 +239,7 @@ export const TemplateUrlFormDialog: React.FC<TemplateUrlFormDialogProps> = ({
                     <Button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                        className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                     >
                         {isSaving ? t('saving') : t('save')}
                     </Button>

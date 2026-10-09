@@ -33,7 +33,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, de
         <Card className="relative overflow-hidden border-border/70 bg-card/92">
             {actionLabel && onClick && (
                 <div
-                    className="absolute right-0 top-0 cursor-pointer rounded-bl-xl bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    className="absolute right-0 top-0 cursor-pointer rounded-bl-xl bg-primary px-2 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                     onClick={(e) => {
                         e.stopPropagation();
                         onClick();

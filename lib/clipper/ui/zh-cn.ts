@@ -17,6 +17,8 @@ export const zhCN = {
     notConfigured: '尚未配置 AI 服务，请先在「AI 设置」中完成配置。已保留原始笔记内容。',
     outputTooLarge: '模型输出过大，已保留原始笔记内容。',
     warningTooLarge: '模型警告过长，已将其丢弃。',
+    protectedChanged: '模型修改了受保护内容，已保留原始笔记内容。',
+    segmentLimit: (count: number) => `模型格式化的文本分段超过 ${count} 个，已保留原始笔记内容。`,
   },
   image: {
     denied: (count: number) => `${count} 张图片因未授予来源站点权限而保留原始 URL。`,
@@ -31,7 +33,7 @@ export const zhCN = {
   },
 } as const;
 
-const providerCodeMessages = {
+export const providerCodeMessages = {
   TIMEOUT: '模型服务响应超时。',
   HTTP_ERROR: '模型服务返回请求错误。',
   INVALID_RESPONSE: '模型服务返回了无效响应。',
@@ -43,8 +45,8 @@ const providerCodeMessages = {
 
 type ProviderCode = keyof typeof providerCodeMessages;
 
-const MODEL_WARNING_FALLBACK = '模型格式化未生效，已保留原始 Markdown。';
-const IMAGE_WARNING_FALLBACK = '部分图片处理未完成，笔记中已保留可用内容。';
+export const MODEL_WARNING_FALLBACK = '模型格式化未生效，已保留原始 Markdown。';
+export const IMAGE_WARNING_FALLBACK = '部分图片处理未完成，笔记中已保留可用内容。';
 
 const trustedModelWarnings = new Set<string>([
   zhCN.model.unavailable(),
@@ -53,7 +55,7 @@ const trustedModelWarnings = new Set<string>([
   zhCN.model.notConfigured,
   zhCN.model.outputTooLarge,
   zhCN.model.warningTooLarge,
-  '模型修改了受保护内容，已保留原始笔记内容。',
+  zhCN.model.protectedChanged,
 ]);
 
 export function normalizeModelWarning(warning: string): string {
@@ -65,7 +67,7 @@ export function normalizeModelWarning(warning: string): string {
   if (count !== undefined
     && Number.isSafeInteger(count)
     && count === MAX_SAFE_SEGMENT_REQUESTS) {
-    return `模型格式化的文本分段超过 ${MAX_SAFE_SEGMENT_REQUESTS} 个，已保留原始笔记内容。`;
+    return zhCN.model.segmentLimit(MAX_SAFE_SEGMENT_REQUESTS);
   }
   return MODEL_WARNING_FALLBACK;
 }

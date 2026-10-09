@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
+import { getI18n, useTranslation } from 'react-i18next';
 
 import type { ClippingJob } from '@/lib/clipper/contracts/job';
 import { extractedArticleSchema, type ExtractedArticle } from '@/lib/clipper/contracts/article';
@@ -18,6 +19,7 @@ import { normalizeDocument } from '@/lib/clipper/extraction/normalize-document';
 import { convertArticleToMarkdown } from '@/lib/clipper/markdown/converter';
 import { createSettingsRepository } from '@/lib/clipper/settings/repository';
 import { shouldResumeJob, summarizePendingJob } from '@/lib/clipper/jobs/resume';
+import { hostLabel, hostPatternFor, requestHostAccess } from '@/lib/hostAccess';
 import { VaultHandleRepository } from '@/lib/clipper/vault/database';
 import { parseRelativeDirectory } from '@/lib/clipper/vault/path';
 import {
@@ -31,7 +33,7 @@ import {
 } from '@/lib/clipper/permissions/image-origins';
 import { Editor, type EditorTab } from './components/Editor';
 import { Progress, type PanelProgress } from './components/Progress';
-import { normalizeImageWarning, normalizeModelWarning, zhCN } from '@/lib/clipper/ui/zh-cn';
+import { localizeImageWarning, localizeModelWarning } from '@/lib/clipper/ui/warnings';
 
 // UI Primitives
 import { Button } from '@/components/ui/button.tsx';
@@ -45,6 +47,7 @@ import {
   RotateCcw,
   History,
   X,
+  Loader2,
   MousePointerClick,
   AlertTriangle,
   FolderSearch,
@@ -72,6 +75,8 @@ export interface ExtractOptions {
 export interface RuntimeClient {
   getMostRecentIncomplete(signal?: AbortSignal): Promise<ClippingJob | undefined>;
   getActiveTabUrl(): Promise<string | undefined>;
+  /** 申请读取某个站点的权限；必须直接由点击触发 */
+  requestSiteAccess(pattern: string): Promise<boolean>;
   getJob(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
   extractActive(options?: ExtractOptions): Promise<ClippingJob>;
   preparePreview(jobId: string, signal?: AbortSignal): Promise<ClippingJob>;
@@ -184,7 +189,7 @@ async function send(request: RuntimeRequest): Promise<RuntimeResponse> {
 
 async function activeTabId(): Promise<number> {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new Error('无法获取当前活动标签页。');
+  if (!tab?.id) throw new Error(getI18n().t('clipNoActiveTab'));
   return tab.id;
 }
 
@@ -233,6 +238,9 @@ export function createRuntimeClient(): RuntimeClient {
     async getActiveTabUrl() {
       const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
       return tab?.url;
+    },
+    requestSiteAccess(pattern) {
+      return requestHostAccess([pattern]);
     },
     async extractActive(options) {
       const signal = options?.signal;
@@ -392,6 +400,7 @@ export function createRuntimeClient(): RuntimeClient {
 
 export default function App({ client }: { client?: RuntimeClient }) {
   const runtimeClient = React.useMemo(() => client || createRuntimeClient(), [client]);
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [job, setJob] = useState<ClippingJob | null>(null);
   const [draft, setDraft] = useState<EditableDraft>({
@@ -411,6 +420,24 @@ export default function App({ client }: { client?: RuntimeClient }) {
   // An unfinished clip of another page, offered instead of being restored silently.
   const [pendingJob, setPendingJob] = useState<ClippingJob | null>(null);
   const showFormatting = () => setProgress({ stage: 'formatting' });
+  // 当前页面因缺少站点权限而无法读取时，保存需要申请的站点（如 https://example.com/*）
+  const [siteAccess, setSiteAccess] = useState<string | null>(null);
+
+  // 读取页面失败且是权限问题时给出「授权访问」入口；chrome:// 等页面无法授权，仍只显示错误
+  const offerSiteAccess = async (err: any) => {
+    setSiteAccess(null);
+    if (err?.code !== 'INJECTION_FAILED') return;
+    try {
+      const pattern = hostPatternFor((await runtimeClient.getActiveTabUrl()) ?? '');
+      if (pattern && !(await browser.permissions.contains({ origins: [pattern] }))) setSiteAccess(pattern);
+    } catch {
+      // 读取标签页信息失败时保持普通错误提示
+    }
+  };
+
+  useEffect(() => {
+    document.title = t('clipTitle');
+  }, [t]);
 
   // Initialize
   useEffect(() => {
@@ -448,7 +475,8 @@ export default function App({ client }: { client?: RuntimeClient }) {
         if (mounted) {
           console.error('Init failed:', err);
           setProgress({ stage: 'failed' });
-          setErrorMessage(err.message || '提取文章失败');
+          setErrorMessage(err.message || t('clipExtractFailed'));
+          void offerSiteAccess(err);
         }
       }
     })();
@@ -491,9 +519,9 @@ export default function App({ client }: { client?: RuntimeClient }) {
     try {
       await runtimeClient.discardJob(pendingJob.jobId);
       setPendingJob(null);
-      toast({ title: '已丢弃未完成的剪藏' });
+      toast({ title: t('clipDiscarded') });
     } catch (err: any) {
-      toast({ variant: 'destructive', title: '丢弃失败', description: err.message });
+      toast({ variant: 'destructive', title: t('clipDiscardFailed'), description: err.message });
     }
   };
 
@@ -506,10 +534,23 @@ export default function App({ client }: { client?: RuntimeClient }) {
       setJob(newJob);
       setDraft(editableDraft(newJob));
       setProgress({ stage: 'ready' });
-      toast({ title: '已重新提取页面' });
+      toast({ title: t('clipReExtracted') });
     } catch (err: any) {
       setProgress({ stage: 'failed' });
-      setErrorMessage(err.message || '提取失败');
+      setErrorMessage(err.message || t('clipExtractFailed'));
+      void offerSiteAccess(err);
+    }
+  };
+
+  // 点击「授权访问」：权限请求必须是点击处理函数里的第一个异步调用
+  const handleGrantSiteAccess = async () => {
+    if (!siteAccess) return;
+    const granted = await runtimeClient.requestSiteAccess(siteAccess);
+    if (granted) {
+      setSiteAccess(null);
+      await handleReExtract();
+    } else {
+      setErrorMessage(t('hostAccessDeniedDesc', { host: hostLabel(siteAccess.replace('/*', '')) }));
     }
   };
 
@@ -522,23 +563,25 @@ export default function App({ client }: { client?: RuntimeClient }) {
       setJob(newJob);
       setDraft(editableDraft(newJob));
       setProgress({ stage: 'ready' });
-      toast({ title: '区域内容提取成功' });
+      toast({ title: t('clipRegionExtracted') });
     } catch (err: any) {
       if (isRegionSelectionCancelled(err)) {
         setProgress({ stage: 'cancelled' });
       } else {
         setProgress({ stage: 'failed' });
-        setErrorMessage(err.message || '区域选择失败');
+        setErrorMessage(err.message || t('clipRegionFailed'));
+        void offerSiteAccess(err);
       }
     } finally {
       setIsSelectingRegion(false);
     }
   };
 
-  // AI Format
+  // AI Format：失败原因统一显示在页面上的横幅里（持久、可复制），toast 只给出结果标题
   const handleAIFormat = async () => {
     if (!job) return;
     try {
+      setErrorMessage(null);
       await syncDraft();
       setIsAiFormatting(true);
       setProgress({ stage: 'formatting' });
@@ -546,22 +589,12 @@ export default function App({ client }: { client?: RuntimeClient }) {
       setJob(formatted);
       setDraft(editableDraft(formatted));
       setProgress({ stage: 'ready' });
-      if (formatted.modelWarning) {
-        toast({
-          variant: 'destructive',
-          title: 'AI 排版未生效',
-          description: normalizeModelWarning(formatted.modelWarning),
-        });
-      } else {
-        toast({ title: 'AI 结构化排版完成' });
-      }
+      toast(formatted.modelWarning
+        ? { variant: 'destructive', title: t('clipAiFormatIneffective') }
+        : { title: t('clipAiFormatDone') });
     } catch (err: any) {
       setProgress({ stage: 'ready' });
-      toast({
-        variant: 'destructive',
-        title: 'AI 排版失败',
-        description: err.message || '调用大模型服务失败',
-      });
+      setErrorMessage(err.message || t('clipAiFormatCallFailed'));
     } finally {
       setIsAiFormatting(false);
     }
@@ -594,17 +627,12 @@ export default function App({ client }: { client?: RuntimeClient }) {
       const uploadedCount = Object.keys(updatedJob.uploadedImageUrls || {}).length;
       setProgress({ stage: 'ready' });
       toast({
-        title: '图片转存完成',
-        description: `共 ${totalImages} 张图片，已转存 ${uploadedCount} 张`,
+        title: t('clipUploadDone'),
+        description: t('clipUploadDoneDesc', { total: totalImages, uploaded: uploadedCount }),
       });
     } catch (err: any) {
       setProgress({ stage: 'ready' });
-      setErrorMessage(err.message || '图片转存失败');
-      toast({
-        variant: 'destructive',
-        title: '图片转存失败',
-        description: err.message,
-      });
+      setErrorMessage(err.message || t('clipUploadFailed'));
     } finally {
       setIsUploadingImages(false);
     }
@@ -615,13 +643,28 @@ export default function App({ client }: { client?: RuntimeClient }) {
     try {
       const v = await runtimeClient.chooseVault();
       setVault(v);
-      toast({ title: '已授权 Obsidian Vault', description: v.name });
+      toast({ title: t('clipVaultAuthorized'), description: v.name });
     } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Vault 授权失败',
-        description: err.message,
-      });
+      // 用户在系统目录选择框里点了取消，不算错误
+      if (err?.name !== 'AbortError') setErrorMessage(err.message || t('clipVaultAuthFailed'));
+    }
+  };
+
+  // 目录已绑定但浏览器要求重新确认访问权限（必须由点击触发）
+  const handleAuthorizeVault = async () => {
+    if (!vault) return;
+    try {
+      setErrorMessage(null);
+      await vault.requestPermission();
+      const refreshed = await runtimeClient.loadVault();
+      setVault(refreshed);
+      if (refreshed?.permission === 'granted') {
+        toast({ title: t('clipVaultAuthorized'), description: refreshed.name });
+      } else {
+        setErrorMessage(t('clipVaultAuthFailed'));
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || t('clipVaultAuthFailed'));
     }
   };
 
@@ -632,11 +675,8 @@ export default function App({ client }: { client?: RuntimeClient }) {
       setErrorMessage(null);
       await syncDraft();
 
-      // Check Vault permission
-      if (!vault || vault.permission !== 'granted') {
-        const v = await runtimeClient.chooseVault();
-        setVault(v);
-      }
+      // 选择 / 授权 Vault 是主按钮的独立步骤，保存时不再隐式弹出目录选择器
+      if (!vault || vault.permission !== 'granted') return;
 
       setIsSaving(true);
       setProgress({ stage: 'uploading', completed: 0, total: job.imageReferences.length });
@@ -655,15 +695,10 @@ export default function App({ client }: { client?: RuntimeClient }) {
       });
       setJob(completed);
       setProgress({ stage: 'completed' });
-      toast({ title: '已保存至 Obsidian Vault！' });
+      toast({ title: t('clipSaved') });
     } catch (err: any) {
       setProgress({ stage: 'failed' });
-      setErrorMessage(err.message || '保存失败');
-      toast({
-        variant: 'destructive',
-        title: '保存失败',
-        description: err.message,
-      });
+      setErrorMessage(err.message || t('clipSaveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -674,189 +709,276 @@ export default function App({ client }: { client?: RuntimeClient }) {
     try {
       await runtimeClient.copyMarkdown(draft.markdown);
       setIsCopied(true);
-      toast({ title: 'Markdown 已复制到剪贴板' });
+      toast({ title: t('clipCopied') });
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
-      toast({ variant: 'destructive', title: '复制失败' });
+      toast({ variant: 'destructive', title: t('clipCopyFailed') });
     }
   };
 
+  const busy = isAiFormatting || isUploadingImages || isSaving || isSelectingRegion
+    || progress.stage === 'extracting' || progress.stage === 'formatting';
+  const pendingImages = job
+    ? job.imageReferences.filter((reference) => !job.uploadedImageUrls[reference.sourceUrl]).length
+    : 0;
+  const primaryAction: 'choose-vault' | 'authorize-vault' | 'save' = !vault
+    ? 'choose-vault'
+    : vault.permission !== 'granted'
+      ? 'authorize-vault'
+      : 'save';
+  const primaryLabel = isSaving
+    ? t('clipSaving')
+    : primaryAction === 'choose-vault'
+      ? t('clipChooseVault')
+      : primaryAction === 'authorize-vault'
+        ? t('clipAuthorizeVault')
+        : t('clipSave');
+  const primaryNote = primaryAction === 'choose-vault'
+    ? t('clipChooseVaultNote')
+    : primaryAction === 'authorize-vault'
+      ? t('clipAuthorizeVaultNote')
+      : pendingImages > 0
+        ? t('clipSaveImagesNote', { count: pendingImages })
+        : null;
+  const handlePrimary = primaryAction === 'choose-vault'
+    ? handleChooseVault
+    : primaryAction === 'authorize-vault'
+      ? handleAuthorizeVault
+      : handleSave;
+  const warnings = job
+    ? [
+        job.modelWarning ? localizeModelWarning(job.modelWarning, t) : null,
+        job.imageWarning ? localizeImageWarning(job.imageWarning, t) : null,
+      ].filter((warning): warning is string => Boolean(warning))
+    : [];
+
   return (
-    <div className="flex flex-col h-screen max-h-screen p-3 space-y-2.5 overflow-hidden bg-background text-foreground text-xs">
-      {/* Top Header / Progress */}
-      <div className="flex items-center justify-between pb-1 border-b">
-        <div className="flex items-center gap-1.5 font-semibold text-sm">
-          <FolderTree className="h-4 w-4 text-primary" />
-          <span>网页剪藏至 Obsidian</span>
+    <div className="flex h-screen max-h-screen flex-col overflow-hidden bg-background text-sm text-foreground blueprint:font-mono">
+      {/* 可滚动的内容区：窗口较矮时整体滚动，而不是把编辑区挤没 */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3">
+        <div className="space-y-2 border-b pb-2">
+          <div className="flex items-center gap-2 text-base font-semibold blueprint:uppercase blueprint:tracking-[0.12em]">
+            <FolderTree className="h-4 w-4 shrink-0 text-primary" />
+            <h1>{t('clipTitle')}</h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 min-w-[7rem] flex-1"
+              onClick={handleReExtract}
+              disabled={busy}
+              title={t('clipReExtractHint')}
+            >
+              <RotateCcw className="mr-1.5 h-4 w-4" />
+              {t('clipReExtract')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 min-w-[7rem] flex-1"
+              onClick={handleSelectRegion}
+              disabled={busy}
+              title={t('clipSelectRegionHint')}
+            >
+              <MousePointerClick className="mr-1.5 h-4 w-4" />
+              {t('clipSelectRegion')}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs"
-            onClick={handleReExtract}
-            title="重新提取"
-          >
-            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-            重提
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-xs"
-            onClick={handleSelectRegion}
-            disabled={isSelectingRegion}
-            title="选择页面区域提取"
-          >
-            <MousePointerClick className="h-3.5 w-3.5 mr-1" />
-            选区
-          </Button>
-        </div>
-      </div>
 
-      {/* Progress & Alert Banner */}
-      <Progress progress={progress} />
+        <Progress progress={progress} />
 
-      {pendingJob && (() => {
-        const { title, host } = summarizePendingJob(pendingJob);
-        return (
-          <div className="p-2 rounded bg-muted/60 border flex items-center gap-2 text-[11px]">
-            <History className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <div className="min-w-0 flex-1">
-              <div className="text-muted-foreground">另有一篇未完成的剪藏</div>
-              <div className="truncate font-medium" title={`${title}${host ? `（${host}）` : ''}`}>
-                {title}{host ? `（${host}）` : ''}
+        {pendingJob && (() => {
+          const { title, host } = summarizePendingJob(pendingJob);
+          return (
+            <div className="flex items-center gap-2 rounded border bg-muted/60 p-2">
+              <History className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-muted-foreground">{t('clipPendingTitle')}</div>
+                <div className="truncate font-medium" title={`${title}${host ? ` (${host})` : ''}`}>
+                  {title}{host ? ` (${host})` : ''}
+                </div>
               </div>
+              <Button size="sm" variant="outline" className="h-8 px-2" onClick={handleResumePending}>
+                {t('clipPendingResume')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={handleDiscardPending}
+                aria-label={t('clipDiscardAria')}
+                title={t('clipPendingDiscard')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={handleResumePending}>
-              继续编辑
+          );
+        })()}
+
+        {errorMessage && !siteAccess && (
+          <div role="alert" className="flex items-start gap-2 rounded border border-destructive/30 bg-destructive/10 p-2 text-destructive">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p className="max-h-28 min-w-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words text-xs">{errorMessage}</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 shrink-0 p-0 text-destructive hover:text-destructive"
+              onClick={() => { void runtimeClient.copyMarkdown(errorMessage); }}
+              aria-label={t('clipErrorCopy')}
+              title={t('clipErrorCopy')}
+            >
+              <Copy className="h-3.5 w-3.5" />
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 w-7 p-0"
-              onClick={handleDiscardPending}
-              aria-label="丢弃未完成的剪藏"
-              title="丢弃"
+              className="h-7 w-7 shrink-0 p-0 text-destructive hover:text-destructive"
+              onClick={() => setErrorMessage(null)}
+              aria-label={t('clipErrorDismiss')}
+              title={t('clipErrorDismiss')}
             >
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
-        );
-      })()}
+        )}
 
-      {errorMessage && (
-        <div className="p-2 rounded bg-destructive/10 border border-destructive/30 text-destructive flex items-center gap-1.5 text-[11px]">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{errorMessage}</span>
-        </div>
-      )}
+        {siteAccess && (
+          <div role="status" className="flex items-center gap-2 rounded border border-primary/30 bg-primary/5 p-2">
+            <p className="min-w-0 flex-1 text-xs">{t('clipSiteAccessNote', { host: hostLabel(siteAccess.replace('/*', '')) })}</p>
+            <Button size="sm" className="h-8 shrink-0 px-3" onClick={handleGrantSiteAccess}>
+              {t('clipSiteAccessGrant')}
+            </Button>
+          </div>
+        )}
 
-      {/* Meta Form: Title & Subdir */}
-      <div className="space-y-1.5">
-        <div>
-          <label className="text-[11px] font-medium text-muted-foreground block mb-0.5">
-            笔记标题
-          </label>
-          <Input
-            value={draft.title}
-            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-            onBlur={() => syncDraft('title')}
-            className="h-8 text-xs font-medium"
-            placeholder="文章标题..."
-          />
+        {warnings.length > 0 && (
+          <div role="status" className="flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1 space-y-0.5 text-xs">
+              {warnings.map((warning) => (
+                <p key={warning} className="break-words">{warning}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Meta Form: Title & Subdir */}
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <label htmlFor="clip-title" className="block text-sm font-medium text-muted-foreground">
+              {t('clipNoteTitle')}
+            </label>
+            <Input
+              id="clip-title"
+              value={draft.title}
+              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+              onBlur={() => syncDraft('title')}
+              className="h-9 text-sm font-medium"
+              placeholder={t('clipNoteTitlePlaceholder')}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="clip-subdir" className="block text-sm font-medium text-muted-foreground">
+              {t('clipSubdir')}
+            </label>
+            <Input
+              id="clip-subdir"
+              value={draft.targetSubdirectory}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, targetSubdirectory: e.target.value }))
+              }
+              onBlur={() => syncDraft('targetSubdirectory')}
+              className="h-9 font-mono text-sm"
+              placeholder={t('clipSubdirPlaceholder')}
+            />
+          </div>
         </div>
-        <div>
-          <label className="text-[11px] font-medium text-muted-foreground block mb-0.5">
-            Vault 存放子目录（相对路径）
-          </label>
-          <Input
-            value={draft.targetSubdirectory}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, targetSubdirectory: e.target.value }))
-            }
-            onBlur={() => syncDraft('targetSubdirectory')}
-            className="h-8 text-xs font-mono"
-            placeholder="Clippings/ (留空为根目录)"
-          />
-        </div>
+
+        <Editor
+          markdown={draft.markdown}
+          imageReferences={job?.imageReferences}
+          uploadedImageUrls={job?.uploadedImageUrls}
+          activeTab={activeTab}
+          onMarkdownChange={(val) => setDraft((d) => ({ ...d, markdown: val }))}
+          onMarkdownBlur={() => syncDraft('markdown')}
+          onTabChange={setActiveTab}
+        />
       </div>
 
-      {/* Main Markdown Editor & Preview */}
-      <Editor
-        markdown={draft.markdown}
-        imageReferences={job?.imageReferences}
-        uploadedImageUrls={job?.uploadedImageUrls}
-        activeTab={activeTab}
-        onMarkdownChange={(val) => setDraft((d) => ({ ...d, markdown: val }))}
-        onMarkdownBlur={() => syncDraft('markdown')}
-        onTabChange={setActiveTab}
-      />
-
-      {/* Bottom Action Footer */}
-      <div className="pt-1.5 border-t flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          {/* Vault Status */}
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-              onClick={handleChooseVault}
-              title="设置或切换 Obsidian Vault 目标目录"
-            >
-              <FolderSearch className="h-3.5 w-3.5 mr-1" />
-              <span>{vault ? vault.name : '未选择 Vault 目录'}</span>
-            </Button>
-          </div>
-
-          {/* Auxiliary actions */}
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs"
-              onClick={handleCopy}
-            >
-              {isCopied ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
-              {isCopied ? '已复制' : '复制 MD'}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-7 px-2 text-xs text-amber-600 dark:text-amber-400 font-medium"
-              onClick={handleAIFormat}
-              disabled={isAiFormatting || !draft.markdown}
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-1" />
-              {isAiFormatting ? '排版中…' : 'AI 规范排版'}
-            </Button>
-          </div>
+      {/* 固定在底部的操作区：一个主按钮 + 两个辅助操作 */}
+      <div className="shrink-0 space-y-2 border-t bg-background p-3">
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-9 min-w-0 justify-start gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            onClick={handleChooseVault}
+            title={t('clipVaultHint')}
+          >
+            <FolderSearch className="h-4 w-4 shrink-0" />
+            <span className="truncate">{vault ? vault.name : t('clipVaultNone')}</span>
+            {vault && vault.permission !== 'granted' && (
+              <span className="shrink-0 rounded bg-amber-500/15 px-1.5 text-xs text-amber-700 dark:text-amber-400">
+                {t('clipVaultNeedsAuth')}
+              </span>
+            )}
+            {vault && vault.permission === 'granted' && (
+              <span className="shrink-0 text-xs underline-offset-2 hover:underline">{t('clipVaultChange')}</span>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0 px-3"
+            onClick={handleCopy}
+            disabled={!draft.markdown}
+          >
+            {isCopied ? <Check className="mr-1.5 h-4 w-4 text-emerald-500" /> : <Copy className="mr-1.5 h-4 w-4" />}
+            {isCopied ? t('clipCopiedButton') : t('clipCopyButton')}
+          </Button>
         </div>
 
-        {/* Action Buttons: Upload Images & Save to Obsidian */}
         <div className="grid grid-cols-2 gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-xs font-medium flex items-center justify-center gap-1.5"
-            onClick={handleUploadImages}
-            disabled={isUploadingImages || isSaving || !draft.markdown || !job || job.imageReferences.length === 0}
-            title={job && job.imageReferences.length === 0 ? '页面无图片' : '仅上传图片至配置的图床'}
+            className="h-9"
+            onClick={handleAIFormat}
+            disabled={busy || !draft.markdown}
+            title={t('clipAiFormatHint')}
           >
-            <UploadCloud className="h-3.5 w-3.5" />
-            {isUploadingImages ? '上传中…' : '上传图片'}
+            {isAiFormatting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+            {isAiFormatting ? t('clipAiFormatting') : t('clipAiFormat')}
           </Button>
           <Button
             size="sm"
-            className="h-8 text-xs font-semibold flex items-center justify-center gap-1.5"
-            onClick={handleSave}
-            disabled={isSaving || isUploadingImages || !draft.markdown}
+            variant="outline"
+            className="h-9"
+            onClick={handleUploadImages}
+            disabled={busy || !draft.markdown || !job || job.imageReferences.length === 0}
+            title={job && job.imageReferences.length === 0 ? t('clipNoImages') : t('clipUploadImagesHint')}
           >
-            <Save className="h-4 w-4" />
-            {isSaving ? '处理中…' : '上传图片并保存到 Obsidian'}
+            {isUploadingImages ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-1.5 h-4 w-4" />}
+            {isUploadingImages ? t('clipUploadingImages') : t('clipUploadImages')}
           </Button>
         </div>
+
+        {primaryNote && <p className="text-xs text-muted-foreground">{primaryNote}</p>}
+
+        <Button
+          className="h-10 w-full font-semibold"
+          onClick={handlePrimary}
+          disabled={primaryAction === 'save' ? busy || !draft.markdown : isSaving}
+        >
+          {isSaving
+            ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            : primaryAction === 'save'
+              ? <Save className="mr-1.5 h-4 w-4" />
+              : <FolderSearch className="mr-1.5 h-4 w-4" />}
+          {primaryLabel}
+        </Button>
       </div>
     </div>
   );

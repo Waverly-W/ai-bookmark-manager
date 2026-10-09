@@ -1,3 +1,6 @@
+import { ALL_SITES_PATTERNS, requestHostAccess } from '@/lib/hostAccess';
+import { deleteBookmarkWithSnapshot, restoreBookmarkSnapshot, type BookmarkSnapshot } from '@/lib/bookmarkTrash';
+import { undoToastAction, UNDO_TOAST_DURATION_MS } from '@/components/ui/toast-undo';
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { scanBookmarkValidity, ValidityResult, updateChromeBookmark, deleteChromeBookmark, filterBookmarksByFolder } from '@/lib/bookmarkUtils';
+import { scanBookmarkValidity, ValidityResult, updateChromeBookmark, filterBookmarksByFolder } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
 import { Loader2, AlertTriangle, ArrowLeft, Trash2, ExternalLink, Edit, StopCircle } from 'lucide-react';
 import { CascadingFolderSelect } from '@/components/ui/cascading-folder-select';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 
 interface ValidityManagerProps {
@@ -23,7 +25,6 @@ interface ValidityManagerProps {
 export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onRefresh, onBack }) => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
-    const { themeId } = useTheme();
     const [isScanning, setIsScanning] = useState(false);
     const [invalidBookmarks, setInvalidBookmarks] = useState<ValidityResult[]>([]);
     const [scanned, setScanned] = useState(false);
@@ -45,6 +46,8 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
     }, [logs]);
 
     const handleScan = async () => {
+        // 检测需要请求任意网站：必须在任何 await 之前申请
+        const hostAccess = requestHostAccess(ALL_SITES_PATTERNS);
         setIsScanning(true);
         setScanned(false);
         setInvalidBookmarks([]);
@@ -55,6 +58,15 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
         abortControllerRef.current = controller;
 
         try {
+            if (!await hostAccess) {
+                toast({
+                    title: t('hostAccessDeniedTitle'),
+                    description: t('validityAccessDeniedDesc'),
+                    variant: "destructive"
+                });
+                setIsScanning(false);
+                return;
+            }
             const targetBookmarks = filterBookmarksByFolder(bookmarks, selectedFolderId);
             const results = await scanBookmarkValidity(
                 targetBookmarks,
@@ -111,11 +123,25 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
 
     const handleDelete = async (id: string) => {
         try {
-            await deleteChromeBookmark(id);
+            const target = invalidBookmarks.find(b => b.id === id);
+            const snapshot = await deleteBookmarkWithSnapshot(id);
             setInvalidBookmarks(prev => prev.filter(b => b.id !== id));
             onRefresh();
             toast({
                 title: t('bookmarkDeleted'),
+                description: target ? t('undoDeletedDesc', { name: target.title }) : undefined,
+                duration: UNDO_TOAST_DURATION_MS,
+                action: undoToastAction(t('undo'), async () => {
+                    try {
+                        await restoreBookmarkSnapshot(snapshot);
+                        // 恢复后的书签 id 会变化，需重新扫描才能再次出现在失效列表中
+                        onRefresh();
+                        toast({ title: t('undoRestored') });
+                    } catch (undoError) {
+                        console.error('Undo failed:', undoError);
+                        toast({ title: t('undoFailed'), variant: 'destructive' });
+                    }
+                }),
             });
         } catch (error) {
             console.error('Delete failed:', error);
@@ -155,21 +181,21 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
         <div className="space-y-6">
             <div className={cn(
                 "rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
-                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
             )}>
                 <div className="flex items-start gap-4">
-                <Button variant="outline" size="icon" className={cn(themeId === 'blueprint' && "rounded-[var(--button-radius)]")} onClick={onBack}>
+                <Button variant="outline" size="icon" className={cn("blueprint:rounded-[var(--button-radius)]")} onClick={onBack}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="space-y-2">
                     <span className={cn(
-                        "inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
-                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                        "inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary",
+                        "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-border/60 blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                     )}>
                         {t('validityManager')}
                     </span>
-                    <h2 className={cn("font-display text-3xl font-semibold tracking-tight", themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]")}>{t('validityManager')}</h2>
-                    <p className={cn("max-w-2xl text-sm text-muted-foreground", themeId === 'blueprint' && "font-mono")}>
+                    <h2 className={cn("font-display text-3xl font-semibold tracking-tight", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.18em]")}>{t('validityManager')}</h2>
+                    <p className={cn("max-w-2xl text-sm text-muted-foreground", "blueprint:font-mono")}>
                         {t('validityManagerDesc')}
                     </p>
                 </div>
@@ -177,7 +203,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
             </div>
 
             {isScanning ? (
-                <Card className={cn("mt-8 border-primary/20 bg-card/92", themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed")}>
+                <Card className={cn("mt-8 border-primary/20 bg-card/92", "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed")}>
                     <CardHeader>
                         <CardTitle>{t('scanProgress')}</CardTitle>
                     </CardHeader>
@@ -192,7 +218,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
 
                         <div className={cn(
                             "flex h-48 flex-col overflow-hidden rounded-[1rem] border border-border/70 bg-surface-2/70 p-4 font-mono text-xs",
-                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                            "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                         )}>
                             <div className="flex-1 overflow-y-auto space-y-1">
                                 {logs.map((log, i) => (
@@ -203,7 +229,7 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
                         </div>
 
                         <div className="flex justify-center">
-                            <Button variant="destructive" className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")} onClick={handleStop}>
+                            <Button variant="destructive" className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")} onClick={handleStop}>
                                 <StopCircle className="mr-2 h-4 w-4" />
                                 {t('stop')}
                             </Button>
@@ -213,11 +239,11 @@ export const ValidityManager: React.FC<ValidityManagerProps> = ({ bookmarks, onR
             ) : !scanned ? (
                 <div className={cn(
                     "mt-8 flex flex-col items-center justify-center rounded-[1.75rem] border-2 border-dashed border-border/80 bg-surface-2/65 p-12",
-                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)]"
+                    "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)]"
                 )}>
                     <div className={cn(
                         "mb-4 rounded-full bg-primary/10 p-4",
-                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border border-primary/30"
+                        "blueprint:rounded-[var(--card-radius)] blueprint:border blueprint:border-primary/30"
                     )}>
                         <AlertTriangle className="h-12 w-12 text-primary" />
                     </div>

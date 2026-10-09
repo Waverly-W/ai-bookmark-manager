@@ -60,7 +60,7 @@ export const normalizeAIError = (
   if (error instanceof DOMException || error instanceof TypeError) {
     return new AIRuntimeError(
       'network',
-      'AI network request failed. Check the API URL, proxy TLS/CORS settings, and connectivity.',
+      'AI network request failed. Check the API URL, that the extension has been granted access to the API host (re-save the AI settings to grant it), proxy TLS/CORS settings, and connectivity.',
       error
     );
   }

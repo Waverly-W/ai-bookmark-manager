@@ -6,6 +6,7 @@ import {
   type Settings,
 } from '../contracts/settings';
 import { r2RuntimeSettingsSchema } from '../image-host/r2-settings';
+import { resolveImageHostDraft } from './image-host-draft';
 import {
   settingsMutationLock,
   type SettingsMutationLock,
@@ -135,17 +136,7 @@ export class SettingsRepository {
 
   async saveImageHost(draft: Settings['imageHost']): Promise<Settings> {
     return this.mutate((latest) => {
-      const candidate = draft.kind === 'r2'
-        ? {
-            ...draft,
-            accessKeyId: draft.accessKeyId || (latest.imageHost.kind === 'r2'
-              ? latest.imageHost.accessKeyId
-              : ''),
-            secretAccessKey: draft.secretAccessKey || (latest.imageHost.kind === 'r2'
-              ? latest.imageHost.secretAccessKey
-              : ''),
-          }
-        : draft;
+      const candidate = resolveImageHostDraft(draft, latest.imageHost);
       const imageHost = candidate.kind === 'r2'
         ? r2RuntimeSettingsSchema.parse(candidate)
         : candidate;

@@ -18,7 +18,6 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 import { buildTemplateUrl } from '@/lib/templateUrlUtils';
 import type { TemplateUrlItem, TemplateUrlOpenMode } from '@/lib/templateUrlStorage';
@@ -39,7 +38,6 @@ export const TemplateUrlRunDialog: React.FC<TemplateUrlRunDialogProps> = ({
     onRun
 }) => {
     const { t } = useTranslation('common');
-    const { themeId } = useTheme();
     const [values, setValues] = React.useState<Record<string, string>>({});
     const [openMode, setOpenMode] = React.useState<TemplateUrlOpenMode>('new-tab');
     const [runError, setRunError] = React.useState('');
@@ -116,10 +114,10 @@ export const TemplateUrlRunDialog: React.FC<TemplateUrlRunDialogProps> = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]")}>
+                    <DialogTitle className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]")}>
                         {t('runTemplateUrl')}
                     </DialogTitle>
-                    <DialogDescription className={cn(themeId === 'blueprint' && "font-mono")}>
+                    <DialogDescription className={cn("blueprint:font-mono")}>
                         {template.name}
                     </DialogDescription>
                 </DialogHeader>
@@ -147,7 +145,7 @@ export const TemplateUrlRunDialog: React.FC<TemplateUrlRunDialogProps> = ({
                     ) : (
                         <p className={cn(
                             "text-sm text-muted-foreground",
-                            themeId === 'blueprint' && "font-mono"
+                            "blueprint:font-mono"
                         )}>
                             {t('templateUrlRunWithoutPlaceholders')}
                         </p>
@@ -170,7 +168,7 @@ export const TemplateUrlRunDialog: React.FC<TemplateUrlRunDialogProps> = ({
                         <Label>{t('templateUrlFinalUrl')}</Label>
                         <div className={cn(
                             "rounded-[1rem] border border-border/70 bg-surface-2/70 p-3",
-                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                            "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                         )}>
                             <p className="break-all font-mono text-xs text-foreground/88">
                                 {finalUrl || template.urlTemplate}
@@ -193,7 +191,7 @@ export const TemplateUrlRunDialog: React.FC<TemplateUrlRunDialogProps> = ({
                     <Button
                         onClick={handleRun}
                         disabled={isRunning || hasMissingValues || !isPreviewValid}
-                        className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                        className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                     >
                         {isRunning ? t('processing') : t('executeSearch')}
                     </Button>

@@ -161,7 +161,7 @@ export const ClassificationDialog: React.FC<ClassificationDialogProps> = ({
                                         </div>
                                         {item.reason && (
                                             <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                                                <Badge variant="outline" className="mr-2 text-[10px] h-4 px-1">
+                                                <Badge variant="outline" className="mr-2 text-xs h-4 px-1">
                                                     {(item.confidence * 100).toFixed(0)}%
                                                 </Badge>
                                                 {item.reason}

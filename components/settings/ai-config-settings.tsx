@@ -1,3 +1,4 @@
+import { hostLabel, hostPatternFor, requestHostAccess } from '@/lib/hostAccess';
 import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -95,10 +96,19 @@ export function AIConfigSettings() {
             return;
         }
 
+        // 必须在任何 await 之前申请：浏览器要求权限请求直接来自用户点击
+        const hostAccess = requestHostAccess([hostPatternFor(config.apiUrl)]);
+
         setTesting(true);
         setTestResult(null);
 
         try {
+            if (!await hostAccess) {
+                const denied = { success: false, message: t('hostAccessDeniedTitle'), error: t('hostAccessDeniedDesc', { host: hostLabel(config.apiUrl) }) };
+                setTestResult(denied);
+                toast({ title: denied.message, description: denied.error, variant: "destructive" });
+                return;
+            }
             const result = await testAIConnection(config);
             setTestResult(result);
             const translatedMessage = result.messageKey ? t(result.messageKey) : result.message;
@@ -141,6 +151,7 @@ export function AIConfigSettings() {
             return;
         }
 
+        const hostAccess = requestHostAccess([hostPatternFor(config.apiUrl)]);
         setSaving(true);
 
         try {
@@ -149,6 +160,14 @@ export function AIConfigSettings() {
                 title: t('configSaved'),
                 description: t('configSavedDesc'),
             });
+            // 配置已保存，但没有访问权限时 AI 请求仍会被浏览器拦截，需要明确告诉用户
+            if (!await hostAccess) {
+                toast({
+                    title: t('hostAccessDeniedTitle'),
+                    description: t('hostAccessDeniedSaved', { host: hostLabel(config.apiUrl) }),
+                    variant: "destructive"
+                });
+            }
         } catch (error) {
             console.error('Save config error:', error);
             toast({

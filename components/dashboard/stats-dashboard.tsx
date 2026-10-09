@@ -9,7 +9,6 @@ import {
 } from 'recharts';
 import { BookOpen, Folder, Clock, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 
 interface StatsDashboardProps {
@@ -20,7 +19,6 @@ const COLORS = ['#b68a2e', '#6f8a52', '#d1a458', '#8a5a31', '#8a7160'];
 
 export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
     const { t } = useTranslation();
-    const { themeId } = useTheme();
 
     // Filter out empty dates for cleaner chart if needed, or keep them for continuity
     // For now, we use the data as is.
@@ -60,20 +58,20 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
 
             <Card className={cn(
                 "overflow-hidden border-border/70 bg-card/92",
-                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
             )}>
                 <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
                     <div className="space-y-2">
                         <span className={cn(
-                            "inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
-                            themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                            "inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary",
+                            "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-border/60 blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                         )}>
                             {t('statistics')}
                         </span>
                         <div className="space-y-1">
                             <h3 className={cn(
                                 "font-display text-2xl font-semibold tracking-tight text-foreground",
-                                themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
+                                "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]"
                             )}>
                                 {stats.recentAdditions > 0
                                     ? `${t('recentAdditions')}: ${stats.recentAdditions}`
@@ -81,7 +79,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                             </h3>
                             <p className={cn(
                                 "max-w-2xl text-sm text-muted-foreground",
-                                themeId === 'blueprint' && "font-mono"
+                                "blueprint:font-mono"
                             )}>
                                 {stats.duplicateCount > 0
                                     ? `${t('duplicates')}: ${stats.duplicateCount} · ${t('activityTrend')}`
@@ -92,14 +90,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                     <div className="grid grid-cols-2 gap-3 text-sm md:min-w-[280px]">
                         <div className={cn(
                             "rounded-[1rem] border border-border/70 bg-surface-2 px-4 py-3",
-                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed font-mono"
+                            "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:font-mono"
                         )}>
                             <div className="text-xs text-muted-foreground">{t('totalBookmarks')}</div>
                             <div className="mt-1 font-display text-xl font-semibold">{stats.totalBookmarks}</div>
                         </div>
                         <div className={cn(
                             "rounded-[1rem] border border-border/70 bg-surface-2 px-4 py-3",
-                            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed font-mono"
+                            "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:font-mono"
                         )}>
                             <div className="text-xs text-muted-foreground">{t('totalFolders')}</div>
                             <div className="mt-1 font-display text-xl font-semibold">{stats.totalFolders}</div>
@@ -113,7 +111,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                 {/* Folder Distribution */}
                 <Card className={cn(
                     "border-border/70 bg-card/92",
-                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                    "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                 )}>
                     <CardHeader>
                         <CardTitle className="text-base font-medium">{t('topFolders')}</CardTitle>
@@ -153,7 +151,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats }) => {
                 {/* Activity Trend */}
                 <Card className={cn(
                     "border-border/70 bg-card/92",
-                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                    "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                 )}>
                     <CardHeader>
                         <CardTitle className="text-base font-medium">{t('activityTrend')}</CardTitle>

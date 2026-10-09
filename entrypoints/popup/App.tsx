@@ -24,13 +24,13 @@ import { PopupLayout } from './components/PopupLayout';
 import { SmartInput } from './components/SmartInput';
 import { SmartTagInput } from './components/SmartTagInput';
 import { SmartLocationSelector } from './components/SmartLocationSelector';
-import { useTheme } from "@/components/theme-provider.tsx";
 import { cn } from "@/lib/utils";
+
+const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 function App() {
     const { toast } = useToast();
     const { t, i18n } = useTranslation('popup');
-    const { themeId } = useTheme();
 
     // Core Data
     const [title, setTitle] = useState('');
@@ -142,6 +142,7 @@ function App() {
             }
         } catch (e) {
             console.error(e);
+            toast({ title: t('aiRenameFailed'), description: errorMessage(e), variant: "destructive" });
         } finally {
             setIsRenaming(false);
         }
@@ -262,7 +263,18 @@ function App() {
 
         if (!workflowResult.success) {
             console.warn('[AI Workflow] Stopped after recommendation failure', workflowResult.error);
+            toast({ title: t('aiRecommendFailed'), description: workflowResult.error, variant: "destructive" });
             return;
+        }
+
+        // 重命名 / 打标签任一步失败时也要告知用户，而不是让加载动画无声消失
+        const failedStep = workflowResult.rename && !workflowResult.rename.success
+            ? { title: t('aiRenameFailed'), error: workflowResult.rename.error }
+            : workflowResult.tag && !workflowResult.tag.success
+                ? { title: t('autoTagFailed'), error: workflowResult.tag.error }
+                : null;
+        if (failedStep) {
+            toast({ title: failedStep.title, description: failedStep.error, variant: "destructive" });
         }
 
         logPopupTiming('full AI workflow', workflowStart, {
@@ -284,17 +296,21 @@ function App() {
                 { forceRemote: true }
             );
 
-            if (result.success && result.recommendations) {
-                if (result.recommendations.length > 0) {
-                    const bestId = result.recommendations[0].folderId;
-                    if (allFlatFolders.some(f => f.id === bestId)) {
-                        setSelectedFolder(bestId);
-                        toast({ title: t('aiRecommendSuccess'), duration: 1500 });
-                    }
-                }
+            if (!result.success) {
+                toast({ title: t('aiRecommendFailed'), description: result.error, variant: "destructive" });
+                return;
+            }
+
+            const bestId = result.recommendations?.[0]?.folderId;
+            if (bestId && allFlatFolders.some(f => f.id === bestId)) {
+                setSelectedFolder(bestId);
+                toast({ title: t('aiRecommendSuccess'), duration: 1500 });
+            } else {
+                toast({ title: t('noRecommendations') });
             }
         } catch (e) {
             console.error(e);
+            toast({ title: t('aiRecommendFailed'), description: errorMessage(e), variant: "destructive" });
         } finally {
             setIsRecommending(false);
         }
@@ -310,9 +326,12 @@ function App() {
                 setTags(uniqueTags);
                 setSuggestedTags((prev) => [...new Set([...prev, ...result.tags!])]);
                 toast({ title: t('autoTagSuccess'), description: t('autoTagSuccessDesc', { count: result.tags.length }) });
+            } else {
+                toast({ title: t('autoTagFailed'), description: result.error, variant: "destructive" });
             }
         } catch (e) {
             console.error(e);
+            toast({ title: t('autoTagFailed'), description: errorMessage(e), variant: "destructive" });
         } finally {
             setIsAutoTagging(false);
         }
@@ -340,17 +359,17 @@ function App() {
             duration: autoClose ? 1200 : 2200,
             className: cn(
                 "border-primary/20 bg-gradient-to-br from-primary/12 via-card to-card shadow-panel",
-                themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed bg-card"
+                "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-card"
             ),
             title: (
                 <span className="flex items-center gap-2 text-primary">
                     <span className={cn(
                         "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15",
-                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-primary/30"
+                        "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-primary/30"
                     )}>
                         <Check className="h-3.5 w-3.5" />
                     </span>
-                    <span className={cn("tracking-tight", themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]")}>{t('success')}</span>
+                    <span className={cn("tracking-tight", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]")}>{t('success')}</span>
                 </span>
             ),
             description: (
@@ -358,7 +377,7 @@ function App() {
                     <p className="text-foreground/80">
                         {t('bookmarkAdded', { folderName })}
                     </p>
-                    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
+                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
                         <span className="max-w-[170px] truncate">{displayTitle}</span>
                         <span className="opacity-60">-&gt;</span>
                         <span className="max-w-[120px] truncate text-primary/85">
@@ -413,13 +432,13 @@ function App() {
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center text-muted-foreground">
                     <div className={cn(
                         "flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10",
-                        themeId === 'blueprint' && "rounded-[var(--card-radius)] border-primary/35"
+                        "blueprint:rounded-[var(--card-radius)] blueprint:border-primary/35"
                     )}>
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
                     <p className={cn(
                         "font-display text-base font-semibold text-foreground",
-                        themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
+                        "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]"
                     )}>{t('initializing')}</p>
                 </div>
             </PopupLayout>
@@ -430,14 +449,14 @@ function App() {
         <PopupLayout>
             <h1 className={cn(
                 "font-display text-lg font-semibold tracking-tight text-foreground",
-                themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
+                "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]"
             )}>
                 {t('saveToLibrary')}
             </h1>
             <div className="space-y-3">
                 <section className={cn(
                     "rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm",
-                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/72"
+                    "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-background/72"
                 )}>
                     <SmartInput
                         id="title"
@@ -452,7 +471,7 @@ function App() {
 
                 <section className={cn(
                     "rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm",
-                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/72"
+                    "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-background/72"
                 )}>
                     <SmartLocationSelector
                         folders={folders}
@@ -465,7 +484,7 @@ function App() {
 
                 <section className={cn(
                     "rounded-[1.25rem] border border-border/70 bg-background/80 p-3.5 shadow-sm",
-                    themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/72"
+                    "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-background/72"
                 )}>
                     <SmartTagInput
                         tags={tags}
@@ -483,7 +502,7 @@ function App() {
                     variant="outline"
                     className={cn(
                         "h-11 flex-1 rounded-full text-xs font-medium shadow-sm border-primary/30 hover:bg-primary/5",
-                        themeId === 'blueprint' && "rounded-[var(--button-radius)] border-dashed font-mono uppercase tracking-[0.1em]"
+                        "blueprint:rounded-[var(--button-radius)] blueprint:border-dashed blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.1em]"
                     )}
                     onClick={async () => {
                         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
@@ -498,16 +517,16 @@ function App() {
                             window.close();
                         }
                     }}
-                    title="打开侧边栏剪藏当前文章到 Obsidian"
+                    title={t('clipToObsidianHint')}
                 >
                     <FolderTree className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                    剪藏到 Obsidian
+                    {t('clipToObsidian')}
                 </Button>
 
                 <Button
                     className={cn(
                         "h-11 flex-1 rounded-full text-xs font-semibold shadow-md",
-                        themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-primary/35 font-mono uppercase tracking-[0.14em] shadow-sm"
+                        "blueprint:rounded-[var(--button-radius)] blueprint:border blueprint:border-primary/35 blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em] blueprint:shadow-sm"
                     )}
                     onClick={handleSave}
                     disabled={isCreating}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useMemo } from 'react';
 import { FaFolder, FaBookmark, FaSearch } from 'react-icons/fa';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -83,9 +84,11 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
     selectedId,
     onSelect,
     className,
-    placeholder = "选择文件夹",
+    placeholder,
     popoverContentClassName
 }) => {
+    const { t } = useTranslation();
+    const placeholderText = placeholder ?? t('selectFolder');
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -116,7 +119,7 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
     };
 
     const getDisplayValue = () => {
-        if (!selectedFolder) return placeholder;
+        if (!selectedFolder) return placeholderText;
         return selectedFolder.title;
     };
 
@@ -168,7 +171,7 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
                     <div className="flex items-center border-b border-border/50 bg-surface-2/80 px-4 py-3">
                         <FaSearch className="mr-3 h-4 w-4 shrink-0 text-muted-foreground" />
                         <Input
-                            placeholder="搜索文件夹..."
+                            placeholder={t('searchFolders')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="h-10 border-none bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/70"
@@ -179,7 +182,7 @@ export const SearchableFolderSelect: React.FC<SearchableFolderSelectProps> = ({
                     <div className="max-h-64 overflow-y-auto p-2 space-y-1">
                         {filteredFolders.length === 0 ? (
                             <div className="py-8 text-center text-sm text-muted-foreground">
-                                未找到匹配的文件夹
+                                {t('noMatchingFolders')}
                             </div>
                         ) : (
                             <>

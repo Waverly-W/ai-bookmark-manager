@@ -10,9 +10,16 @@ import { VaultHandleRepository } from '@/lib/clipper/vault/database';
 import { chooseVault } from '@/lib/clipper/vault/permissions';
 import { createSettingsRepository } from '@/lib/clipper/settings/repository';
 import { imageHostErrorField, type ImageHostField } from '@/lib/clipper/settings/errors';
-import type { Settings } from '@/lib/clipper/contracts/settings';
+import { picGoSettingsSchema, type Settings } from '@/lib/clipper/contracts/settings';
+import { resolveImageHostDraft } from '@/lib/clipper/settings/image-host-draft';
+import { r2RuntimeSettingsSchema } from '@/lib/clipper/image-host/r2-settings';
+import { createPicGoImageHost } from '@/lib/clipper/image-host/picgo';
+import { createR2ImageHost } from '@/lib/clipper/image-host/r2';
+import { uploadTestImage } from '@/lib/clipper/image-host/test-upload';
+import { ImageHostUploadError } from '@/lib/clipper/image-host/types';
+import { hostLabel, hostPatternFor, requestHostAccess } from '@/lib/hostAccess';
 import { browser } from 'wxt/browser';
-import { FolderTree, Image, FolderSearch, Sparkles } from 'lucide-react';
+import { FolderTree, Image, FolderSearch, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const FIELD_ERROR_KEYS: Record<ImageHostField, string> = {
   picgoEndpoint: 'obsidianErrPicgoEndpoint',
@@ -49,6 +56,21 @@ export function ObsidianSettings() {
 
   const [fieldError, setFieldError] = useState<ImageHostField | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  // 当前表单内容对应的图床配置（R2 密钥留空时由 resolveImageHostDraft 沿用已保存的值）
+  const buildImageHostDraft = (): Settings['imageHost'] => imageHostKind === 'picgo'
+    ? { kind: 'picgo', endpoint: picgoEndpoint.trim() }
+    : {
+        kind: 'r2',
+        accountId: r2AccountId.trim(),
+        bucket: r2Bucket.trim(),
+        accessKeyId: r2AccessKeyId.trim(),
+        secretAccessKey: r2SecretAccessKey,
+        publicBaseUrl: r2PublicBaseUrl.trim(),
+        keyPrefix: r2KeyPrefix.trim(),
+      };
 
   const applySaved = (saved: Settings) => {
     setAutoFormat(saved.model.autoFormatWithAI);
@@ -104,7 +126,14 @@ export function ObsidianSettings() {
     if (fieldError === field) setFieldError(null);
   };
 
+  // 图床需要访问的站点：PicGo 为填写的上传地址，R2 为 <accountId>.r2.cloudflarestorage.com
+  const imageHostOrigin = (): string => imageHostKind === 'picgo'
+    ? picgoEndpoint.trim()
+    : `https://${r2AccountId.trim()}.r2.cloudflarestorage.com`;
+
   const handleSaveSettings = async () => {
+    // 必须在任何 await 之前申请：浏览器要求权限请求直接来自用户点击
+    const hostAccess = requestHostAccess([hostPatternFor(imageHostOrigin())]);
     setFieldError(null);
     setIsSaving(true);
     try {
@@ -113,22 +142,19 @@ export function ObsidianSettings() {
       // Both calls re-read the latest stored settings under the lock, so nothing
       // else the clipper saved in the meantime is overwritten by stale form state.
       await repo.saveClipping(autoFormat);
-      const saved = imageHostKind === 'picgo'
-        ? await repo.saveImageHost({ kind: 'picgo', endpoint: picgoEndpoint.trim() })
-        : await repo.saveImageHost({
-            kind: 'r2',
-            accountId: r2AccountId.trim(),
-            bucket: r2Bucket.trim(),
-            accessKeyId: r2AccessKeyId.trim(),
-            secretAccessKey: r2SecretAccessKey,
-            publicBaseUrl: r2PublicBaseUrl.trim(),
-            keyPrefix: r2KeyPrefix.trim(),
-          });
+      const saved = await repo.saveImageHost(buildImageHostDraft());
 
       applySaved(saved);
       setR2AccessKeyId('');
       setR2SecretAccessKey('');
       toast({ title: t('obsidianSaved') });
+      if (!await hostAccess) {
+        toast({
+          variant: 'destructive',
+          title: t('hostAccessDeniedTitle'),
+          description: t('hostAccessDeniedSaved', { host: hostLabel(imageHostOrigin()) }),
+        });
+      }
     } catch (err: any) {
       const field = imageHostErrorField(err);
       setFieldError(field ?? null);
@@ -142,8 +168,46 @@ export function ObsidianSettings() {
     }
   };
 
+  // 用当前表单内容（无需先保存）向图床上传一张 1×1 测试图，验证地址与密钥是否可用
+  const handleTestImageHost = async () => {
+    const hostAccess = requestHostAccess([hostPatternFor(imageHostOrigin())]);
+    setFieldError(null);
+    setTestResult(null);
+    setIsTesting(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20_000);
+    try {
+      if (!await hostAccess) {
+        setTestResult({ ok: false, message: t('hostAccessDeniedDesc', { host: hostLabel(imageHostOrigin()) }) });
+        return;
+      }
+      const saved = (await createSettingsRepository(browser.storage).load()).imageHost;
+      const resolved = resolveImageHostDraft(buildImageHostDraft(), saved);
+      const host = resolved.kind === 'picgo'
+        ? createPicGoImageHost(picGoSettingsSchema.parse(resolved))
+        : createR2ImageHost(r2RuntimeSettingsSchema.parse(resolved));
+      const url = await uploadTestImage(host, controller.signal);
+      setTestResult({ ok: true, message: t('obsidianTestOk', { url }) });
+    } catch (err: any) {
+      const field = imageHostErrorField(err);
+      if (field) {
+        setFieldError(field);
+        setTestResult({ ok: false, message: t(FIELD_ERROR_KEYS[field]) });
+      } else if (controller.signal.aborted) {
+        setTestResult({ ok: false, message: t('obsidianTestTimeout') });
+      } else if (imageHostKind === 'picgo' && err instanceof ImageHostUploadError && err.retryable) {
+        setTestResult({ ok: false, message: t('obsidianTestPicgoUnreachable') });
+      } else {
+        setTestResult({ ok: false, message: err?.message || t('obsidianErrGeneric') });
+      }
+    } finally {
+      clearTimeout(timer);
+      setIsTesting(false);
+    }
+  };
+
   const fieldMessage = (field: ImageHostField) => fieldError === field && (
-    <p role="alert" className="text-[11px] text-destructive">{t(FIELD_ERROR_KEYS[field])}</p>
+    <p role="alert" className="text-xs text-destructive">{t(FIELD_ERROR_KEYS[field])}</p>
   );
 
   return (
@@ -244,7 +308,7 @@ export function ObsidianSettings() {
                 className="font-mono text-xs"
               />
               {fieldMessage('picgoEndpoint') || (
-                <p className="text-[11px] text-muted-foreground">{t('obsidianPicgoHint')}</p>
+                <p className="text-xs text-muted-foreground">{t('obsidianPicgoHint')}</p>
               )}
             </div>
           </div>
@@ -304,7 +368,7 @@ export function ObsidianSettings() {
               {fieldMessage('r2SecretAccessKey')}
             </div>
             {credentialsSaved && (
-              <p className="text-[11px] text-muted-foreground md:col-span-2">{t('obsidianCredentialSavedHint')}</p>
+              <p className="text-xs text-muted-foreground md:col-span-2">{t('obsidianCredentialSavedHint')}</p>
             )}
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="r2-public-base-url" className="text-xs">{t('obsidianR2PublicBaseUrl')}</Label>
@@ -327,14 +391,37 @@ export function ObsidianSettings() {
                 placeholder="clippings"
                 className="font-mono text-xs"
               />
-              <p className="text-[11px] text-muted-foreground">{t('obsidianR2KeyPrefixHint')}</p>
+              <p className="text-xs text-muted-foreground">{t('obsidianR2KeyPrefixHint')}</p>
             </div>
           </div>
         )}
+
+        <div className="space-y-2 border-t pt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="outline" size="sm" onClick={handleTestImageHost} disabled={isTesting || isSaving}>
+              {isTesting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              {isTesting ? t('obsidianTesting') : t('obsidianTestImageHost')}
+            </Button>
+            <p className="min-w-0 flex-1 text-xs text-muted-foreground">{t('obsidianTestHint')}</p>
+          </div>
+          {testResult && (
+            <div
+              role="status"
+              className={`flex items-start gap-2 break-all rounded-md border p-2.5 text-xs ${
+                testResult.ok
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'border-destructive/30 bg-destructive/10 text-destructive'
+              }`}
+            >
+              {testResult.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+              <span>{testResult.message}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSaveSettings} disabled={isSaving}>
+        <Button onClick={handleSaveSettings} disabled={isSaving || isTesting}>
           {isSaving ? t('obsidianSaving') : t('obsidianSave')}
         </Button>
       </div>

@@ -4,7 +4,6 @@ import { FileDown, Pencil, Link2, Layers3 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 import type { ImportedTemplateCandidate } from '@/lib/templateUrlImportUtils';
 
@@ -22,24 +21,23 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
     onEdit
 }) => {
     const { t } = useTranslation('common');
-    const { themeId } = useTheme();
 
     return (
         <Card className={cn(
             "flex h-full flex-col overflow-hidden border-border/70 bg-card/92",
-            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+            "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
         )}>
             <CardHeader className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2">
                         <CardTitle className={cn(
                             "line-clamp-2 text-xl",
-                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                            "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                         )}>
                             {candidate.name}
                         </CardTitle>
                         <CardDescription className={cn(
-                            themeId === 'blueprint' && "font-mono"
+                            "blueprint:font-mono"
                         )}>
                             {candidate.domain}
                         </CardDescription>
@@ -49,7 +47,7 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
                         variant="outline"
                         className={cn(
                             "shrink-0 border-border/70 bg-background/75 text-muted-foreground",
-                            themeId === 'blueprint' && "rounded-[var(--badge-radius)] font-mono"
+                            "blueprint:rounded-[var(--badge-radius)] blueprint:font-mono"
                         )}
                     >
                         {t('templateUrlImportSampleCount', { count: candidate.sampleCount })}
@@ -58,11 +56,11 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
 
                 <div className={cn(
                     "rounded-[1rem] border border-border/70 bg-surface-2/70 p-3",
-                    themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed"
+                    "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
                 )}>
                     <p className={cn(
-                        "mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground",
-                        themeId === 'blueprint' && "font-mono"
+                        "mb-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground",
+                        "blueprint:font-mono"
                     )}>
                         {t('templateUrlTemplate')}
                     </p>
@@ -80,7 +78,7 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
                             variant="secondary"
                             className={cn(
                                 "bg-primary/10 text-primary",
-                                themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-primary/30 font-mono"
+                                "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-primary/30 blueprint:font-mono"
                             )}
                         >
                             {`{${placeholder}}`}
@@ -98,10 +96,10 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
                             key={sampleUrl}
                             className={cn(
                                 "rounded-[0.85rem] border border-border/60 bg-background/80 p-3",
-                                themeId === 'blueprint' && "rounded-[var(--button-radius)] border-dashed"
+                                "blueprint:rounded-[var(--button-radius)] blueprint:border-dashed"
                             )}
                         >
-                            <p className="break-all font-mono text-[11px] text-muted-foreground">
+                            <p className="break-all font-mono text-xs text-muted-foreground">
                                 {sampleUrl}
                             </p>
                         </div>
@@ -116,7 +114,7 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
 
             <CardFooter className="mt-auto flex flex-col gap-3 sm:flex-row">
                 <Button
-                    className={cn("w-full justify-between", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                    className={cn("w-full justify-between", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                     disabled={isImporting}
                     onClick={() => void onImport(candidate)}
                 >
@@ -125,7 +123,7 @@ export const TemplateUrlImportCandidateCard: React.FC<TemplateUrlImportCandidate
                 </Button>
                 <Button
                     variant="outline"
-                    className={cn("w-full justify-between", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                    className={cn("w-full justify-between", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                     disabled={isImporting}
                     onClick={() => onEdit(candidate)}
                 >

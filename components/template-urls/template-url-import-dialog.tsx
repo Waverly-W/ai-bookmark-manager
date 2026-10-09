@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SearchableFolderSelect } from '@/components/ui/searchable-folder-select';
 import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 import { getBookmarkFolderTree, getBookmarksInFolder, type BookmarkFolder } from '@/lib/bookmarkUtils';
 import {
@@ -55,7 +54,6 @@ export const TemplateUrlImportDialog: React.FC<TemplateUrlImportDialogProps> = (
 }) => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
-    const { themeId } = useTheme();
     const [folders, setFolders] = React.useState<BookmarkFolder[]>([]);
     const [selectedFolderId, setSelectedFolderId] = React.useState('');
     const [view, setView] = React.useState<ImportView>('select-folder');
@@ -156,7 +154,7 @@ export const TemplateUrlImportDialog: React.FC<TemplateUrlImportDialogProps> = (
             <div className="grid gap-2">
                 <p className={cn(
                     "text-sm text-muted-foreground",
-                    themeId === 'blueprint' && "font-mono"
+                    "blueprint:font-mono"
                 )}>
                     {t('templateUrlImportDescription')}
                 </p>
@@ -179,7 +177,7 @@ export const TemplateUrlImportDialog: React.FC<TemplateUrlImportDialogProps> = (
                 <Button
                     onClick={() => void handleScan()}
                     disabled={!selectedFolderId || isLoadingFolders}
-                    className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                    className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                 >
                     {isLoadingFolders ? t('loading') : t('templateUrlImportScan')}
                 </Button>
@@ -193,7 +191,7 @@ export const TemplateUrlImportDialog: React.FC<TemplateUrlImportDialogProps> = (
             <div className="space-y-2 text-center">
                 <p className={cn(
                     "text-base font-medium",
-                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                    "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                 )}>
                     {t('templateUrlImportScanning')}
                 </p>
@@ -211,7 +209,7 @@ export const TemplateUrlImportDialog: React.FC<TemplateUrlImportDialogProps> = (
                     <EmptyState
                         className={cn(
                             "rounded-[1.5rem] border-border/70 bg-card/72 py-12",
-                            themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed bg-card/82"
+                            "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-card/82"
                         )}
                         icon={<FolderSearch className="h-8 w-8 text-primary" />}
                         title={t('templateUrlImportEmptyTitle')}
@@ -256,10 +254,10 @@ export const TemplateUrlImportDialog: React.FC<TemplateUrlImportDialogProps> = (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className={cn(themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]")}>
+                    <DialogTitle className={cn("blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]")}>
                         {t('templateUrlImportTitle')}
                     </DialogTitle>
-                    <DialogDescription className={cn(themeId === 'blueprint' && "font-mono")}>
+                    <DialogDescription className={cn("blueprint:font-mono")}>
                         {t('templateUrlImportDescription')}
                     </DialogDescription>
                 </DialogHeader>

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from 'react-i18next';
-import { useTheme } from "@/components/theme-provider.tsx";
 
 interface SmartInputProps {
     id: string;
@@ -32,7 +31,6 @@ export function SmartInput({
 }: SmartInputProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const { t } = useTranslation('popup');
-    const { themeId } = useTheme();
 
     useEffect(() => {
         if (autoFocus && inputRef.current) {
@@ -46,7 +44,7 @@ export function SmartInput({
             <div className="flex items-center justify-between gap-2">
                 <Label htmlFor={id} className={cn(
                     "text-[13px] font-medium text-foreground/88",
-                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                    "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                 )}>
                     {label}
                 </Label>
@@ -55,8 +53,8 @@ export function SmartInput({
                         variant="subtle"
                         size="sm"
                         className={cn(
-                            "h-8 gap-1.5 px-3 text-[11px]",
-                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]"
+                            "h-8 gap-1.5 px-3 text-xs",
+                            "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]"
                         )}
                         onClick={onAiRegenerate}
                         disabled={isAiLoading || !value}
@@ -80,7 +78,7 @@ export function SmartInput({
                 size="default"
                 className={cn(
                     "h-11 rounded-[1rem] border-transparent bg-surface-2 px-3.5 text-sm shadow-none placeholder:text-muted-foreground/55 focus-visible:border-border/80 focus-visible:ring-primary/25",
-                    themeId === 'blueprint' && "rounded-[var(--input-radius)] border border-border/60 bg-input/85 font-mono"
+                    "blueprint:rounded-[var(--input-radius)] blueprint:border blueprint:border-border/60 blueprint:bg-input/85 blueprint:font-mono"
                 )}
             />
         </div>

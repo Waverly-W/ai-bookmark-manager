@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { FaFolder, FaBookmark } from 'react-icons/fa';
 import { cn } from '@/lib/utils';
@@ -89,8 +90,10 @@ export const FolderSelect: React.FC<FolderSelectProps> = ({
     selectedId,
     onSelect,
     className,
-    placeholder = "选择文件夹"
+    placeholder
 }) => {
+    const { t } = useTranslation();
+    const placeholderText = placeholder ?? t('selectFolder');
     // 扁平化文件夹列表
     const flattenedFolders = flattenFolders(folders);
     
@@ -99,7 +102,7 @@ export const FolderSelect: React.FC<FolderSelectProps> = ({
     
     // 生成显示值
     const getDisplayValue = () => {
-        if (!selectedFolder) return placeholder;
+        if (!selectedFolder) return placeholderText;
         return selectedFolder.title;
     };
 
@@ -116,7 +119,7 @@ export const FolderSelect: React.FC<FolderSelectProps> = ({
                             )}
                         </>
                     )}
-                    <SelectValue placeholder={placeholder}>
+                    <SelectValue placeholder={placeholderText}>
                         <span className="truncate">{getDisplayValue()}</span>
                     </SelectValue>
                 </div>

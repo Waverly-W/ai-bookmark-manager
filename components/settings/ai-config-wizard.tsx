@@ -1,3 +1,4 @@
+import { hostLabel, hostPatternFor, requestHostAccess } from '@/lib/hostAccess';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -76,10 +77,18 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
 
     // 测试连接
     const handleTestConnection = async () => {
+        // 必须在任何 await 之前申请：浏览器要求权限请求直接来自用户点击
+        const hostAccess = requestHostAccess([hostPatternFor(config.apiUrl)]);
         setTesting(true);
         setTestResult(null);
 
         try {
+            if (!await hostAccess) {
+                const denied = { success: false, message: t('hostAccessDeniedTitle'), error: t('hostAccessDeniedDesc', { host: hostLabel(config.apiUrl) }) };
+                setTestResult(denied);
+                toast({ title: denied.message, description: denied.error, variant: 'destructive' });
+                return;
+            }
             const result = await testAIConnection(config);
             setTestResult(result);
             const translatedMessage = result.messageKey ? t(result.messageKey) : result.message;
@@ -116,12 +125,20 @@ export const AIConfigWizard: React.FC<AIConfigWizardProps> = ({
 
     // 完成向导
     const handleFinish = async () => {
+        const hostAccess = requestHostAccess([hostPatternFor(config.apiUrl)]);
         try {
             await saveAIConfig(config);
             toast({
                 title: t('wizardComplete'),
                 description: t('wizardCompleteDesc'),
             });
+            if (!await hostAccess) {
+                toast({
+                    title: t('hostAccessDeniedTitle'),
+                    description: t('hostAccessDeniedSaved', { host: hostLabel(config.apiUrl) }),
+                    variant: 'destructive'
+                });
+            }
             resetWizard();
             onOpenChange(false);
             onComplete?.();

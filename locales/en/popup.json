@@ -46,5 +46,7 @@
     "success": "Success",
     "bookmarkAdded": "Bookmark added to \"{{folderName}}\"",
     "addFailed": "Add Failed",
-    "cannotAddBookmark": "Cannot add bookmark"
+    "cannotAddBookmark": "Cannot add bookmark",
+    "clipToObsidian": "Clip to Obsidian",
+    "clipToObsidianHint": "Open the side panel to clip this article to Obsidian"
 }

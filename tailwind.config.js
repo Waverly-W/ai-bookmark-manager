@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 const defaultTheme = require("tailwindcss/defaultTheme");
+const plugin = require("tailwindcss/plugin");
 
 module.exports = {
     darkMode: ["class"],
@@ -22,6 +23,10 @@ module.exports = {
                 display: ["var(--font-display)", ...defaultTheme.fontFamily.sans],
                 mono: ["var(--font-mono)", ...defaultTheme.fontFamily.mono],
             },
+            // 代码里大量使用了 Tailwind 默认档位之外的透明度（如 bg-card/96），补齐后才会真正生成
+            opacity: Object.fromEntries(
+                [12, 15, 72, 78, 82, 84, 88, 92, 94, 96, 98].map((step) => [step, String(step / 100)])
+            ),
             transitionTimingFunction: {
                 'md-emphasized': 'cubic-bezier(0.2, 0, 0, 1)',
                 'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.15)',
@@ -121,5 +126,13 @@ module.exports = {
             },
         },
     },
-    plugins: [require("tailwindcss-animate")],
+    plugins: [
+        require("tailwindcss-animate"),
+        // 主题差异统一通过 <html data-theme-id> 驱动：blueprint:xxx 仅在 blueprint 主题生效，
+        // classic:xxx 仅在其余主题生效，组件里不再需要读取 themeId 来拼 className。
+        plugin(({ addVariant }) => {
+            addVariant("blueprint", ':is([data-theme-id="blueprint"] &)');
+            addVariant("classic", 'html:not([data-theme-id="blueprint"]) &');
+        }),
+    ],
 }

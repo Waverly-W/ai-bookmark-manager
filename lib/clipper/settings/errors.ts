@@ -20,8 +20,11 @@ const FIELD_BY_PATH_KEY: Record<string, ImageHostField> = {
  * UI can point at the field instead of showing a raw schema message.
  */
 export function imageHostErrorField(error: unknown): ImageHostField | undefined {
+  // 既可能是 zod 错误本身，也可能是仓库包装后放在 cause 里的 zod 错误
+  const issuesOf = (value: unknown): unknown =>
+    typeof value === 'object' && value !== null ? Reflect.get(value, 'issues') : undefined;
   const cause = typeof error === 'object' && error !== null ? Reflect.get(error, 'cause') : undefined;
-  const issues: unknown = typeof cause === 'object' && cause !== null ? Reflect.get(cause, 'issues') : undefined;
+  const issues = issuesOf(error) ?? issuesOf(cause);
   if (!Array.isArray(issues)) return undefined;
 
   for (const issue of issues) {

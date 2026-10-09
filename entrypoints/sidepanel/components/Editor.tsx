@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs.tsx';
 import { RenderedPreview } from './RenderedPreview';
 import type { ImageReference } from '@/lib/clipper/contracts/article';
@@ -16,8 +17,9 @@ interface EditorProps {
 }
 
 export function Editor(props: EditorProps) {
+  const { t } = useTranslation();
   return (
-    <div className="flex flex-col flex-1 min-h-0 border rounded-lg overflow-hidden bg-card text-card-foreground">
+    <div className="flex min-h-[240px] flex-1 flex-col overflow-hidden rounded-lg border bg-card text-card-foreground">
       <Tabs
         value={props.activeTab}
         onValueChange={(val) => props.onTabChange(val as EditorTab)}
@@ -25,11 +27,11 @@ export function Editor(props: EditorProps) {
       >
         <div className="border-b px-3 py-1.5 bg-muted/40 flex items-center justify-between">
           <TabsList className="h-8">
-            <TabsTrigger value="source" className="text-xs px-3 py-1">
-              源文本
+            <TabsTrigger value="source" className="text-sm px-3 py-1">
+              {t('clipEditorSource')}
             </TabsTrigger>
-            <TabsTrigger value="rendered" className="text-xs px-3 py-1">
-              渲染预览
+            <TabsTrigger value="rendered" className="text-sm px-3 py-1">
+              {t('clipEditorPreview')}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -37,13 +39,13 @@ export function Editor(props: EditorProps) {
         <TabsContent value="source" className="flex-1 p-0 m-0 min-h-0">
           <textarea
             id="markdown-source"
-            aria-label="Markdown 源文本"
+            aria-label={t('clipEditorAria')}
             value={props.markdown}
             onChange={(e) => props.onMarkdownChange(e.target.value)}
             onBlur={props.onMarkdownBlur}
             spellCheck={false}
-            className="w-full h-full min-h-[300px] p-3 text-xs font-mono bg-transparent border-0 focus:outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground"
-            placeholder="正文内容 (Markdown)..."
+            className="w-full h-full min-h-[160px] p-3 text-xs font-mono bg-transparent border-0 focus:outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground"
+            placeholder={t('clipEditorPlaceholder')}
           />
         </TabsContent>
 

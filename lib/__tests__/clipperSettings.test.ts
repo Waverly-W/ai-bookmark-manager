@@ -118,3 +118,40 @@ describe('image host settings errors', () => {
     });
   });
 });
+
+describe('image host test upload', () => {
+  it('reuses saved R2 credentials only for blank fields', async () => {
+    const { resolveImageHostDraft } = await import('../clipper/settings/image-host-draft');
+    const saved = r2();
+
+    expect(resolveImageHostDraft(r2({ accessKeyId: '', secretAccessKey: '' }), saved))
+      .toMatchObject({ accessKeyId: 'AKIA-TEST', secretAccessKey: 'secret-test' });
+    expect(resolveImageHostDraft(r2({ accessKeyId: 'NEW', secretAccessKey: '' }), saved))
+      .toMatchObject({ accessKeyId: 'NEW', secretAccessKey: 'secret-test' });
+    expect(resolveImageHostDraft(r2({ accessKeyId: '' }), { kind: 'picgo', endpoint: 'http://127.0.0.1:36677/upload' }))
+      .toMatchObject({ accessKeyId: '' });
+    const picgo = { kind: 'picgo' as const, endpoint: 'http://127.0.0.1:36677/upload' };
+    expect(resolveImageHostDraft(picgo, saved)).toBe(picgo);
+  });
+
+  it('uploads a valid 1x1 PNG and returns the public URL', async () => {
+    const { uploadTestImage, TEST_IMAGE_FILENAME } = await import('../clipper/image-host/test-upload');
+    const upload = vi.fn(async () => 'https://img.example.com/test.png');
+
+    await expect(uploadTestImage({ upload })).resolves.toBe('https://img.example.com/test.png');
+
+    const image = (upload.mock.calls[0] as unknown as [{ blob: Blob; filename: string; contentType: string }])[0];
+    expect(image.filename).toBe(TEST_IMAGE_FILENAME);
+    expect(image.contentType).toBe('image/png');
+    const bytes = new Uint8Array(await image.blob.arrayBuffer());
+    expect(Array.from(bytes.slice(0, 8))).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  });
+
+  it('maps a raw zod error to the offending field', async () => {
+    const { r2RuntimeSettingsSchema } = await import('../clipper/image-host/r2-settings');
+    const result = r2RuntimeSettingsSchema.safeParse(r2({ bucket: 'UPPER' }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(imageHostErrorField(result.error)).toBe('r2Bucket');
+  });
+});

@@ -174,9 +174,9 @@ function warningFrom(error: unknown): string {
     return zhCN.model.outputTooLarge;
   }
   if (error instanceof SafeSegmentRequestLimitError) {
-    return `模型格式化的文本分段超过 ${MAX_SAFE_SEGMENT_REQUESTS} 个，已保留原始笔记内容。`;
+    return zhCN.model.segmentLimit(MAX_SAFE_SEGMENT_REQUESTS);
   }
-  if (error instanceof ProtectedPlaceholderError) return '模型修改了受保护内容，已保留原始笔记内容。';
+  if (error instanceof ProtectedPlaceholderError) return zhCN.model.protectedChanged;
   if (error instanceof ProviderError) return zhCN.model.unavailable(error.code);
   return zhCN.model.unavailable();
 }

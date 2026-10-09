@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronRight, ChevronLeft, Folder, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider.tsx";
 
 interface DrillDownFolderSelectProps {
     folders: BookmarkFolder[]; // Tree structure
@@ -22,7 +21,6 @@ export function DrillDownFolderSelect({
     className,
     placeholder = "Select folder..."
 }: DrillDownFolderSelectProps) {
-    const { themeId } = useTheme();
     const [open, setOpen] = useState(false);
     // View state: which folder's children are we looking at?
     const [viewId, setViewId] = useState<string>('1');
@@ -100,7 +98,7 @@ export function DrillDownFolderSelect({
                     aria-expanded={open}
                     className={cn(
                         "w-full justify-between font-normal bg-secondary/40 hover:bg-secondary/60 text-foreground border-0 transition-all shadow-none",
-                        themeId === 'blueprint' && "rounded-[var(--input-radius)] border border-border/60 bg-input/85 font-mono uppercase tracking-[0.08em] hover:bg-input",
+                        "blueprint:rounded-[var(--input-radius)] blueprint:border blueprint:border-border/60 blueprint:bg-input/85 blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.08em] blueprint:hover:bg-input",
                         className
                     )}
                 >
@@ -109,7 +107,7 @@ export function DrillDownFolderSelect({
                             <>
                                 <div className={cn(
                                     "p-1 rounded bg-primary/10 text-primary shrink-0",
-                                    themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-primary/20"
+                                    "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-primary/20"
                                 )}>
                                     <Folder className="h-3.5 w-3.5" />
                                 </div>
@@ -124,19 +122,19 @@ export function DrillDownFolderSelect({
             </PopoverTrigger>
             <PopoverContent className={cn(
                 "w-[300px] p-0 border-0 shadow-lg bg-popover rounded-xl overflow-hidden",
-                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border border-border/60 shadow-panel"
+                "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border blueprint:border-border/60 blueprint:shadow-panel"
             )} align="start">
                 {/* Header */}
                 <div className={cn(
                     "flex items-center gap-2 p-2 bg-secondary/30 backdrop-blur-md border-b border-white/5",
-                    themeId === 'blueprint' && "border-b border-border/40 bg-surface-2/80"
+                    "blueprint:border-b blueprint:border-border/40 blueprint:bg-surface-2/80"
                 )}>
                     <Button
                         variant="ghost"
                         size="icon"
                         className={cn(
                             "h-7 w-7 shrink-0 rounded-full hover:bg-background/50",
-                            themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-transparent"
+                            "blueprint:rounded-[var(--button-radius)] blueprint:border blueprint:border-transparent"
                         )}
                         onClick={handleBack}
                         disabled={!canGoBack}
@@ -145,7 +143,7 @@ export function DrillDownFolderSelect({
                     </Button>
                     <span className={cn(
                         "text-xs font-semibold truncate flex-1 text-center text-foreground/90",
-                        themeId === 'blueprint' && "font-mono uppercase tracking-[0.14em]"
+                        "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                     )}>
                         {currentViewFolder?.title || "Folders"}
                     </span>
@@ -155,7 +153,7 @@ export function DrillDownFolderSelect({
                 </div>
 
                 {/* List */}
-                <ScrollArea className={cn("h-[200px] bg-background", themeId === 'blueprint' && "bg-background/85")}>
+                <ScrollArea className={cn("h-[200px] bg-background", "blueprint:bg-background/85")}>
                     <div className="p-1.5 space-y-0.5">
                         {subfolders.map((folder) => {
                             const isSelected = folder.id === selectedId;
@@ -166,7 +164,7 @@ export function DrillDownFolderSelect({
                                     key={folder.id}
                                     className={cn(
                                         "flex items-center w-full rounded-lg px-2.5 py-2 text-sm outline-none transition-all cursor-pointer group select-none",
-                                        themeId === 'blueprint' && "rounded-[var(--button-radius)] border border-transparent font-mono",
+                                        "blueprint:rounded-[var(--button-radius)] blueprint:border blueprint:border-transparent blueprint:font-mono",
                                         isSelected
                                             ? "bg-primary/10 text-primary font-medium"
                                             : "hover:bg-secondary/50 text-foreground/80"
@@ -189,7 +187,7 @@ export function DrillDownFolderSelect({
                                             role="button"
                                             className={cn(
                                                 "ml-auto p-1 rounded-md transition-colors",
-                                                themeId === 'blueprint' && "rounded-[var(--badge-radius)]",
+                                                "blueprint:rounded-[var(--badge-radius)]",
                                                 isSelected ? "hover:bg-primary/20 text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"
                                             )}
                                             onClick={(e) => handleDrillDown(e, folder.id)}

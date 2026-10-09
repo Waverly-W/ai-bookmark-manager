@@ -46,5 +46,7 @@
     "success": "成功",
     "bookmarkAdded": "书签已添加到「{{folderName}}」",
     "addFailed": "添加失败",
-    "cannotAddBookmark": "无法添加书签"
+    "cannotAddBookmark": "无法添加书签",
+    "clipToObsidian": "剪藏到 Obsidian",
+    "clipToObsidianHint": "打开侧边栏，把当前文章剪藏到 Obsidian"
 }

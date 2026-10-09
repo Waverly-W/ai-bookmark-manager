@@ -9,9 +9,11 @@ export default defineConfig({
     outDir: 'dist',
     manifest: ({ browser }) => ({
         permissions: browser === "firefox" ? [...basePermissions, ...hostPermissions] : [...basePermissions, "favicon"],
+        // Chrome：安装时不再索取「读取所有网站数据」。需要访问某个站点的功能（AI 服务、WebDAV、
+        // 图床、失效链接检测、侧边栏读取页面）在用户点击时通过 lib/hostAccess.ts 单独申请。
+        // Firefox（MV2）不支持可选主机权限的这种用法，保持在 permissions 里声明。
         ...(browser === "firefox" ? {} : {
-            host_permissions: hostPermissions,
-            optional_host_permissions: ["https://*/*", "http://*/*"]
+            optional_host_permissions: [...hostPermissions]
         }),
         action: {},
         side_panel: {

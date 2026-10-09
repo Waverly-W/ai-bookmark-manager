@@ -84,8 +84,8 @@ export default () => {
             )}
             <div className={`min-h-screen w-full transition-colors duration-300 relative overflow-hidden ${!isCustomBackground ? 'bg-background' : ''}`}>
 
-                {!isCustomBackground && themeId !== 'blueprint' && (
-                    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+                {!isCustomBackground && (
+                    <div className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden classic:block">
                         <div className="enterprise-grid absolute inset-0 opacity-60" />
                         <div className="absolute inset-x-0 top-0 h-[36vh] bg-[radial-gradient(circle_at_top_left,rgba(24,99,220,0.08),transparent_36%),radial-gradient(circle_at_top_right,rgba(155,96,170,0.1),transparent_28%)]" />
                         <div className="absolute inset-x-0 bottom-0 h-[28vh] bg-[linear-gradient(180deg,transparent,rgba(23,23,28,0.04))]" />
@@ -105,7 +105,7 @@ export default () => {
                     }`}>
                     {isCustomBackground ? (
                         <div className="h-full w-full max-w-[1600px] mx-auto animate-in fade-in zoom-in-[0.99] duration-500 slide-in-from-bottom-2">
-                            <div className={`h-full min-h-[calc(100vh-3rem)] rounded-[2rem] border border-border/40 bg-background/88 p-6 shadow-panel backdrop-blur-md transition-all duration-300 hover:bg-background/92 md:min-h-[calc(100vh-3rem)] md:p-8 ${themeId === 'blueprint' ? 'blueprint-panel rounded-[var(--card-radius)] border-dashed bg-background/84 hover:bg-background/88' : ''}`}>
+                            <div className={`h-full min-h-[calc(100vh-3rem)] rounded-[2rem] border border-border/40 bg-background/88 p-6 shadow-panel backdrop-blur-md transition-all duration-300 hover:bg-background/92 md:min-h-[calc(100vh-3rem)] md:p-8 blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:bg-background/84 blueprint:hover:bg-background/88`}>
                                 {sidebarType === SidebarType.home && <Home onNavigate={setSidebarType} />}
                                 {sidebarType === SidebarType.statistics && <StatisticsPage />}
                                 {sidebarType === SidebarType.templateUrls && <TemplateUrlsPage />}

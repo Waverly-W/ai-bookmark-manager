@@ -335,7 +335,7 @@
     }
 
     .kicker-label {
-        @apply inline-flex items-center gap-2 border px-3 py-1 text-[11px] uppercase tracking-[0.22em];
+        @apply inline-flex items-center gap-2 border px-3 py-1 text-xs uppercase tracking-[0.22em];
         border-radius: var(--badge-radius);
         border-color: hsl(var(--border) / 0.75);
         background-color: hsl(var(--background) / 0.72);

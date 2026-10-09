@@ -11,32 +11,24 @@ import { ObsidianSettings } from "@/components/settings/obsidian-settings.tsx";
 import { DataExportSettings } from "@/components/settings/data-export-settings.tsx";
 import { BackgroundSettings } from "@/components/settings/background-settings.tsx";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "@/components/theme-provider.tsx";
 import { cn } from "@/lib/utils";
 
 export function SettingsPage() {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = React.useState("bookmarks");
-    const { themeId } = useTheme();
 
     return (
-        <div className="container mx-auto flex h-[calc(100vh-2rem)] max-w-7xl gap-8 px-6 py-6 md:px-8 md:py-8">
-            {/* Sidebar */}
-            <aside className="w-72 flex-shrink-0 space-y-6">
+        <div className="container mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:h-[calc(100vh-2rem)] lg:flex-row lg:gap-8 lg:px-8 lg:py-8">
+            {/* Sidebar：窄屏时位于顶部，菜单横向滚动 */}
+            <aside className="w-full space-y-4 lg:w-72 lg:flex-shrink-0 lg:space-y-6">
                 <div className={cn(
-                    "panel-shell space-y-2 p-5",
-                    themeId === 'blueprint' ? "blueprint-panel" : "surface-subtle"
+                    "panel-shell space-y-2 p-4 lg:p-5",
+                    "classic:surface-subtle blueprint:blueprint-panel"
                 )}>
                     <div className="space-y-2">
-                        <span className={cn(
-                            "kicker-label",
-                            themeId === 'blueprint' ? "border-dashed bg-background/10 text-muted-foreground" : "text-primary"
-                        )}>
-                            {t('settings')}
-                        </span>
                         <h1 className={cn(
-                            "font-display text-4xl font-normal tracking-[-0.04em]",
-                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]"
+                            "font-display text-3xl font-normal tracking-[-0.04em] lg:text-4xl",
+                            "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.18em]"
                         )}>{t('settings')}</h1>
                         <p className="text-sm leading-6 text-muted-foreground">{t('settingsDescription')}</p>
                     </div>
@@ -45,7 +37,7 @@ export function SettingsPage() {
             </aside>
 
             {/* Content */}
-            <main className="flex-1 overflow-y-auto pr-2">
+            <main className="min-w-0 flex-1 lg:overflow-y-auto lg:pr-2">
                 <div className="max-w-4xl space-y-6 pb-10">
                     {activeTab === "bookmarks" && (
                         <div className="panel-shell p-6">
@@ -56,12 +48,12 @@ export function SettingsPage() {
                     {activeTab === "appearance" && (
                         <div className={cn(
                             "panel-shell space-y-6 p-6",
-                            themeId === 'blueprint' && "blueprint-panel border-dashed"
+                            "blueprint:blueprint-panel blueprint:border-dashed"
                         )}>
                             <div className="space-y-2 border-b border-border/70 pb-4">
                                 <h2 className={cn(
                                     "font-display text-[2rem] font-normal tracking-[-0.03em]",
-                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.16em]"
+                                    "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.16em]"
                                 )}>{t('appearanceSettings')}</h2>
                                 <p className="text-sm leading-6 text-muted-foreground">
                                     {t('appearanceSettingsDescription')}

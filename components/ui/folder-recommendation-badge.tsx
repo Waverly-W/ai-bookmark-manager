@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { FolderRecommendation } from '@/lib/folderRecommendation';
@@ -18,6 +19,7 @@ export function FolderRecommendationBadge({
     showReason = true,
     className = ''
 }: FolderRecommendationBadgeProps) {
+    const { t } = useTranslation();
     // 根据置信度决定显示样式
     const getConfidenceColor = (confidence: number) => {
         if (confidence >= 0.8) return 'border border-primary/20 bg-primary/10 text-primary';
@@ -31,7 +33,7 @@ export function FolderRecommendationBadge({
         <div className={cn("flex items-start gap-2", className)}>
             <div className={cn("flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm shadow-sm", confidenceColor)}>
                 <Sparkles className="w-3.5 h-3.5" />
-                <span className="font-medium">AI 推荐</span>
+                <span className="font-medium">{t('aiRecommended')}</span>
                 {recommendation.confidence > 0 && (
                     <span className="text-xs opacity-75">
                         ({Math.round(recommendation.confidence * 100)}%)

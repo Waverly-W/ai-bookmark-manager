@@ -7,12 +7,14 @@ import { useTranslation } from "react-i18next";
 import { Trash2, Upload } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { BackgroundConfig, useBackground } from "@/components/background-provider.tsx";
+import { useToast } from "@/hooks/use-toast";
 
 // Removed local BackgroundConfig interface as it is now imported from provider
 
 export function BackgroundSettings() {
     const { t } = useTranslation();
     const { backgroundConfig, setBackground } = useBackground();
+    const { toast } = useToast();
 
     const saveConfig = async (newConfig: BackgroundConfig) => {
         await setBackground(newConfig);
@@ -22,7 +24,12 @@ export function BackgroundSettings() {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 10 * 1024 * 1024) {
-                alert("Image size too large. Please choose an image under 10MB.");
+                toast({
+                    variant: 'destructive',
+                    title: t('backgroundImageTooLarge'),
+                    description: t('backgroundImageTooLargeDesc')
+                });
+                e.target.value = '';
                 return;
             }
 

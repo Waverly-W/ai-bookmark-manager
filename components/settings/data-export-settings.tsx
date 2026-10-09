@@ -1,3 +1,5 @@
+import { hostLabel, hostPatternFor, requestHostAccess } from '@/lib/hostAccess';
+import { useConfirmDialog } from '@/components/ui/confirm-dialog';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -162,6 +164,7 @@ const VersionCard: React.FC<{
 export function DataExportSettings() {
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
+    const { confirm, confirmDialog } = useConfirmDialog();
 
     const [config, setConfig] = useState<WebDAVBackupConfig>(DEFAULT_WEBDAV_BACKUP_CONFIG);
     const [configLoading, setConfigLoading] = useState(true);
@@ -236,6 +239,9 @@ export function DataExportSettings() {
             return null;
         }
 
+        // 必须在任何 await 之前申请：浏览器要求权限请求直接来自用户点击（校验是同步的，不会消耗手势）
+        const hostAccess = requestHostAccess([hostPatternFor(config.baseUrl.trim())]);
+
         const nextConfig: WebDAVBackupConfig = {
             ...config,
             baseUrl: config.baseUrl.trim(),
@@ -245,6 +251,14 @@ export function DataExportSettings() {
 
         await saveWebDAVBackupConfig(nextConfig);
         setConfig(nextConfig);
+        if (!await hostAccess) {
+            toast({
+                title: t('hostAccessDeniedTitle'),
+                description: t('hostAccessDeniedDesc', { host: hostLabel(nextConfig.baseUrl) }),
+                variant: 'destructive'
+            });
+            return null;
+        }
         return nextConfig;
     };
 
@@ -352,7 +366,11 @@ export function DataExportSettings() {
     };
 
     const handleOverwriteRestore = async (version: BackupVersionSummary) => {
-        if (!window.confirm(t('webdavOverwriteConfirm', { version: version.folderName }))) {
+        if (!await confirm({
+            title: t('webdavOverwriteTitle'),
+            description: t('webdavOverwriteConfirm', { version: version.folderName }),
+            destructive: true
+        })) {
             return;
         }
 
@@ -370,7 +388,12 @@ export function DataExportSettings() {
     };
 
     const handleDeleteVersion = async (version: BackupVersionSummary) => {
-        if (!window.confirm(t('webdavDeleteConfirm', { version: version.folderName }))) {
+        if (!await confirm({
+            title: t('webdavDeleteTitle'),
+            description: t('webdavDeleteConfirm', { version: version.folderName }),
+            confirmLabel: t('delete'),
+            destructive: true
+        })) {
             return;
         }
 
@@ -404,7 +427,10 @@ export function DataExportSettings() {
             const mergeResult = mergeBackupSnapshots(localSnapshot, bundle.snapshot);
 
             if (mergeResult.conflicts.length === 0) {
-                if (!window.confirm(t('webdavIncrementalNoConflictConfirm', { version: version.folderName }))) {
+                if (!await confirm({
+                    title: t('webdavIncrementalTitle'),
+                    description: t('webdavIncrementalNoConflictConfirm', { version: version.folderName })
+                })) {
                     return;
                 }
 
@@ -882,6 +908,7 @@ export function DataExportSettings() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {confirmDialog}
         </>
     );
 }

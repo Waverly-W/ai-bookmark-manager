@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '@/components/theme-provider.tsx';
 import { cn } from '@/lib/utils';
 import {
     deleteTemplateUrl as removeTemplateUrl,
@@ -44,7 +43,6 @@ const isRestrictedTabUrl = (url?: string): boolean =>
 export const TemplateUrlsPage: React.FC = () => {
     const { t } = useTranslation('common');
     const { toast } = useToast();
-    const { themeId } = useTheme();
     const [templates, setTemplates] = React.useState<TemplateUrlItem[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -209,33 +207,33 @@ export const TemplateUrlsPage: React.FC = () => {
         <div className="container mx-auto max-w-7xl space-y-6 p-6 md:p-8 animate-in fade-in duration-500">
             <div className={cn(
                 "space-y-4 rounded-[1.75rem] border border-border/70 bg-card/88 p-6 shadow-sm",
-                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed"
+                "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed"
             )}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="space-y-2">
                         <span className={cn(
-                            "inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary",
-                            themeId === 'blueprint' && "rounded-[var(--badge-radius)] border border-border/60 font-mono uppercase tracking-[0.14em]"
+                            "inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary",
+                            "blueprint:rounded-[var(--badge-radius)] blueprint:border blueprint:border-border/60 blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]"
                         )}>
                             {t('templateUrls')}
                         </span>
                         <div className="flex items-center gap-3">
                             <div className={cn(
                                 "flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary",
-                                themeId === 'blueprint' && "rounded-[var(--card-radius)] border border-primary/30"
+                                "blueprint:rounded-[var(--card-radius)] blueprint:border blueprint:border-primary/30"
                             )}>
                                 <Link2 className="h-6 w-6" />
                             </div>
                             <div className="space-y-1">
                                 <h1 className={cn(
                                     "font-display text-3xl font-semibold tracking-tight",
-                                    themeId === 'blueprint' && "font-mono uppercase tracking-[0.18em]"
+                                    "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.18em]"
                                 )}>
                                     {t('templateUrls')}
                                 </h1>
                                 <p className={cn(
                                     "max-w-2xl text-sm text-muted-foreground",
-                                    themeId === 'blueprint' && "font-mono"
+                                    "blueprint:font-mono"
                                 )}>
                                     {t('templateUrlsDescription')}
                                 </p>
@@ -246,7 +244,7 @@ export const TemplateUrlsPage: React.FC = () => {
                     <div className="flex flex-wrap gap-2 self-start">
                         <Button
                             onClick={handleCreate}
-                            className={cn("gap-2", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                            className={cn("gap-2", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                         >
                             <Plus className="h-4 w-4" />
                             {t('createTemplateUrl')}
@@ -254,7 +252,7 @@ export const TemplateUrlsPage: React.FC = () => {
                         <Button
                             variant="outline"
                             onClick={() => setIsImportDialogOpen(true)}
-                            className={cn("gap-2", themeId === 'blueprint' && "font-mono uppercase tracking-[0.12em]")}
+                            className={cn("gap-2", "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.12em]")}
                         >
                             <FileDown className="h-4 w-4" />
                             {t('templateUrlImportButton')}

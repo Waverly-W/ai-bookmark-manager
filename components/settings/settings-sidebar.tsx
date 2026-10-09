@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { Bookmark, Palette, Sparkles, FileText, Database, FolderTree } from "lucide-react";
-import { useTheme } from "@/components/theme-provider.tsx";
 
 interface SettingsSidebarProps {
     activeTab: string;
@@ -13,7 +12,6 @@ interface SettingsSidebarProps {
 
 export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsSidebarProps) {
     const { t } = useTranslation();
-    const { themeId } = useTheme();
 
     const menuItems = [
         {
@@ -50,8 +48,8 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
 
     return (
         <nav className={cn(
-            "rounded-[1.5rem] border border-border/70 bg-card/88 p-2 shadow-sm",
-            themeId === 'blueprint' && "rounded-[var(--card-radius)] border-dashed",
+            "flex gap-1 overflow-x-auto rounded-[1.5rem] border border-border/70 bg-card/88 p-2 shadow-sm lg:flex-col lg:overflow-x-visible",
+            "blueprint:rounded-[var(--card-radius)] blueprint:border-dashed",
             className
         )}>
             {menuItems.map((item) => {
@@ -61,12 +59,13 @@ export function SettingsSidebar({ activeTab, onTabChange, className }: SettingsS
                         key={item.id}
                         variant={activeTab === item.id ? "subtle" : "ghost"}
                         className={cn(
-                            "h-11 w-full justify-start gap-3 rounded-[1rem] px-4",
-                            themeId === 'blueprint' && "rounded-[var(--button-radius)] font-mono uppercase tracking-[0.14em]",
+                            "h-11 shrink-0 justify-start gap-3 whitespace-nowrap rounded-[1rem] px-4 lg:w-full",
+                            "blueprint:rounded-[var(--button-radius)] blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.14em]",
                             activeTab === item.id
                                 ? "bg-primary-soft text-foreground"
                                 : "text-muted-foreground hover:text-foreground"
                         )}
+                        aria-current={activeTab === item.id ? "page" : undefined}
                         onClick={() => onTabChange(item.id)}
                     >
                         <Icon className="h-4 w-4 shrink-0" />

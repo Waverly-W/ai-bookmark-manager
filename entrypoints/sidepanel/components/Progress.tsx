@@ -1,7 +1,7 @@
 import React from 'react';
 import { Progress as ProgressBar } from '@/components/ui/progress.tsx';
 import { Loader2, CheckCircle2, AlertCircle, Sparkles, UploadCloud, FileEdit } from 'lucide-react';
-import { zhCN } from '@/lib/clipper/ui/zh-cn';
+import { useTranslation } from 'react-i18next';
 
 export type PanelProgress =
   | { stage: 'extracting' }
@@ -13,53 +13,53 @@ export type PanelProgress =
   | { stage: 'cancelled' }
   | { stage: 'failed' };
 
-function getStatusDetails(progress: PanelProgress) {
+function getStatusDetails(progress: PanelProgress, t: (key: string, options?: Record<string, unknown>) => string) {
   switch (progress.stage) {
     case 'extracting':
       return {
-        label: '正在提取正文…',
+        label: t('clipExtracting'),
         icon: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
         color: 'text-primary'
       };
     case 'formatting':
       return {
-        label: 'AI 正在排版优化…',
+        label: t('clipFormatting'),
         icon: <Sparkles className="h-4 w-4 animate-pulse text-amber-500" />,
         color: 'text-amber-500'
       };
     case 'ready':
       return {
-        label: '就绪（可编辑并保存）',
+        label: t('clipReady'),
         icon: <FileEdit className="h-4 w-4 text-emerald-500" />,
         color: 'text-emerald-500'
       };
     case 'uploading':
       return {
-        label: zhCN.progress.uploading(progress.completed, progress.total),
+        label: t('clipUploading', { completed: progress.completed, total: progress.total }),
         icon: <UploadCloud className="h-4 w-4 animate-bounce text-blue-500" />,
         color: 'text-blue-500'
       };
     case 'writing':
       return {
-        label: '正在写入 Obsidian 库…',
+        label: t('clipWriting'),
         icon: <Loader2 className="h-4 w-4 animate-spin text-primary" />,
         color: 'text-primary'
       };
     case 'completed':
       return {
-        label: '笔记已保存至 Obsidian',
+        label: t('clipCompleted'),
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
         color: 'text-emerald-500'
       };
     case 'cancelled':
       return {
-        label: '已取消区域选择',
+        label: t('clipCancelled'),
         icon: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
         color: 'text-muted-foreground'
       };
     case 'failed':
       return {
-        label: '操作失败',
+        label: t('clipFailed'),
         icon: <AlertCircle className="h-4 w-4 text-destructive" />,
         color: 'text-destructive'
       };
@@ -67,7 +67,8 @@ function getStatusDetails(progress: PanelProgress) {
 }
 
 export function Progress({ progress }: { progress: PanelProgress }) {
-  const { label, icon, color } = getStatusDetails(progress);
+  const { t } = useTranslation();
+  const { label, icon, color } = getStatusDetails(progress, t);
 
   const percent = progress.stage === 'uploading'
     ? progress.total > 0 ? (progress.completed / progress.total) * 100 : 0
@@ -76,14 +77,14 @@ export function Progress({ progress }: { progress: PanelProgress }) {
       : undefined;
 
   return (
-    <div className="space-y-1.5 p-2.5 rounded-lg bg-muted/50 border text-xs" aria-live="polite">
+    <div className="space-y-1.5 p-2.5 rounded-lg bg-muted/50 border text-sm" aria-live="polite">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {icon}
           <span className={`font-medium ${color}`}>{label}</span>
         </div>
         {progress.stage === 'uploading' && (
-          <span className="text-muted-foreground text-[11px]">
+          <span className="text-muted-foreground text-xs">
             {progress.completed} / {progress.total}
           </span>
         )}

@@ -5,7 +5,6 @@ import { Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { Favicon } from '@/components/ui/favicon';
-import { useTheme } from "@/components/theme-provider.tsx";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -65,7 +64,6 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     onSelect
 }) => {
     const { t } = useTranslation();
-    const { themeId } = useTheme();
     const isFolder = !item.url;
     const childrenCount = item.children?.length || 0;
 
@@ -109,7 +107,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                     "bg-primary/10",
                     "border border-primary/20",
                     "shadow-sm",
-                    themeId === 'blueprint' && "rounded-[var(--badge-radius)] border-primary/40"
+                    "blueprint:rounded-[var(--badge-radius)] blueprint:border-primary/40"
                 )}>
                     <FaFolder className="h-5 w-5 text-primary" />
                 </div>
@@ -151,7 +149,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
             <Card
                 className={cn(
                 "group relative cursor-pointer overflow-hidden border-border/60 bg-card/92 transition-all duration-200 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md",
-                themeId === 'blueprint' && "blueprint-panel rounded-[var(--card-radius)] border-dashed hover:border-primary/40 hover:bg-card",
+                "blueprint:blueprint-panel blueprint:rounded-[var(--card-radius)] blueprint:border-dashed blueprint:hover:border-primary/40 blueprint:hover:bg-card",
                 selected && "ring-2 ring-primary border-primary bg-primary/5",
                 className
             )}
@@ -161,7 +159,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                 <div className="absolute top-2 right-2 z-10">
                     <div className={cn(
                         "w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                        themeId === 'blueprint' && "rounded-[var(--badge-radius)] border-border/70 bg-background/50",
+                        "blueprint:rounded-[var(--badge-radius)] blueprint:border-border/70 blueprint:bg-background/50",
                         selected ? "bg-primary border-primary" : "bg-background/80 border-muted-foreground/50 hover:border-primary"
                     )}>
                         {selected && <div className="w-2.5 h-1.5 border-l-2 border-b-2 border-primary-foreground -rotate-45 mb-0.5" />}
@@ -180,14 +178,14 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                         <h3 className={cn(
                             "font-medium text-sm leading-5 line-clamp-2",
                             "group-hover:text-primary transition-colors",
-                            themeId === 'blueprint' && "font-mono uppercase tracking-[0.08em]"
+                            "blueprint:font-mono blueprint:uppercase blueprint:tracking-[0.08em]"
                         )}
                             title={item.title}
                         >
                             <HighlightedText text={item.title} highlight={highlight} />
                         </h3>
                         {getMeta() && (
-                            <p className="truncate text-[11px] text-muted-foreground">
+                            <p className="truncate text-xs text-muted-foreground">
                                 {getMeta()}
                             </p>
                         )}
