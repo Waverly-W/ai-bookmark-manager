@@ -50,3 +50,12 @@ export function combineFrontmatterAndBody(frontmatter: string, body: string): st
     ? `${normalizedFrontmatter}\n\n${normalizedBody}\n`
     : `${normalizedFrontmatter}\n`;
 }
+
+/**
+ * 去掉开头的 YAML 元数据块，仅用于预览：笔记里仍保留元数据，
+ * 预览若不处理，会把 `title: ...` 这些行当成普通段落显示出来。
+ */
+export function stripFrontmatter(markdown: string): string {
+  const match = /^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/.exec(markdown);
+  return match ? markdown.slice(match[0].length).replace(/^\s*\n/, '') : markdown;
+}

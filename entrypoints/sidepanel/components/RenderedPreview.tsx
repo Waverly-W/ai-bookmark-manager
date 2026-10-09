@@ -3,6 +3,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import type { ImageReference } from '@/lib/clipper/contracts/article';
+import { stripFrontmatter } from '@/lib/clipper/markdown/frontmatter';
 
 function safeHttpUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;
@@ -122,7 +123,7 @@ interface RenderedPreviewProps {
 export function RenderedPreview({ markdown, imageReferences = [], uploadedImageUrls = {} }: RenderedPreviewProps) {
   // Resolve image tokens in preview: replace with uploaded URL first, or original source URL
   const resolvedMarkdown = React.useMemo(() => {
-    let text = markdown;
+    let text = stripFrontmatter(markdown);
     if (imageReferences && imageReferences.length > 0) {
       for (const ref of imageReferences) {
         const targetUrl = uploadedImageUrls[ref.sourceUrl] || ref.sourceUrl;

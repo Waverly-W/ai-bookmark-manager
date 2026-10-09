@@ -16,6 +16,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

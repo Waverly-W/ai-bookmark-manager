@@ -62,3 +62,14 @@ Here is an image: ![Alt](__W2O_IMG_0__)
     expect(restored).toContain('![Alt](__W2O_IMG_0__)');
   });
 });
+
+describe('preview frontmatter', () => {
+  it('removes only the leading YAML block for previews', async () => {
+    const { stripFrontmatter } = await import('../clipper/markdown/frontmatter');
+
+    expect(stripFrontmatter('---\ntitle: A\nsource: https://a.example\n---\n\n# Heading\n\nBody')).toBe('# Heading\n\nBody');
+    expect(stripFrontmatter('---\r\ntitle: A\r\n---\r\nBody')).toBe('Body');
+    expect(stripFrontmatter('# No frontmatter\n\n---\n\nrule above')).toBe('# No frontmatter\n\n---\n\nrule above');
+    expect(stripFrontmatter('---\nnever closed\n')).toBe('---\nnever closed\n');
+  });
+});
