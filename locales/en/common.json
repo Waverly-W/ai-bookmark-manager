@@ -543,6 +543,8 @@
   "manageFolders": "Manage Folders",
   "emptyFolders": "Empty Folders",
   "backupConflictPrompt": "Backup Conflict",
+  "clipFormatPrompt": "Clip Format",
+  "clipFormatSystemPromptDescription": "The system prompt keeps the clipping structure, code blocks, and image placeholders intact. It is not editable.",
   "webdavBackupTitle": "WebDAV Backup & Restore",
   "webdavBackupDescription": "Sync bookmarks, tags, AI settings, and prompts to WebDAV, with each backup stored as a timestamped version.",
   "webdavConfigTitle": "WebDAV Configuration",

@@ -472,7 +472,15 @@ export default function App({ client }: { client?: RuntimeClient }) {
       setJob(formatted);
       setDraft(editableDraft(formatted));
       setProgress({ stage: 'ready' });
-      toast({ title: 'AI 结构化排版完成' });
+      if (formatted.modelWarning) {
+        toast({
+          variant: 'destructive',
+          title: 'AI 排版未生效',
+          description: normalizeModelWarning(formatted.modelWarning),
+        });
+      } else {
+        toast({ title: 'AI 结构化排版完成' });
+      }
     } catch (err: any) {
       setProgress({ stage: 'ready' });
       toast({

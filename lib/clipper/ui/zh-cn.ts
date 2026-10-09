@@ -14,6 +14,7 @@ export const zhCN = {
       return reason ? `模型格式化不可用：${reason}` : '模型格式化不可用。';
     },
     unavailableWithOriginal: '模型格式化不可用，已保留原始笔记内容供检查。',
+    notConfigured: '尚未配置 AI 服务，请先在「AI 设置」中完成配置。已保留原始笔记内容。',
     outputTooLarge: '模型输出过大，已保留原始笔记内容。',
     warningTooLarge: '模型警告过长，已将其丢弃。',
   },
@@ -49,6 +50,7 @@ const trustedModelWarnings = new Set<string>([
   zhCN.model.unavailable(),
   ...Object.keys(providerCodeMessages).map((code) => zhCN.model.unavailable(code)),
   zhCN.model.unavailableWithOriginal,
+  zhCN.model.notConfigured,
   zhCN.model.outputTooLarge,
   zhCN.model.warningTooLarge,
   '模型修改了受保护内容，已保留原始笔记内容。',

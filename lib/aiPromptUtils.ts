@@ -270,6 +270,20 @@ Requirements:
 5. mergedValueJson must be a valid JSON string`;
 
 /**
+ * 默认的剪藏排版 Prompt 模板（中文）
+ */
+export const DEFAULT_MARKDOWN_FORMAT_PROMPT_ZH = `排版要求：
+1. 整理为结构清晰、符合 Obsidian 规范的 Markdown
+2. 保持原文语言和措辞，只调整格式，不改写内容`;
+
+/**
+ * 默认的剪藏排版 Prompt 模板（英文）
+ */
+export const DEFAULT_MARKDOWN_FORMAT_PROMPT_EN = `Formatting requirements:
+1. Produce clean, well-structured Obsidian-compatible Markdown
+2. Keep the original language and wording; change formatting only, not content`;
+
+/**
  * 存储键名
  */
 export const STORAGE_KEYS = {
@@ -282,7 +296,9 @@ export const STORAGE_KEYS = {
     CUSTOM_AUTO_TAG_PROMPT: 'aiAutoTagPrompt',
     USE_CUSTOM_AUTO_TAG_PROMPT: 'aiUseCustomAutoTagPrompt',
     CUSTOM_BACKUP_CONFLICT_PROMPT: 'aiBackupConflictPrompt',
-    USE_CUSTOM_BACKUP_CONFLICT_PROMPT: 'aiUseCustomBackupConflictPrompt'
+    USE_CUSTOM_BACKUP_CONFLICT_PROMPT: 'aiUseCustomBackupConflictPrompt',
+    CUSTOM_MARKDOWN_FORMAT_PROMPT: 'aiMarkdownFormatPrompt',
+    USE_CUSTOM_MARKDOWN_FORMAT_PROMPT: 'aiUseCustomMarkdownFormatPrompt'
 };
 
 /**
@@ -956,6 +972,78 @@ export const isUsingCustomBackupConflictPrompt = async (): Promise<boolean> => {
         return result[STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT] || false;
     } catch (error) {
         console.error('Failed to check custom backup conflict prompt status:', error);
+        return false;
+    }
+};
+
+/**
+ * 获取默认的剪藏排版 Prompt
+ */
+export const getDefaultMarkdownFormatPrompt = (locale: string = 'zh_CN'): string => {
+    return locale.startsWith('zh') ? DEFAULT_MARKDOWN_FORMAT_PROMPT_ZH : DEFAULT_MARKDOWN_FORMAT_PROMPT_EN;
+};
+
+/**
+ * 获取当前的剪藏排版 Prompt
+ */
+export const getCurrentMarkdownFormatPrompt = async (locale: string = 'zh_CN'): Promise<string> => {
+    try {
+        const result = await browser.storage.local.get([
+            STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT,
+            STORAGE_KEYS.CUSTOM_MARKDOWN_FORMAT_PROMPT
+        ]);
+        const useCustom = result[STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT];
+        const customPrompt = result[STORAGE_KEYS.CUSTOM_MARKDOWN_FORMAT_PROMPT];
+
+        if (useCustom && customPrompt) {
+            return customPrompt;
+        }
+
+        return getDefaultMarkdownFormatPrompt(locale);
+    } catch (error) {
+        console.error('Failed to get current markdown format prompt:', error);
+        return getDefaultMarkdownFormatPrompt(locale);
+    }
+};
+
+/**
+ * 保存自定义剪藏排版 Prompt
+ */
+export const saveCustomMarkdownFormatPrompt = async (prompt: string): Promise<void> => {
+    try {
+        await browser.storage.local.set({
+            [STORAGE_KEYS.CUSTOM_MARKDOWN_FORMAT_PROMPT]: prompt,
+            [STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT]: true
+        });
+    } catch (error) {
+        console.error('Failed to save custom markdown format prompt:', error);
+        throw new Error('Failed to save custom markdown format prompt template');
+    }
+};
+
+/**
+ * 恢复默认的剪藏排版 Prompt
+ */
+export const restoreDefaultMarkdownFormatPrompt = async (): Promise<void> => {
+    try {
+        await browser.storage.local.set({
+            [STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT]: false
+        });
+    } catch (error) {
+        console.error('Failed to restore default markdown format prompt:', error);
+        throw new Error('Failed to restore default markdown format prompt template');
+    }
+};
+
+/**
+ * 检查是否使用自定义剪藏排版 Prompt
+ */
+export const isUsingCustomMarkdownFormatPrompt = async (): Promise<boolean> => {
+    try {
+        const result = await browser.storage.local.get(STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT);
+        return result[STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT] || false;
+    } catch (error) {
+        console.error('Failed to check custom markdown format prompt status:', error);
         return false;
     }
 };

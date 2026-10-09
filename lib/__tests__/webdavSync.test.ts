@@ -95,6 +95,10 @@ const createSnapshot = (
         conflictResolution: {
             useCustom: false,
             customPrompt: null
+        },
+        markdownFormat: {
+            useCustom: false,
+            customPrompt: null
         }
     },
     ...overrides
@@ -169,6 +173,10 @@ describe('webdavSync merge helpers', () => {
                 conflictResolution: {
                     useCustom: true,
                     customPrompt: 'Remote conflict prompt'
+                },
+                markdownFormat: {
+                    useCustom: false,
+                    customPrompt: null
                 }
             }
         });
@@ -269,6 +277,10 @@ describe('webdavSync merge helpers', () => {
                 conflictResolution: {
                     useCustom: true,
                     customPrompt: 'Remote conflict prompt'
+                },
+                markdownFormat: {
+                    useCustom: false,
+                    customPrompt: null
                 }
             }
         });

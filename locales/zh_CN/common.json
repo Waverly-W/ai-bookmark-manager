@@ -541,6 +541,8 @@
   "manageFolders": "管理文件夹",
   "emptyFolders": "空文件夹",
   "backupConflictPrompt": "备份冲突解决",
+  "clipFormatPrompt": "剪藏排版",
+  "clipFormatSystemPromptDescription": "系统提示词保证剪藏内容的结构、代码块与图片占位符不被改动，不可编辑。",
   "webdavBackupTitle": "WebDAV 备份与恢复",
   "webdavBackupDescription": "将书签、标签、AI 设置和提示词同步到 WebDAV，并按时间戳保存为可恢复版本。",
   "webdavConfigTitle": "WebDAV 配置",

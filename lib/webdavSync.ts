@@ -23,6 +23,7 @@ export interface BackupPromptsFile {
     folderRecommendation: BackupPromptEntry;
     autoTagging: BackupPromptEntry;
     conflictResolution: BackupPromptEntry;
+    markdownFormat: BackupPromptEntry;
 }
 
 export interface BackupSettingsFile {
@@ -160,6 +161,10 @@ const PROMPT_STORAGE_MAP = {
     conflictResolution: {
         customKey: AI_PROMPT_STORAGE_KEYS.CUSTOM_BACKUP_CONFLICT_PROMPT,
         useCustomKey: AI_PROMPT_STORAGE_KEYS.USE_CUSTOM_BACKUP_CONFLICT_PROMPT
+    },
+    markdownFormat: {
+        customKey: AI_PROMPT_STORAGE_KEYS.CUSTOM_MARKDOWN_FORMAT_PROMPT,
+        useCustomKey: AI_PROMPT_STORAGE_KEYS.USE_CUSTOM_MARKDOWN_FORMAT_PROMPT
     }
 } as const;
 
@@ -213,6 +218,10 @@ const DEFAULT_PROMPTS_FILE: BackupPromptsFile = {
         customPrompt: null
     },
     conflictResolution: {
+        useCustom: false,
+        customPrompt: null
+    },
+    markdownFormat: {
         useCustom: false,
         customPrompt: null
     }
@@ -941,7 +950,8 @@ export const collectLocalBackupSnapshot = async (): Promise<BackupSnapshot> => {
             contextualRename: getPromptEntry(promptSettings, 'contextualRename'),
             folderRecommendation: getPromptEntry(promptSettings, 'folderRecommendation'),
             autoTagging: getPromptEntry(promptSettings, 'autoTagging'),
-            conflictResolution: getPromptEntry(promptSettings, 'conflictResolution')
+            conflictResolution: getPromptEntry(promptSettings, 'conflictResolution'),
+            markdownFormat: getPromptEntry(promptSettings, 'markdownFormat')
         }
     };
 };

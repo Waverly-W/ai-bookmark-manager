@@ -9,9 +9,8 @@ import { uploadArticleImages } from '../image-host/pipeline';
 import type { ImageHost } from '../image-host/types';
 import { createPicGoImageHost } from '../image-host/picgo';
 import { createR2ImageHost } from '../image-host/r2';
-import { createChatCompletionsClient } from '../llm/chat-completions';
-import { createResponsesClient } from '../llm/responses';
-import { formatMarkdown } from '../llm/formatter';
+import { getAIConfig, validateAIConfig } from '../../aiConfigUtils';
+import { formatArticleMarkdownWithAI } from '../../aiService';
 import { originPattern } from '../permissions/hosts';
 import {
   createSettingsRepository,
@@ -20,6 +19,7 @@ import {
 import { VaultDatabase, VaultHandleRepository } from '../vault/database';
 import { writeNote } from '../vault/writer';
 import { runtimeOverrides } from '../runtime/overrides-none';
+import { zhCN } from '../ui/zh-cn';
 import { JobDatabase, JobRepository } from './database';
 import {
   ClippingJobOrchestrator,
@@ -89,19 +89,30 @@ async function requireHostPermission(url: string, browserLike: FactoryBrowser): 
   if (!granted) configuration('Grant the configured provider host permission before continuing.');
 }
 
-function createFormatter(settings: Settings, browserLike: FactoryBrowser): MarkdownFormatterAdapter {
+// 与 popup 一致：优先使用已保存的界面语言，否则按浏览器语言
+async function uiLocale(storage: BrowserStorageLike): Promise<string> {
+  try {
+    const { i18n } = await storage.local.get('i18n');
+    if (typeof i18n === 'string' && i18n) return i18n;
+  } catch {
+    // Fall back to the browser language below.
+  }
+  return globalThis.navigator?.language?.toLowerCase().startsWith('zh') ? 'zh_CN' : 'en';
+}
+
+// 排版走统一 AI 出口：每次读取「AI 设置」中的最新配置与「提示词设置」中的排版要求
+function createFormatter(browserLike: FactoryBrowser): MarkdownFormatterAdapter {
   return {
     async format(markdown, signal) {
-      if (!settings.model.apiKey) configuration('Configure the model API key before formatting.');
-      await requireHostPermission(settings.model.baseUrl, browserLike);
+      const config = await getAIConfig();
+      if (!validateAIConfig(config).valid) {
+        return { markdown, warning: zhCN.model.notConfigured };
+      }
       signal?.throwIfAborted();
-      const client = settings.model.protocol === 'responses'
-        ? createResponsesClient(settings.model)
-        : createChatCompletionsClient(settings.model);
-      const result = await formatMarkdown(markdown, client, { signal });
-      return result.ok
-        ? { markdown: result.markdown, warning: null }
-        : { markdown: result.markdown, warning: result.warning };
+      const locale = await uiLocale(browserLike.storage);
+      const result = await formatArticleMarkdownWithAI(config, markdown, { signal }, locale);
+      if (!result.success) throw new Error(result.error);
+      return { markdown: result.formattedMarkdown ?? markdown, warning: result.warning ?? null };
     },
   };
 }
@@ -157,7 +168,7 @@ export async function createOperationContext(
 ): Promise<OperationContext> {
   const browserLike = options.browser ?? (browser as unknown as FactoryBrowser);
   const settings = await createSettingsRepository(browserLike.storage).load();
-  const formatter = createFormatter(settings, browserLike);
+  const formatter = createFormatter(browserLike);
   const imageHost = createImageHost(settings, browserLike);
   const images = createImagePipeline(imageHost);
   const database = new JobDatabase(options.jobDatabaseName);

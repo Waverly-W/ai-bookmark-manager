@@ -30,7 +30,12 @@ import {
     saveCustomBackupConflictPrompt,
     restoreDefaultBackupConflictPrompt,
     isUsingCustomBackupConflictPrompt,
-    getDefaultBackupConflictPrompt
+    getDefaultBackupConflictPrompt,
+    getCurrentMarkdownFormatPrompt,
+    saveCustomMarkdownFormatPrompt,
+    restoreDefaultMarkdownFormatPrompt,
+    isUsingCustomMarkdownFormatPrompt,
+    getDefaultMarkdownFormatPrompt
 } from "@/lib/aiPromptUtils";
 import { Loader2, RotateCcw, Save, Info } from "lucide-react";
 
@@ -39,6 +44,7 @@ import { folderRecommendationScenario } from "@/lib/ai/scenarios/folderRecommend
 import { contextualBookmarkRenameScenario } from "@/lib/ai/scenarios/contextualBookmarkRename";
 import { autoTaggingScenario } from "@/lib/ai/scenarios/autoTagging";
 import { backupConflictResolutionScenario } from "@/lib/ai/scenarios/backupConflictResolution";
+import { markdownFormatScenario } from "@/lib/ai/scenarios/markdownFormat";
 
 export function AIPromptSettings() {
     const { t, i18n } = useTranslation();
@@ -74,6 +80,9 @@ export function AIPromptSettings() {
                 } else if (activeTab === 'conflict') {
                     currentPrompt = await getCurrentBackupConflictPrompt(i18n.language);
                     usingCustom = await isUsingCustomBackupConflictPrompt();
+                } else if (activeTab === 'markdown') {
+                    currentPrompt = await getCurrentMarkdownFormatPrompt(i18n.language);
+                    usingCustom = await isUsingCustomMarkdownFormatPrompt();
                 }
 
                 setPrompt(currentPrompt);
@@ -124,6 +133,8 @@ export function AIPromptSettings() {
                 await saveCustomAutoTagPrompt(prompt);
             } else if (activeTab === 'conflict') {
                 await saveCustomBackupConflictPrompt(prompt);
+            } else if (activeTab === 'markdown') {
+                await saveCustomMarkdownFormatPrompt(prompt);
             }
 
             setIsCustom(true);
@@ -164,6 +175,9 @@ export function AIPromptSettings() {
             } else if (activeTab === 'conflict') {
                 await restoreDefaultBackupConflictPrompt();
                 defaultPrompt = getDefaultBackupConflictPrompt(i18n.language);
+            } else if (activeTab === 'markdown') {
+                await restoreDefaultMarkdownFormatPrompt();
+                defaultPrompt = getDefaultMarkdownFormatPrompt(i18n.language);
             }
 
             setPrompt(defaultPrompt);
@@ -195,6 +209,8 @@ export function AIPromptSettings() {
             return autoTaggingScenario.getSystemPrompt(i18n.language);
         } else if (activeTab === 'conflict') {
             return backupConflictResolutionScenario.getSystemPrompt(i18n.language);
+        } else if (activeTab === 'markdown') {
+            return markdownFormatScenario.getSystemPrompt(i18n.language);
         }
         return '';
     };
@@ -213,12 +229,13 @@ export function AIPromptSettings() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="flex h-auto w-full flex-wrap">
                     <TabsTrigger value="basic">{t('basicRename')}</TabsTrigger>
                     <TabsTrigger value="contextual">{t('contextualRename')}</TabsTrigger>
                     <TabsTrigger value="folder">{t('folderRecommendation')}</TabsTrigger>
                     <TabsTrigger value="tagging">{t('autoTagging')}</TabsTrigger>
                     <TabsTrigger value="conflict">{t('backupConflictPrompt')}</TabsTrigger>
+                    <TabsTrigger value="markdown">{t('clipFormatPrompt')}</TabsTrigger>
                 </TabsList>
 
                 <div className="mt-4 space-y-6">
@@ -235,7 +252,7 @@ export function AIPromptSettings() {
                                     {getSystemPrompt()}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    {t('systemPromptDescription')}
+                                    {activeTab === 'markdown' ? t('clipFormatSystemPromptDescription') : t('systemPromptDescription')}
                                 </p>
                             </div>
 

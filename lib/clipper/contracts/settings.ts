@@ -22,9 +22,6 @@ function configuredHttpUrlSchema(label: string) {
   );
 }
 
-/** Pure API base used for provider endpoint composition. */
-export const modelBaseUrlSchema = configuredHttpUrlSchema('Model base URL');
-
 /** Full PicGo upload endpoint; query-based authentication is not supported. */
 export const picgoEndpointUrlSchema = configuredHttpUrlSchema(
   'PicGo endpoint URL',
@@ -35,41 +32,12 @@ export const r2PublicBaseUrlSchema = configuredHttpUrlSchema(
   'R2 public base URL',
 );
 
-const modelProviderFields = {
-  baseUrl: modelBaseUrlSchema,
-  apiKey: z.string(),
-  model: z.string().trim().min(1),
-  timeoutMs: z.int().min(1_000).max(300_000),
-  temperature: z.number().min(0).max(2).optional(),
-  maxOutputTokens: z.int().min(1).max(1_000_000).optional(),
-};
-
-export const modelProviderDraftSchema = z.discriminatedUnion('protocol', [
-  z.object({
-    protocol: z.literal('chat-completions'),
-    ...modelProviderFields,
-  }),
-  z.object({
-    protocol: z.literal('responses'),
-    ...modelProviderFields,
-  }),
-]);
-
-export const modelSettingsSchema = z.discriminatedUnion('protocol', [
-  z.object({
-    protocol: z.literal('chat-completions'),
-    ...modelProviderFields,
-    automaticFormatting: z.boolean(),
-  }),
-  z.object({
-    protocol: z.literal('responses'),
-    ...modelProviderFields,
-    automaticFormatting: z.boolean(),
-  }),
-]);
+// 模型服务统一使用「AI 设置」中的配置，这里只保留剪藏专属开关
+export const modelSettingsSchema = z.object({
+  automaticFormatting: z.boolean(),
+});
 
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
-export type ModelProviderDraft = Omit<ModelSettings, 'automaticFormatting'>;
 
 export const picGoSettingsSchema = z.object({
   kind: z.literal('picgo'),
@@ -126,11 +94,6 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings: Settings = settingsSchema.parse({
   version: 1,
   model: {
-    protocol: 'chat-completions',
-    baseUrl: 'https://api.openai.com',
-    apiKey: '',
-    model: 'gpt-5-mini',
-    timeoutMs: 60_000,
     automaticFormatting: true,
   },
   imageHost: {

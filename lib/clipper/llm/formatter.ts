@@ -4,6 +4,7 @@ import {
   concatenatedStringsWithinJsonWireLimit,
   withinJsonStringWireLimit,
 } from '../contracts/limits';
+import { formatMarkdownSystemPrompt } from '../../ai/scenarios/markdownFormat';
 import { zhCN } from '../ui/zh-cn';
 import { ProviderError, type ModelClient } from './client';
 import {
@@ -12,15 +13,13 @@ import {
   splitProtectedMarkdown,
 } from './protected-content';
 
-export const SYSTEM_INSTRUCTION = `Format the supplied document as Obsidian-compatible Markdown.
-Keep valid YAML frontmatter, heading levels and order, lists, quotes, fenced code, and tables valid.
-Do not invent or infer facts, content, links, tags, callouts, or wikilinks.
-Preserve every __W2O_PROTECTED_<index>__ placeholder exactly once and byte-for-byte.
-Output only Markdown, without commentary or an enclosing code fence.`;
+/** Fixed safety rules only; callers normally pass the rules plus the user's requirements. */
+export const SYSTEM_INSTRUCTION = formatMarkdownSystemPrompt('zh_CN');
 
 export interface FormatMarkdownOptions {
   signal?: AbortSignal;
   maxChunkCharacters?: number;
+  instructions?: string;
 }
 
 export type FormatMarkdownResult =
@@ -55,11 +54,24 @@ function stripMarkdownWrapper(markdown: string): string {
   return match ? match[1]! : markdown;
 }
 
-async function formatOne(markdown: string, client: ModelClient, signal?: AbortSignal): Promise<string> {
+// Models do not reliably keep the blank lines around a segment or chunk, so
+// re-apply the original boundary whitespace before segments are joined.
+function withOriginalBoundaries(original: string, formatted: string): string {
+  const leading = original.slice(0, original.length - original.trimStart().length);
+  const trailing = original.slice(original.trimEnd().length);
+  return `${leading}${formatted.trim()}${trailing}`;
+}
+
+async function formatOne(
+  markdown: string,
+  client: ModelClient,
+  instructions: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const protectedDocument = protectMarkdown(markdown);
   signal?.throwIfAborted();
   const response = await client.generate({
-    instructions: SYSTEM_INSTRUCTION,
+    instructions,
     input: protectedDocument.markdown,
     signal,
   });
@@ -69,7 +81,10 @@ async function formatOne(markdown: string, client: ModelClient, signal?: AbortSi
   }
   let restored: string;
   try {
-    restored = restoreProtectedMarkdown(stripMarkdownWrapper(response.text), protectedDocument);
+    restored = restoreProtectedMarkdown(
+      withOriginalBoundaries(protectedDocument.markdown, stripMarkdownWrapper(response.text.trim())),
+      protectedDocument,
+    );
   } catch (error) {
     throw new ProtectedPlaceholderError(error);
   }
@@ -82,6 +97,7 @@ async function formatOne(markdown: string, client: ModelClient, signal?: AbortSi
 async function formatUnprotectedSegments(
   markdown: string,
   client: ModelClient,
+  instructions: string,
   signal?: AbortSignal,
 ): Promise<string> {
   const protectedDocument = protectMarkdown(markdown);
@@ -99,7 +115,7 @@ async function formatUnprotectedSegments(
       continue;
     }
     const response = await client.generate({
-      instructions: SYSTEM_INSTRUCTION,
+      instructions,
       input: segment.value,
       signal,
     });
@@ -107,7 +123,7 @@ async function formatUnprotectedSegments(
     if (!withinJsonStringWireLimit(response.text, MAX_MARKDOWN_UTF8_BYTES)) {
       throw new ModelOutputTooLargeError();
     }
-    const formatted = stripMarkdownWrapper(response.text);
+    const formatted = withOriginalBoundaries(segment.value, stripMarkdownWrapper(response.text.trim()));
     if (/__W2O_PROTECTED_\d+__/.test(formatted)) {
       throw new ProtectedPlaceholderError(undefined);
     }
@@ -168,10 +184,11 @@ function warningFrom(error: unknown): string {
 async function recoverFromPlaceholderChange(
   markdown: string,
   client: ModelClient,
+  instructions: string,
   signal?: AbortSignal,
 ): Promise<FormatMarkdownResult> {
   try {
-    return { ok: true, markdown: await formatUnprotectedSegments(markdown, client, signal) };
+    return { ok: true, markdown: await formatUnprotectedSegments(markdown, client, instructions, signal) };
   } catch (error) {
     return { ok: false, markdown, warning: warningFrom(error) };
   }
@@ -182,11 +199,12 @@ export async function formatMarkdown(
   client: ModelClient,
   options: FormatMarkdownOptions = {},
 ): Promise<FormatMarkdownResult> {
+  const instructions = options.instructions ?? SYSTEM_INSTRUCTION;
   try {
-    return { ok: true, markdown: await formatOne(markdown, client, options.signal) };
+    return { ok: true, markdown: await formatOne(markdown, client, instructions, options.signal) };
   } catch (error) {
     if (error instanceof ProtectedPlaceholderError) {
-      return recoverFromPlaceholderChange(markdown, client, options.signal);
+      return recoverFromPlaceholderChange(markdown, client, instructions, options.signal);
     }
     if (!(error instanceof ProviderError) || error.code !== 'CONTEXT_LENGTH') {
       return { ok: false, markdown, warning: warningFrom(error) };
@@ -205,7 +223,7 @@ export async function formatMarkdown(
     const formatted: string[] = [];
     for (const chunk of chunks) {
       options.signal?.throwIfAborted();
-      formatted.push(await formatOne(chunk, client, options.signal));
+      formatted.push(await formatOne(chunk, client, instructions, options.signal));
     }
     if (!concatenatedStringsWithinJsonWireLimit(formatted, MAX_MARKDOWN_UTF8_BYTES)) {
       throw new ModelOutputTooLargeError();
@@ -217,7 +235,7 @@ export async function formatMarkdown(
     return { ok: true, markdown: restored };
   } catch (error) {
     if (error instanceof ProtectedPlaceholderError) {
-      return recoverFromPlaceholderChange(markdown, client, options.signal);
+      return recoverFromPlaceholderChange(markdown, client, instructions, options.signal);
     }
     return { ok: false, markdown, warning: warningFrom(error) };
   }

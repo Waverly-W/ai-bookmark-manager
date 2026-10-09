@@ -8,7 +8,8 @@ import {
     getDefaultPrompt,
     getCurrentAutoTagPrompt,
     formatAutoTagPrompt,
-    getCurrentBackupConflictPrompt
+    getCurrentBackupConflictPrompt,
+    getCurrentMarkdownFormatPrompt
 } from './aiPromptUtils';
 import { getFolderForDomain } from './recommendationStorage'; // Import storage utils
 import { AIScenario } from './ai/types';
@@ -23,6 +24,7 @@ import {
 import { getTopTags } from './tagStorage';
 import type { MergeConflict, AIConflictResolution } from './webdavSync';
 import { AIRuntimeError, normalizeAIError, parseAIJsonResponse } from './aiRuntimeUtils';
+import { readAIResponseData } from './aiApiCompat';
 
 /**
  * AI API响应接口
@@ -70,6 +72,7 @@ interface AIGenerationOptions {
     maxTokens?: number;
     temperature?: number;
     label?: string;
+    requireComplete?: boolean; // 输出被截断时视为失败（用于直接落盘的纯文本输出）
 }
 
 interface FolderRecommendationItem {
@@ -181,15 +184,24 @@ const throwIfResponsesAPIIncomplete = (data: ResponsesAPIResponse): void => {
     const reason = data.incomplete_details?.reason;
     if (reason === 'max_output_tokens') {
         throw new AIRuntimeError(
-            'response_format',
+            'incomplete',
             'AI response was incomplete because max_output_tokens was exhausted'
         );
     }
 
     throw new AIRuntimeError(
-        'response_format',
+        'incomplete',
         `AI response was incomplete${reason ? `: ${reason}` : ''}`
     );
+};
+
+const TRUNCATED_FINISH_REASONS = new Set(['length', 'max_tokens', 'content_filter']);
+
+const throwIfChatCompletionTruncated = (data: AIResponse): void => {
+    const finishReason = data.choices?.[0]?.finish_reason;
+    if (finishReason && TRUNCATED_FINISH_REASONS.has(finishReason)) {
+        throw new AIRuntimeError('incomplete', `AI response was incomplete: ${finishReason}`);
+    }
 };
 
 export const extractAIResponseContent = (data: AIResponse | ResponsesAPIResponse, config: AIConfig): string => {
@@ -264,7 +276,7 @@ export const buildAIRequestBody = (
     config: AIConfig,
     userPrompt: string,
     systemPrompt: string | undefined,
-    maxTokens: number,
+    maxTokens: number | null, // null 表示不限制，交由模型默认上限
     responseFormat?: AIResponseFormat,
     generation?: AIGenerationOptions
 ): any => {
@@ -275,9 +287,12 @@ export const buildAIRequestBody = (
             model: config.modelId,
             input: userPrompt,
             temperature,
-            max_output_tokens: maxTokens,
             store: false
         };
+
+        if (maxTokens !== null) {
+            requestBody.max_output_tokens = maxTokens;
+        }
 
         if (systemPrompt) {
             requestBody.instructions = systemPrompt;
@@ -296,9 +311,12 @@ export const buildAIRequestBody = (
     const requestBody: any = {
         model: config.modelId,
         messages: buildMessages(userPrompt, systemPrompt),
-        temperature,
-        max_tokens: maxTokens
+        temperature
     };
+
+    if (maxTokens !== null) {
+        requestBody.max_tokens = maxTokens;
+    }
 
     if (responseFormat) {
         requestBody.response_format = responseFormat;
@@ -429,7 +447,7 @@ const callAIAPI = async (
     config: AIConfig,
     prompt: string,
     systemPrompt?: string,
-    maxTokens: number = 1000, // Increased default for JSON
+    maxTokens: number | null = 1000, // Increased default for JSON; null 表示不限制
     options?: AIRequestOptions,
     responseFormat?: AIResponseFormat,
     generation?: AIGenerationOptions
@@ -480,16 +498,28 @@ const callAIAPI = async (
 
                 if (!response.ok) {
                     const retryErrorText = await response.text();
-                    throw new Error(`API request failed: ${response.status} ${response.statusText}. ${retryErrorText}`);
+                    throw new AIRuntimeError(
+                        'http',
+                        `API request failed: ${response.status} ${response.statusText}. ${retryErrorText}`,
+                        undefined,
+                        response.status
+                    );
                 }
             } else {
-                throw new Error(`API request failed: ${response.status} ${response.statusText}. ${errorText}`);
+                throw new AIRuntimeError(
+                    'http',
+                    `API request failed: ${response.status} ${response.statusText}. ${errorText}`,
+                    undefined,
+                    response.status
+                );
             }
         }
 
-        const data: AIResponse | ResponsesAPIResponse = await response.json();
+        const data = await readAIResponseData(response, config) as AIResponse | ResponsesAPIResponse;
         if (getApiType(config) === 'responses') {
             throwIfResponsesAPIIncomplete(data as ResponsesAPIResponse);
+        } else if (generation?.requireComplete) {
+            throwIfChatCompletionTruncated(data as AIResponse);
         }
         const responseContent = extractAIResponseContent(data, config);
 
@@ -600,7 +630,7 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
             };
         }
 
-        const data: AIResponse | ResponsesAPIResponse = await response.json();
+        const data = await readAIResponseData(response, config) as AIResponse | ResponsesAPIResponse;
         if (hasUsableAIResponse(data, config)) {
             return {
                 success: true,
@@ -627,7 +657,7 @@ export const testAIConnection = async (config: AIConfig): Promise<TestConnection
             message: 'Connection failed',
             messageKey: 'connectionFailed',
             error: normalizedError.message,
-            errorKey: normalizedError.code === 'unknown' ? 'unknownError' : undefined
+            errorKey: normalizedError.message ? undefined : 'unknownError'
         };
     }
 };
@@ -966,7 +996,7 @@ export const batchRenameBookmarksWithConsistency = async (
                     throw new Error(`AI API request failed: ${response.status} ${response.statusText}`);
                 }
 
-                const data = await response.json();
+                const data = await readAIResponseData(response, config) as AIResponse | ResponsesAPIResponse;
                 const aiResponse = extractAIResponseContent(data, config);
 
                 // Parse results for this chunk
@@ -1491,52 +1521,109 @@ export const batchClassifyBookmarks = async (
     }
 };
 
-import { markdownFormatScenario } from './ai/scenarios/markdownFormat';
+import { buildMarkdownFormatInstructions, markdownFormatScenario } from './ai/scenarios/markdownFormat';
 import { formatMarkdown as formatObsidianMarkdownCore } from './clipper/llm/formatter';
-import { createChatCompletionsClient } from './clipper/llm/chat-completions';
-import { createResponsesClient } from './clipper/llm/responses';
+import { contextLengthExceeded, ProviderError, type ModelClient } from './clipper/llm/client';
+
+// 整篇文章排版耗时明显长于书签类场景
+const MARKDOWN_FORMAT_TIMEOUT_MS = 120000;
+
+export interface AITextRequest {
+    instructions: string;
+    input: string;
+    signal?: AbortSignal;
+    timeoutMs?: number;
+    temperature?: number;
+    label?: string;
+}
+
+/**
+ * 统一 AI 出口的纯文本生成：不启用 JSON Mode、不限制输出 token，输出被截断时抛出 incomplete 错误
+ */
+export const generateAIText = async (config: AIConfig, request: AITextRequest): Promise<string> => {
+    return callAIAPI(
+        config,
+        request.input,
+        request.instructions,
+        null,
+        { timeoutMs: request.timeoutMs, signal: request.signal },
+        undefined,
+        {
+            temperature: request.temperature,
+            label: request.label,
+            requireComplete: true
+        }
+    );
+};
+
+const PROVIDER_ERROR_CODES: Partial<Record<AIRuntimeError['code'], string>> = {
+    cancelled: 'ABORTED',
+    timeout: 'TIMEOUT',
+    network: 'NETWORK_ERROR',
+    incomplete: 'INCOMPLETE_RESPONSE'
+};
+
+// 将统一出口的错误映射为剪藏排版器识别的错误码（CONTEXT_LENGTH 会触发分块重试）
+const toProviderError = (error: unknown): ProviderError => {
+    const normalizedError = normalizeAIError(error);
+    const code = normalizedError.code === 'http'
+        ? (contextLengthExceeded(normalizedError.status ?? 0, normalizedError.message, normalizedError.message)
+            ? 'CONTEXT_LENGTH'
+            : 'HTTP_ERROR')
+        : PROVIDER_ERROR_CODES[normalizedError.code] ?? 'INVALID_RESPONSE';
+
+    return new ProviderError(normalizedError.message, { code, status: normalizedError.status });
+};
+
+const createMarkdownFormatModelClient = (config: AIConfig, timeoutMs: number): ModelClient => ({
+    async generate(request) {
+        try {
+            const text = await generateAIText(config, {
+                instructions: request.instructions,
+                input: request.input,
+                signal: request.signal,
+                timeoutMs,
+                temperature: 0.2,
+                label: markdownFormatScenario.id
+            });
+            return { text };
+        } catch (error) {
+            const providerError = toProviderError(error);
+            console.warn('[AI] Markdown format request failed', {
+                code: providerError.code,
+                message: providerError.message
+            });
+            throw providerError;
+        }
+    }
+});
 
 /**
  * 将提取到的 Markdown 内容调用 AI 整理为 Obsidian 兼容规范格式
  * @param config AI配置
  * @param markdown 待整理 Markdown
  * @param options 可选超时与信号
+ * @param locale 语言（决定未自定义时使用的默认排版要求）
  */
 export const formatArticleMarkdownWithAI = async (
     config: AIConfig,
     markdown: string,
-    options?: AIRequestOptions
+    options?: AIRequestOptions,
+    locale: string = 'zh_CN'
 ): Promise<{ success: boolean; formattedMarkdown?: string; warning?: string | null; error?: string }> => {
     try {
-        const modelSettings = {
-            protocol: (config.apiType === 'responses' ? 'responses' : 'chat-completions') as 'chat-completions' | 'responses',
-            baseUrl: config.apiUrl,
-            apiKey: config.apiKey,
-            model: config.modelId,
-            timeoutMs: options?.timeoutMs ?? 60000,
-            automaticFormatting: true
-        };
-
-        const client = modelSettings.protocol === 'responses'
-            ? createResponsesClient(modelSettings)
-            : createChatCompletionsClient(modelSettings);
-
+        const requirements = await getCurrentMarkdownFormatPrompt(locale);
+        const client = createMarkdownFormatModelClient(config, options?.timeoutMs ?? MARKDOWN_FORMAT_TIMEOUT_MS);
         const result = await formatObsidianMarkdownCore(markdown, client, {
-            signal: options?.signal
+            signal: options?.signal,
+            instructions: buildMarkdownFormatInstructions(requirements, locale)
         });
 
-        if (result.ok) {
-            return {
-                success: true,
-                formattedMarkdown: result.markdown
-            };
-        } else {
-            return {
-                success: true,
-                formattedMarkdown: result.markdown,
-                warning: result.warning
-            };
-        }
+        return {
+            success: true,
+            formattedMarkdown: result.markdown,
+            warning: result.ok ? null : result.warning
+        };
     } catch (error) {
         console.error('AI article markdown format failed:', error);
         return {
@@ -1545,4 +1632,3 @@ export const formatArticleMarkdownWithAI = async (
         };
     }
 };
-

@@ -1,6 +1,13 @@
 import type { JSONSchema } from './ai/types';
 
-export type AIErrorCode = 'cancelled' | 'timeout' | 'network' | 'response_format' | 'unknown';
+export type AIErrorCode =
+  | 'cancelled'
+  | 'timeout'
+  | 'network'
+  | 'http'
+  | 'incomplete'
+  | 'response_format'
+  | 'unknown';
 
 export interface AIErrorContext {
   timedOut?: boolean;
@@ -10,11 +17,14 @@ export interface AIErrorContext {
 
 export class AIRuntimeError extends Error {
   readonly code: AIErrorCode;
+  /** HTTP status for `http` errors. */
+  readonly status?: number;
 
-  constructor(code: AIErrorCode, message: string, cause?: unknown) {
+  constructor(code: AIErrorCode, message: string, cause?: unknown, status?: number) {
     super(message);
     this.name = 'AIRuntimeError';
     this.code = code;
+    this.status = status;
 
     if (cause !== undefined) {
       Object.defineProperty(this, 'cause', {

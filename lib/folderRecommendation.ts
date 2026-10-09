@@ -6,7 +6,7 @@ import {
     formatFolderRecommendationPrompt
 } from './aiPromptUtils';
 import type { AIRequestOptions } from './aiService';
-import { buildAIEndpoint, buildAIRequestBody, extractAIResponseContent } from './aiApiCompat';
+import { buildAIEndpoint, buildAIRequestBody, extractAIResponseContent, readAIResponseData } from './aiApiCompat';
 
 /**
  * 页面上下文信息
@@ -99,7 +99,7 @@ async function callAIForRecommendation(
             throw new Error(`API request failed: ${response.status} ${response.statusText}. ${errorText}`);
         }
 
-        const data = await response.json();
+        const data = await readAIResponseData(response, config);
 
         const content = extractAIResponseContent(data, config);
         if (!content) {

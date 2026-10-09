@@ -2,9 +2,7 @@ import { browser } from 'wxt/browser';
 
 import {
   defaultSettings,
-  modelProviderDraftSchema,
   settingsSchema,
-  type ModelProviderDraft,
   type Settings,
 } from '../contracts/settings';
 import { r2RuntimeSettingsSchema } from '../image-host/r2-settings';
@@ -45,7 +43,7 @@ export class SettingsRepositoryError extends Error {
  */
 export type SafeSettings = {
   version: 1;
-  model: Omit<Settings['model'], 'apiKey'>;
+  model: Settings['model'];
   imageHost:
     | Extract<Settings['imageHost'], { kind: 'picgo' }>
     | Omit<Extract<Settings['imageHost'], { kind: 'r2' }>, 'accessKeyId' | 'secretAccessKey'>;
@@ -135,21 +133,6 @@ export class SettingsRepository {
     });
   }
 
-  async saveModel(draft: ModelProviderDraft): Promise<Settings> {
-    return this.mutate((latest) => {
-      const provider = modelProviderDraftSchema.parse(draft);
-      return {
-        ...latest,
-        model: {
-          ...latest.model,
-          ...provider,
-          apiKey: provider.apiKey || latest.model.apiKey,
-          automaticFormatting: latest.model.automaticFormatting,
-        },
-      };
-    });
-  }
-
   async saveImageHost(draft: Settings['imageHost']): Promise<Settings> {
     return this.mutate((latest) => {
       const candidate = draft.kind === 'r2'
@@ -181,13 +164,6 @@ export class SettingsRepository {
     }));
   }
 
-  async clearModelApiKey(): Promise<Settings> {
-    return this.mutate((latest) => ({
-      ...latest,
-      model: { ...latest.model, apiKey: '' },
-    }));
-  }
-
   async clearR2Credential(
     field: 'accessKeyId' | 'secretAccessKey',
   ): Promise<Settings> {
@@ -203,17 +179,7 @@ export class SettingsRepository {
   async exportSafe(): Promise<SafeSettings> {
     const settings = await this.load();
     const model: SafeSettings['model'] = {
-      protocol: settings.model.protocol,
-      baseUrl: settings.model.baseUrl,
-      model: settings.model.model,
-      timeoutMs: settings.model.timeoutMs,
       automaticFormatting: settings.model.automaticFormatting,
-      ...(settings.model.temperature === undefined
-        ? {}
-        : { temperature: settings.model.temperature }),
-      ...(settings.model.maxOutputTokens === undefined
-        ? {}
-        : { maxOutputTokens: settings.model.maxOutputTokens }),
     };
     const imageHost: SafeSettings['imageHost'] =
       settings.imageHost.kind === 'picgo'
