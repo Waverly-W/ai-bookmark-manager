@@ -7,7 +7,7 @@
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Waverly-W/mustard-seed-bookmark)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[简体中文](#关于芥子) | [English](#english-version)
+**简体中文** | [English](README.en.md)
 
 </div>
 
@@ -264,6 +264,7 @@ npm run test      # 单元测试
 ```
 
 - 界面有可见变化时，运行 `npm run build:chrome && npm run screenshots` 更新 `docs/screenshots/`，并在 PR 中附上截图
+- 修改 `README.md`（中文，默认）或 `README.en.md`（英文）时，请同步更新另一份
 
 ---
 
@@ -343,92 +344,5 @@ A: API Key 与配置只保存在浏览器本地，不会上传到任何第三方
 Made by [Waverly-W](https://github.com/Waverly-W)
 
 **芥子纳须弥，智理书签**
-
-</div>
-
----
-
-## English Version
-
-# Mustard Seed Bookmark
-
-<div align="center">
-
-**Mustard Seed Contains Sumeru · AI-Powered Smart Bookmark Manager**
-
-</div>
-
-## About
-
-> "Mustard seed contains Sumeru" is a Buddhist metaphor meaning a tiny mustard seed can contain the immense Mount Sumeru. Mustard Seed Bookmark embodies this idea: collect, organize, and manage a great deal of information from the web inside a small browser extension.
-
-Mustard Seed Bookmark is a browser extension (Chrome and Firefox) built with WXT, React, Tailwind CSS, and shadcn/ui. It combines AI assistance with local-first data handling.
-
-## Screenshots
-
-| Quick add popup | Obsidian clipper side panel |
-|---|---|
-| <img src="docs/screenshots/popup.png" alt="Quick add popup" width="320"> | <img src="docs/screenshots/sidepanel.png" alt="Clipper side panel" width="320"> |
-
-![New tab dashboard](docs/screenshots/newtab.png)
-
-![Obsidian clipper settings](docs/screenshots/settings-obsidian.png)
-
-## Key Features
-
-- **Quick add popup**: one-click saving with optional AI folder, title, and tag suggestions; failures are reported instead of failing silently
-- **Bookmark dashboard**: hierarchical tree, search, `#tag` filters, batch actions, and undo for deletions
-- **Obsidian clipper**: Readability-based extraction, Obsidian-compatible Markdown, optional AI formatting with protected code and image placeholders, direct write to a local vault, PicGo or Cloudflare R2 image hosting
-- **AI toolbox**: batch rename, batch tag, smart classification, with editable prompts
-- **Maintenance tools**: duplicate finder, link validity check, empty folder cleanup
-- **Backup**: WebDAV backup with incremental merge and AI-assisted conflict resolution
-- **AI gateways**: `chat/completions` and `responses` protocols, including gateways that answer with Server-Sent Events
-- **Themes and languages**: Default and Blueprint themes, light and dark modes, English and Simplified Chinese
-
-## Permissions
-
-The Chrome build does not request access to all websites at install time. Features that need a site (your AI service, image host, WebDAV server, the page you are clipping, or link checking) ask for that site when you click the related button. The automatic AI formatting of clips is off by default.
-
-## Quick Start
-
-```bash
-git clone https://github.com/Waverly-W/mustard-seed-bookmark.git
-cd mustard-seed-bookmark
-npm install
-
-# Development
-npm run dev
-
-# Production build
-npm run build
-
-# Type-check and test
-npm run compile
-npm run test
-
-# Regenerate README screenshots (after npm run build:chrome)
-npm run screenshots
-```
-
-See [AGENTS.md](AGENTS.md) for architecture notes and contribution conventions.
-
-## Tech Stack
-
-- **Framework**: WXT
-- **UI**: React 18 + TypeScript
-- **Styling**: Tailwind CSS 3 + shadcn/ui
-- **Validation and storage**: zod, Dexie
-- **i18n**: react-i18next
-- **Tests**: Vitest
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-
-**Mustard Seed contains Sumeru, manages bookmarks wisely**
 
 </div>

@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository is a WXT-based browser extension (Chrome MV3, Firefox MV2). Runtime entrypoints live in `entrypoints/`: `popup/` for quick-save UI, `newtab/` for the main dashboard and tools, `sidepanel/` for the Obsidian clipper, and `background.ts` for extension background logic. Shared React UI is in `components/`, with reusable primitives under `components/ui/` and settings screens under `components/settings/`. Business logic and storage helpers live in `lib/`, custom hooks in `hooks/`, translations in `locales/`, and static extension assets in `public/` and `assets/`. Tests live in `lib/__tests__/`. User-facing docs live in `README.md`, `docs/`, and the UI rules in `FRONTEND.md` and `DESIGN.md`.
+This repository is a WXT-based browser extension (Chrome MV3, Firefox MV2). Runtime entrypoints live in `entrypoints/`: `popup/` for quick-save UI, `newtab/` for the main dashboard and tools, `sidepanel/` for the Obsidian clipper, and `background.ts` for extension background logic. Shared React UI is in `components/`, with reusable primitives under `components/ui/` and settings screens under `components/settings/`. Business logic and storage helpers live in `lib/`, custom hooks in `hooks/`, translations in `locales/`, and static extension assets in `public/` and `assets/`. Tests live in `lib/__tests__/`. User-facing docs live in `README.md` (Chinese, the default), `README.en.md` (English), `docs/`, and the UI rules in `FRONTEND.md` and `DESIGN.md`. The two READMEs link to each other and must be kept equivalent: change both in the same commit.
 
 ## Architecture Map
 Read this before touching a module; it records decisions that are not obvious from the code.
@@ -86,7 +86,7 @@ Unit tests do not cover layout, theming, i18n, or permissions. Load the built ex
 - Open extension pages as tabs (`chrome-extension://<id>/popup.html`, `newtab.html`, `sidepanel.html`). To make the popup or side panel read a real page, keep the article tab in the foreground and open the extension page with `background: true`; use a foreground tab for pages with CSS animations, because background tabs pause them and screenshots come out faded.
 - Radix tabs switch on `mousedown`, not `click`.
 - To test features that read pages without the optional permission being granted, load a copy of `dist/chrome-mv3` whose manifest adds `host_permissions`; the shipped manifest must stay permission-free.
-- `npm run screenshots` regenerates the images used in `README.md`. Update them when the UI changes visibly and commit the new files.
+- `npm run screenshots` regenerates the images used in both READMEs. Update them when the UI changes visibly and commit the new files.
 
 ## Commit & Pull Request Guidelines
 Recent history follows lightweight Conventional Commit prefixes such as `feat:`, `chore:`, and `fix:`, optionally with a scope such as `fix(clipper):`. Keep commits focused and write imperative summaries, for example `feat: add folder recommendation fallback`. Pull requests should include a short problem statement, a concise change summary, test evidence, and screenshots or recordings for popup/new tab/side panel UI changes (`npm run screenshots` produces them). Link related issues when applicable and note any manual extension-loading steps reviewers should use.
