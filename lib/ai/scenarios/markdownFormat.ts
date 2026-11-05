@@ -1,4 +1,5 @@
 import { AIScenario } from '../types';
+import { fillTemplate } from '../template';
 
 export interface MarkdownFormatInput {
   markdown: string;
@@ -52,7 +53,7 @@ export const markdownFormatScenario: AIScenario<MarkdownFormatInput, MarkdownFor
     },
   },
   formatUserPrompt: (template: string, input: MarkdownFormatInput): string => {
-    return template.replace('{markdown}', input.markdown);
+    return fillTemplate(template, { markdown: input.markdown });
   },
   parseResponse: (response: any): MarkdownFormatOutput => {
     if (typeof response === 'string') {

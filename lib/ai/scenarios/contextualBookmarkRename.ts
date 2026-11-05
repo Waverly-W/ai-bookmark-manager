@@ -1,4 +1,6 @@
 import { AIScenario, JSONSchema } from "../types";
+import { fillTemplate } from "../template";
+import { DEFAULT_CONTEXTUAL_RENAME_PROMPT_ZH } from "../../aiPromptUtils";
 
 export interface ContextualBookmarkRenameInput {
     url: string;
@@ -35,20 +37,6 @@ IMPORTANT: You must output strictly in JSON format. Do not include any Markdown 
 JSON Format Example:
 {"newTitle": "New Title Here"}`;
 
-const DEFAULT_USER_PROMPT_ZH = `要求：
-1. 分析同文件夹其他书签的命名模式（如：语言、长度、格式、分隔符等）
-2. 生成的新标题必须遵循这种模式
-3. 准确反映网页内容
-4. 便于搜索和识别
-5. 只返回新标题`;
-
-const DEFAULT_USER_PROMPT_EN = `Requirements:
-1. Analyze the naming pattern of other bookmarks in the folder (e.g., language, length, format, separators)
-2. The new title must follow this pattern
-3. Accurately reflect the page content
-4. Easy to search and identify
-5. Return only the new title`;
-
 const RESPONSE_SCHEMA: JSONSchema = {
     type: "object",
     properties: {
@@ -68,15 +56,13 @@ export const contextualBookmarkRenameScenario: AIScenario<ContextualBookmarkRena
     getSystemPrompt: (locale: string) => {
         return locale.startsWith('zh') ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
     },
-    defaultUserPrompt: DEFAULT_USER_PROMPT_ZH,
+    defaultUserPrompt: DEFAULT_CONTEXTUAL_RENAME_PROMPT_ZH,
     responseSchema: {
         name: "contextual_bookmark_rename_response",
         strict: true,
         schema: RESPONSE_SCHEMA
     },
-    formatUserPrompt: (template: string, input: ContextualBookmarkRenameInput) => {
-        return template;
-    },
+    formatUserPrompt: (template: string) => template,
     parseResponse: (response: any) => {
         return {
             newTitle: response.newTitle
@@ -94,9 +80,10 @@ export const formatContextualBookmarkRenameSystemPrompt = (
     const template = locale.startsWith('zh') ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
     const otherBookmarksStr = otherBookmarks.length > 0 ? otherBookmarks.join('\n') : (locale.startsWith('zh') ? "(无其他书签)" : "(No other bookmarks)");
 
-    return template
-        .replace("{url}", url)
-        .replace("{title}", title)
-        .replace("{currentFolder}", currentFolder)
-        .replace("{otherBookmarks}", otherBookmarksStr);
+    return fillTemplate(template, {
+        url,
+        title,
+        currentFolder,
+        otherBookmarks: otherBookmarksStr
+    });
 };

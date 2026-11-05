@@ -6,10 +6,12 @@ This repository is a WXT-based browser extension (Chrome MV3, Firefox MV2). Runt
 ## Architecture Map
 Read this before touching a module; it records decisions that are not obvious from the code.
 
-- `lib/aiService.ts`: the single exit for every AI request. `callAIAPI` builds the request, retries, parses the response and normalizes errors. Scenarios in `lib/ai/scenarios/` define prompts and response schemas; `executeScenario` runs them. `lib/aiApiCompat.ts` holds the shared request/response helpers used by `lib/folderRecommendation.ts`.
+- `lib/aiService.ts`: the single exit for every AI request. `callAIAPI` builds the request, retries, parses the response and normalizes errors. Scenarios in `lib/ai/scenarios/` define prompts and response schemas; `executeScenario` runs them. `lib/aiApiCompat.ts` holds shared request/response helpers such as `readAIResponseData`. Batch scenarios (classification, rename) split the input into chunks and send each chunk through `executeScenario`; one failed chunk must not discard the others.
 - `lib/clipper/`: the web clipper (Obsidian). `jobs/` is the job state machine and orchestrator (IndexedDB via Dexie), `extraction/` reads the page, `markdown/` converts to Markdown, `llm/formatter.ts` formats Markdown through the AI exit with placeholder protection, `image-host/` uploads to PicGo or Cloudflare R2, `vault/` writes to the local vault, `settings/` is the zod-validated settings repository, `ui/` holds persisted-string helpers.
 - `lib/hostAccess.ts`: runtime host-permission requests (see Permissions).
 - `lib/bookmarkTrash.ts`: delete-with-snapshot and restore for undo.
+- `lib/bookmarkClassification.ts`: pure helpers for AI batch classification (chunking, folder list, validation of returned bookmark and folder IDs, move planning). Never trust an ID the model returns without checking it against the current tree.
+- `lib/ai/template.ts`: `fillTemplate` fills `{name}` placeholders in one pass. Use it instead of `String.replace` with a string replacement, which treats `$&` and `$'` in page titles or Markdown as special patterns.
 - `lib/i18nLocale.ts`: language resolution shared by every entrypoint.
 - Known duplication: `lib/aiService.ts` still carries its own copies of some helpers that also exist in `lib/aiApiCompat.ts`. Keep them in sync or consolidate; do not diverge them silently. Ignore `lib/aiService.ts.bak`.
 

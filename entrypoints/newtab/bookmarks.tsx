@@ -43,6 +43,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 import { ClassificationDialog } from '@/components/ui/classification-dialog';
 import { batchClassifyBookmarks } from '@/lib/aiService';
+import { planClassificationMoves, toClassificationFolders, type ClassificationFolder } from '@/lib/bookmarkClassification';
 import { getAIConfig } from '@/lib/aiConfigUtils';
 import { getBookmarkFolders, moveChromeBookmark } from '@/lib/bookmarkUtils';
 import { BookmarkNode } from '@/entrypoints/types';
@@ -215,7 +216,7 @@ export const Bookmarks: React.FC = () => {
     const [classificationResults, setClassificationResults] = useState<any[]>([]);
     const [showClassificationDialog, setShowClassificationDialog] = useState(false);
     const [isApplyingClassification, setIsApplyingClassification] = useState(false);
-    const [allFolders, setAllFolders] = useState<any[]>([]);
+    const [allFolders, setAllFolders] = useState<ClassificationFolder[]>([]);
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
 
@@ -965,8 +966,7 @@ export const Bookmarks: React.FC = () => {
             setAllBookmarks(updatedBookmarks);
 
             // 更新文件夹列表
-            const folders = await getBookmarkFolders();
-            setAllFolders(folders);
+            setAllFolders(toClassificationFolders(await getBookmarkFolders()));
 
             toast({
                 title: t('batchDeleteSuccess'),
@@ -1030,33 +1030,54 @@ export const Bookmarks: React.FC = () => {
                 return;
             }
 
-            // 3. 获取所有文件夹
-            const folders = await getBookmarkFolders();
+            // 3. 获取所有文件夹（去掉虚拟的 "all" 节点，弹窗下拉框也用这份列表）
+            const folders = toClassificationFolders(await getBookmarkFolders());
             setAllFolders(folders);
 
-            // 4. 调用 AI 服务
+            // 4. 调用 AI 服务（带上当前所在文件夹，已在建议位置的书签会被剔除）
             const result = await batchClassifyBookmarks(
                 aiConfig,
-                bookmarksToClassify.map(b => ({ id: b.id, title: b.title, url: b.url! })),
+                bookmarksToClassify.map(b => ({
+                    id: b.id,
+                    title: b.title,
+                    url: b.url!,
+                    parentId: findNodeById(allBookmarks, b.id)?.parentId
+                })),
                 folders,
                 i18n.language
             );
 
-            if (result.success && result.classifications) {
-                // 5. 映射结果，添加原始信息
-                const enrichedResults = result.classifications.map(c => {
-                    const original = bookmarksToClassify.find(b => b.id === c.bookmarkId);
-                    return {
-                        ...c,
-                        bookmarkTitle: original?.title || '',
-                        bookmarkUrl: original?.url || ''
-                    };
-                });
-                setClassificationResults(enrichedResults);
-                setShowClassificationDialog(true);
-            } else {
-                throw new Error(result.error || 'Unknown error');
+            if (!result.success || !result.classifications) {
+                throw new Error(result.error || t('unknownError'));
             }
+
+            // 部分批次失败：其余结果照常展示，同时告知失败数量和原因
+            if (result.failedCount) {
+                toast({
+                    title: t('classifyPartialFailed', { count: result.failedCount }),
+                    description: result.error,
+                    variant: "destructive"
+                });
+            }
+
+            if (result.classifications.length === 0) {
+                if (!result.failedCount) {
+                    toast({ title: t('classifyNothingToMove') });
+                }
+                return;
+            }
+
+            // 5. 映射结果，添加原始信息
+            const enrichedResults = result.classifications.map(c => {
+                const original = bookmarksToClassify.find(b => b.id === c.bookmarkId);
+                return {
+                    ...c,
+                    bookmarkTitle: original?.title || '',
+                    bookmarkUrl: original?.url || ''
+                };
+            });
+            setClassificationResults(enrichedResults);
+            setShowClassificationDialog(true);
         } catch (error) {
             console.error('AI classification failed:', error);
             toast({
@@ -1069,35 +1090,42 @@ export const Bookmarks: React.FC = () => {
         }
     };
 
-    const handleApplyClassification = async (results: any[]) => {
+    const handleApplyClassification = async (results: Array<{ bookmarkId: string; suggestedFolderId: string }>) => {
         setIsApplyingClassification(true);
         try {
+            // 再校验一次：用户可能在弹窗里改了目标，只移动到真实存在且不同于当前位置的文件夹
+            const currentParentById = new Map(
+                results.map(result => [result.bookmarkId, findNodeById(allBookmarks, result.bookmarkId)?.parentId])
+            );
+            const moves = planClassificationMoves(results, allFolders, currentParentById);
+
+            // 单个移动失败不中断其余移动
             let successCount = 0;
-            for (const result of results) {
-                if (result.suggestedFolderId && result.suggestedFolderId !== '0') {
-                    await moveChromeBookmark(result.bookmarkId, result.suggestedFolderId);
+            const failures: string[] = [];
+            for (const move of moves) {
+                try {
+                    await moveChromeBookmark(move.bookmarkId, move.folderId);
                     successCount++;
+                } catch (error) {
+                    failures.push(error instanceof Error ? error.message : String(error));
                 }
             }
 
-            toast({
-                title: t('processingCompleted'),
-                description: t('batchMoveSuccessDesc', { count: successCount }),
-            });
-
-            // 刷新书签
-            const tree = await browser.bookmarks.getTree();
-            if (tree.length > 0 && tree[0].children) {
-                const flatNodes: BookmarkNode[] = [];
-                const traverse = (nodes: any[]) => {
-                    for (const node of nodes) {
-                        flatNodes.push(node);
-                        if (node.children) traverse(node.children);
-                    }
-                };
-                traverse(tree[0].children);
-                setAllBookmarks(flatNodes);
+            if (failures.length > 0) {
+                toast({
+                    title: t('classifyMovePartialFailed', { count: failures.length }),
+                    description: failures[0],
+                    variant: "destructive"
+                });
+            } else {
+                toast({
+                    title: t('processingCompleted'),
+                    description: t('batchMoveSuccessDesc', { count: successCount }),
+                });
             }
+
+            // 重新加载书签，保留当前所在文件夹和根目录设置
+            await loadBookmarks({ keepNavigation: true });
 
             setShowClassificationDialog(false);
             setIsSelectionMode(false);

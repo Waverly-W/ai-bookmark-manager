@@ -1,4 +1,6 @@
 import { AIScenario, JSONSchema } from "../types";
+import { fillTemplate } from "../template";
+import { DEFAULT_PROMPT_ZH } from "../../aiPromptUtils";
 
 export interface BookmarkRenameInput {
     url: string;
@@ -25,20 +27,6 @@ IMPORTANT: You must output strictly in JSON format. Do not include any Markdown 
 JSON Format Example:
 {"newTitle": "New Title Here"}`;
 
-const DEFAULT_USER_PROMPT_ZH = `要求：
-1. 不超过30个字符
-2. 准确反映网页内容
-3. 便于搜索和识别
-4. 只返回新标题，不要有其他说明文字
-5. 格式为：网站名称 | 功能`;
-
-const DEFAULT_USER_PROMPT_EN = `Requirements:
-1. No more than 50 characters
-2. Accurately reflect the page content
-3. Easy to search and identify
-4. Return only the new title, no additional text
-5. Format: Site Name | Function`;
-
 const RESPONSE_SCHEMA: JSONSchema = {
     type: "object",
     properties: {
@@ -58,48 +46,14 @@ export const bookmarkRenameScenario: AIScenario<BookmarkRenameInput, BookmarkRen
     getSystemPrompt: (locale: string) => {
         return locale.startsWith('zh') ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
     },
-    defaultUserPrompt: DEFAULT_USER_PROMPT_ZH, // Note: User prompt is usually loaded from config, this is just a fallback
+    defaultUserPrompt: DEFAULT_PROMPT_ZH, // 实际使用 getCurrentPrompt 读取的用户配置，这里只是兜底
     responseSchema: {
         name: "bookmark_rename_response",
         strict: true,
         schema: RESPONSE_SCHEMA
     },
-    formatUserPrompt: (template: string, input: BookmarkRenameInput) => {
-        // Note: The System Prompt actually contains the placeholders in the user's request example,
-        // but usually we put dynamic data in the User message or System message.
-        // In the user's request:
-        // System Prompt: ... URL: {url}, Title: {title} ...
-        // User Prompt: Requirements ...
-
-        // However, to allow the user to customize the "Requirements", we should keep the dynamic data 
-        // separate or inject it into the System prompt if the System prompt is fixed but has placeholders.
-
-        // Wait, the user request says:
-        // System Prompt (Hidden): ... URL: {url}, Title: {title}, JSON format.
-        // User Prompt (Customizable): Requirements...
-
-        // So the System Prompt needs to be formatted with the input data too?
-        // Or should we construct the messages such that:
-        // System: "You are a helper... Output JSON..."
-        // User: "URL: ..., Title: ... \n Requirements: ..."
-
-        // The user request specifically asked for:
-        // System Prompt: "Please generate ... URL: {url}, Title: {title}, output JSON."
-
-        // This means the System Prompt IS dynamic per request.
-        // But `systemPrompt` in the interface is usually a static template.
-        // Let's adjust the logic in `aiService` to handle formatting the System Prompt if needed,
-        // OR we define `formatSystemPrompt` in the interface.
-
-        // Actually, looking at the user request again:
-        // "System Prompt (User invisible): Please generate ... URL: {url}, Current Title: {title} ... JSON format."
-
-        // If I make the System Prompt dynamic, I need a way to pass data to it.
-        // Let's assume `formatUserPrompt` is for the User Prompt part.
-        // I might need `formatSystemPrompt` as well.
-
-        return template;
-    },
+    // URL 和标题由 formatBookmarkRenameSystemPrompt 填入 System Prompt，User Prompt 只包含用户的命名要求
+    formatUserPrompt: (template: string) => template,
     parseResponse: (response: any) => {
         return {
             newTitle: response.newTitle
@@ -110,7 +64,5 @@ export const bookmarkRenameScenario: AIScenario<BookmarkRenameInput, BookmarkRen
 // Helper to format the system prompt since it contains data in this specific requirement
 export const formatBookmarkRenameSystemPrompt = (url: string, title: string, locale: string = 'zh_CN'): string => {
     const template = locale.startsWith('zh') ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
-    return template
-        .replace("{url}", url)
-        .replace("{title}", title);
+    return fillTemplate(template, { url, title });
 };

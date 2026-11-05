@@ -290,8 +290,7 @@ describe('Responses API compatibility', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -393,8 +392,7 @@ describe('AI folder recommendation normalization', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(result.success).toBe(true);
@@ -431,8 +429,7 @@ describe('AI folder recommendation normalization', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(result.success).toBe(true);
@@ -486,8 +483,7 @@ describe('AI folder recommendation normalization', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -514,8 +510,7 @@ describe('AI folder recommendation normalization', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(result.success).toBe(false);
@@ -539,8 +534,7 @@ describe('AI folder recommendation normalization', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(result.success).toBe(false);
@@ -627,8 +621,7 @@ describe('SSE streaming response compatibility', () => {
       'https://react.dev',
       'React',
       ['[ID: 1] 书签栏', '[ID: 2] 技术', '[ID: 3] 技术/前端'],
-      'zh_CN',
-      { forceRemote: true }
+      'zh_CN'
     );
 
     expect(result.success).toBe(true);
@@ -823,5 +816,180 @@ describe('Clipper markdown formatting through the unified AI exit', () => {
     const result = await formatArticleMarkdownWithAI(config, markdown);
 
     expect(result).toEqual({ success: true, formattedMarkdown: markdown, warning: null });
+  });
+});
+
+describe('Bookmark rename and classification through the unified AI exit', () => {
+  const config = {
+    apiUrl: 'https://example.com/v1',
+    apiKey: 'test-key',
+    modelId: 'test-model',
+  } as any;
+
+  const chatResponse = (payload: unknown, finishReason = 'stop') => new Response(JSON.stringify({
+    choices: [{ finish_reason: finishReason, message: { content: JSON.stringify(payload) } }],
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const requestBodyOf = (call: unknown[]) => JSON.parse((call[1] as RequestInit).body as string);
+  const userMessageOf = (call: unknown[]) => requestBodyOf(call).messages.find((m: any) => m.role === 'user').content as string;
+  const systemMessageOf = (call: unknown[]) => requestBodyOf(call).messages.find((m: any) => m.role === 'system').content as string;
+
+  const makeBookmarks = (count: number, parentId = 'p') => Array.from({ length: count }, (_, i) => ({
+    id: `b${i + 1}`,
+    title: `Title ${i + 1}`,
+    url: `https://site${i + 1}.example`,
+    parentId,
+  }));
+
+  const folders = [{ id: '10', title: 'Dev', path: 'Bar/Dev' }, { id: '11', title: 'News', path: 'Bar/News' }];
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    const { browser } = await import('wxt/browser');
+    vi.mocked(browser.storage.local.get).mockResolvedValue({});
+  });
+
+  it('classifies large batches in chunks with a budget per chunk and keeps the data out of the system prompt', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      const user = body.messages.find((m: any) => m.role === 'user').content as string;
+      const ids = [...user.matchAll(/^\[(b\d+)\]/gm)].map((match) => match[1]);
+      return chatResponse({
+        classifications: ids.map((id) => ({ bookmarkId: id, suggestedFolderId: '10', confidence: 0.9 })),
+      });
+    });
+
+    const { batchClassifyBookmarks, CLASSIFICATION_CHUNK_SIZE, getClassificationMaxTokens } = await import('@/lib/aiService');
+    const bookmarks = makeBookmarks(CLASSIFICATION_CHUNK_SIZE * 2 + 5);
+    const result = await batchClassifyBookmarks(config, bookmarks, folders, 'en');
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(requestBodyOf(fetchMock.mock.calls[0])).toMatchObject({
+      max_tokens: getClassificationMaxTokens(CLASSIFICATION_CHUNK_SIZE),
+      response_format: { type: 'json_object' },
+      temperature: 0.1,
+    });
+    expect(systemMessageOf(fetchMock.mock.calls[0])).not.toContain('https://site1.example');
+    expect(userMessageOf(fetchMock.mock.calls[0])).toContain('[10] Bar/Dev');
+    expect(result.success).toBe(true);
+    expect(result.failedCount).toBe(0);
+    expect(result.classifications?.map((item) => item.bookmarkId)).toEqual(bookmarks.map((b) => b.id));
+  });
+
+  it('keeps the results of successful chunks when another chunk fails', async () => {
+    let call = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      call += 1;
+      if (call === 1) {
+        return chatResponse({ classifications: [{ bookmarkId: 'b1', suggestedFolderId: '11', confidence: 0.8 }] });
+      }
+      return chatResponse({ classifications: [] }, 'length');
+    });
+
+    const { batchClassifyBookmarks, CLASSIFICATION_CHUNK_SIZE } = await import('@/lib/aiService');
+    const result = await batchClassifyBookmarks(config, makeBookmarks(CLASSIFICATION_CHUNK_SIZE + 3), folders, 'en');
+
+    expect(result.success).toBe(true);
+    expect(result.failedCount).toBe(3);
+    expect(result.error).toBeTruthy();
+    expect(result.classifications).toEqual([
+      { bookmarkId: 'b1', suggestedFolderId: '11', confidence: 0.8, reason: undefined },
+    ]);
+  });
+
+  it('reports failure when every chunk fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('boom', { status: 400 }));
+
+    const { batchClassifyBookmarks } = await import('@/lib/aiService');
+    const result = await batchClassifyBookmarks(config, makeBookmarks(2), folders, 'en');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('400');
+  });
+
+  it('renames in batches through the scenario exit and fails only the items the model skipped', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => chatResponse({
+      results: [
+        { index: 1, newTitle: '"Site One | Docs"' },
+        { index: 3, newTitle: 'Site Three | Docs' },
+      ],
+    }));
+
+    const { batchRenameBookmarks } = await import('@/lib/aiService');
+    const progress: number[] = [];
+    const results = await batchRenameBookmarks(config, makeBookmarks(3), 'en', (current) => progress.push(current));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(requestBodyOf(fetchMock.mock.calls[0]).response_format).toEqual({ type: 'json_object' });
+    expect(userMessageOf(fetchMock.mock.calls[0])).toContain('1. URL: https://site1.example, Current Title: Title 1');
+    expect(results.map((r) => [r.id, r.success, r.newTitle])).toEqual([
+      ['b1', true, 'Site One | Docs'],
+      ['b2', false, undefined],
+      ['b3', true, 'Site Three | Docs'],
+    ]);
+    expect(progress).toEqual([1, 2, 3]);
+  });
+
+  it('marks only the failed rename chunk and throws a cancelled error when aborted', async () => {
+    const { batchRenameBookmarks, BATCH_RENAME_CHUNK_SIZE } = await import('@/lib/aiService');
+    const { AIRuntimeError } = await import('@/lib/aiRuntimeUtils');
+
+    let call = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      call += 1;
+      return call === 1
+        ? new Response('rate limited', { status: 400 })
+        : chatResponse({ results: [{ index: 1, newTitle: 'Ok' }] });
+    });
+    const results = await batchRenameBookmarks(config, makeBookmarks(BATCH_RENAME_CHUNK_SIZE + 1), 'en');
+    expect(results.filter((r) => !r.success)).toHaveLength(BATCH_RENAME_CHUNK_SIZE);
+    expect(results[BATCH_RENAME_CHUNK_SIZE]).toMatchObject({ success: true, newTitle: 'Ok' });
+
+    const controller = new AbortController();
+    controller.abort();
+    await expect(batchRenameBookmarks(config, makeBookmarks(2), 'en', undefined, { signal: controller.signal }))
+      .rejects.toSatisfy((error: unknown) => error instanceof AIRuntimeError && error.code === 'cancelled');
+  });
+
+  it('uses the saved custom folder recommendation and contextual rename prompts', async () => {
+    const { browser } = await import('wxt/browser');
+    vi.mocked(browser.storage.local.get).mockResolvedValue({
+      aiUseCustomFolderRecommendationRulesPrompt: true,
+      aiFolderRecommendationRulesPrompt: 'CUSTOM FOLDER RULES',
+      aiUseCustomContextualRenamePrompt: true,
+      aiContextualRenamePrompt: 'CUSTOM CONTEXT RULES',
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(chatResponse({ recommendations: [{ folderId: '10' }] }))
+      .mockResolvedValueOnce(chatResponse({ newTitle: 'New' }));
+
+    const { recommendFolderWithAI, renameBookmarkContextuallyWithAI } = await import('@/lib/aiService');
+    await recommendFolderWithAI(config, 'https://a.dev', 'A', ['[ID: 10] Bar/Dev'], 'en');
+    await renameBookmarkContextuallyWithAI(config, 'https://a.dev', 'A', 'Dev', [], 'en');
+
+    expect(userMessageOf(fetchMock.mock.calls[0])).toBe('CUSTOM FOLDER RULES');
+    expect(userMessageOf(fetchMock.mock.calls[1])).toBe('CUSTOM CONTEXT RULES');
+  });
+
+  it('keeps page titles with replacement patterns intact in the rename prompt', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(chatResponse({ newTitle: 'x' }));
+
+    const { renameBookmarkWithAI } = await import('@/lib/aiService');
+    await renameBookmarkWithAI(config, 'https://a.dev', "Price $& more $'", 'en');
+
+    expect(systemMessageOf(fetchMock.mock.calls[0])).toContain("Current Title: Price $& more $'");
+  });
+
+  it('reports style consistency problems as codes instead of fixed-language text', async () => {
+    const { detectStyleConsistency } = await import('@/lib/aiService');
+
+    expect(detectStyleConsistency(['A | B', 'C - D'])).toEqual({
+      isConsistent: false,
+      issues: ['mixedSeparators'],
+    });
+    expect(detectStyleConsistency(['A | B', 'C | D'])).toEqual({ isConsistent: true, issues: [] });
   });
 });

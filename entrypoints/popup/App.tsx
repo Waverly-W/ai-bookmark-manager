@@ -12,7 +12,7 @@ import {
     getBookmarkFolderData
 } from "@/lib/bookmarkUtils";
 import { Loader2, Check, Sparkles, FolderTree } from "lucide-react";
-import { addRecentFolder, saveDomainMapping, getFolderForDomain } from "@/lib/recommendationStorage";
+import { saveDomainMapping, getFolderForDomain } from "@/lib/recommendationStorage";
 import { useTranslation } from 'react-i18next';
 import { getAIConfig, AIConfig } from "@/lib/aiConfigUtils";
 import { recommendFolderWithAI, renameBookmarkContextuallyWithAI, autoTagBookmark } from "@/lib/aiService";
@@ -178,8 +178,7 @@ function App() {
                         currentUrl,
                         initialTitle,
                         folderList,
-                        i18n.language,
-                        { forceRemote: true }
+                        i18n.language
                     );
 
                     if (!recResult.success) {
@@ -292,8 +291,7 @@ function App() {
                 url,
                 title,
                 folderList,
-                i18n.language,
-                { forceRemote: true }
+                i18n.language
             );
 
             if (!result.success) {
@@ -399,11 +397,8 @@ function App() {
         try {
             const bookmark = await createChromeBookmark(title, url, selectedFolder);
             await saveTagsForBookmark(bookmark.id, tags);
-            // Hybrid Learning
-            Promise.all([
-                saveDomainMapping(url, selectedFolder),
-                addRecentFolder(selectedFolder)
-            ]).catch(console.error);
+            // 记住该域名保存到的文件夹，下次直接推荐
+            saveDomainMapping(url, selectedFolder).catch(console.error);
 
             // Success & Close
             const autoClose = await shouldAutoClosePopup();
