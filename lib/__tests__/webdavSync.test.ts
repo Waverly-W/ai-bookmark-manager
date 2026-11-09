@@ -63,17 +63,6 @@ const createSnapshot = (
             apiUrl: 'https://api.example.com/v1',
             modelId: 'gpt-local'
         },
-        aiRenameConfig: {
-            useReferenceNaming: true
-        },
-        folderRecommendationConfig: {
-            enabled: true,
-            showReason: true,
-            autoApply: true,
-            fallbackToDefault: true,
-            timeoutMs: 10000,
-            maxRecommendations: 3
-        }
     },
     prompts: {
         basicRename: {
@@ -84,7 +73,7 @@ const createSnapshot = (
             useCustom: false,
             customPrompt: null
         },
-        folderRecommendation: {
+        folderRecommendationRules: {
             useCustom: false,
             customPrompt: null
         },
@@ -141,17 +130,6 @@ describe('webdavSync merge helpers', () => {
                     apiUrl: 'https://api.example.com/v1',
                     modelId: 'gpt-remote'
                 },
-                aiRenameConfig: {
-                    useReferenceNaming: true
-                },
-                folderRecommendationConfig: {
-                    enabled: true,
-                    showReason: true,
-                    autoApply: true,
-                    fallbackToDefault: true,
-                    timeoutMs: 10000,
-                    maxRecommendations: 3
-                }
             },
             prompts: {
                 basicRename: {
@@ -162,7 +140,7 @@ describe('webdavSync merge helpers', () => {
                     useCustom: false,
                     customPrompt: null
                 },
-                folderRecommendation: {
+                folderRecommendationRules: {
                     useCustom: false,
                     customPrompt: null
                 },
@@ -245,17 +223,6 @@ describe('webdavSync merge helpers', () => {
                     apiUrl: 'https://api.example.com/v1',
                     modelId: 'gpt-remote'
                 },
-                aiRenameConfig: {
-                    useReferenceNaming: true
-                },
-                folderRecommendationConfig: {
-                    enabled: true,
-                    showReason: true,
-                    autoApply: true,
-                    fallbackToDefault: true,
-                    timeoutMs: 10000,
-                    maxRecommendations: 3
-                }
             },
             prompts: {
                 basicRename: {
@@ -266,7 +233,7 @@ describe('webdavSync merge helpers', () => {
                     useCustom: false,
                     customPrompt: null
                 },
-                folderRecommendation: {
+                folderRecommendationRules: {
                     useCustom: false,
                     customPrompt: null
                 },

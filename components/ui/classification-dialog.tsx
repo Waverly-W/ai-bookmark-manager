@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, ArrowRight, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KEEP_IN_PLACE_FOLDER_ID } from "@/lib/bookmarkClassification";
 
 interface ClassificationResult {
     bookmarkId: string;
@@ -33,7 +34,6 @@ interface ClassificationResult {
 
 interface FolderOption {
     id: string;
-    title: string;
     path: string;
 }
 
@@ -65,7 +65,7 @@ export const ClassificationDialog: React.FC<ClassificationDialogProps> = ({
             // Default select all high confidence results (> 0.6)
             const initialSelected = new Set(
                 results
-                    .filter(r => r.confidence > 0.6 && r.suggestedFolderId !== '0')
+                    .filter(r => r.confidence > 0.6 && r.suggestedFolderId !== KEEP_IN_PLACE_FOLDER_ID)
                     .map(r => r.bookmarkId)
             );
             setSelectedIds(initialSelected);
@@ -108,7 +108,7 @@ export const ClassificationDialog: React.FC<ClassificationDialogProps> = ({
     };
 
     const getFolderLabel = (folderId: string) => {
-        if (folderId === '0') return t('bookmarkRootFolder');
+        if (folderId === KEEP_IN_PLACE_FOLDER_ID) return t('classifyKeepInPlace');
         const folder = folders.find(f => f.id === folderId);
         return folder ? folder.path : folderId;
     };
@@ -186,7 +186,7 @@ export const ClassificationDialog: React.FC<ClassificationDialogProps> = ({
                                                 </SelectValue>
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="0">{t('bookmarkRootFolder')}</SelectItem>
+                                                <SelectItem value={KEEP_IN_PLACE_FOLDER_ID}>{t('classifyKeepInPlace')}</SelectItem>
                                                 {folders.map(f => (
                                                     <SelectItem key={f.id} value={f.id}>
                                                         {f.path}

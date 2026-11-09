@@ -12,9 +12,16 @@ import { useToast } from '@/hooks/use-toast';
 import { CascadingFolderSelect } from '@/components/ui/cascading-folder-select';
 import { getBookmarksInFolder, getBookmarkFolderTree, BookmarkFolder } from '@/lib/bookmarkUtils';
 import { isAIConfigured, getAIConfig } from '@/lib/aiConfigUtils';
-import { batchRenameBookmarksWithConsistency, detectStyleConsistency } from '@/lib/aiService';
+import { batchRenameBookmarks, detectStyleConsistency, type StyleConsistencyIssue } from '@/lib/aiService';
+import { AIRuntimeError } from '@/lib/aiRuntimeUtils';
 import { updateChromeBookmark, broadcastBookmarkUpdate } from '@/lib/bookmarkUtils';
 import { cn } from '@/lib/utils';
+
+const STYLE_ISSUE_KEYS: Record<StyleConsistencyIssue, { issue: string; suggestion: string }> = {
+    mixedSeparators: { issue: 'renameStyleMixedSeparators', suggestion: 'renameStyleMixedSeparatorsTip' },
+    lengthVariance: { issue: 'renameStyleLengthVariance', suggestion: 'renameStyleLengthVarianceTip' },
+    patternMismatch: { issue: 'renameStylePatternMismatch', suggestion: 'renameStylePatternMismatchTip' }
+};
 
 interface BookmarkItem {
     id: string;
@@ -69,11 +76,9 @@ export const BatchRenamePage: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [folders, setFolders] = useState<BookmarkFolder[]>([]);
-    // Removed legacy useIndividualRequests state
     const [consistencyCheck, setConsistencyCheck] = useState<{
         isConsistent: boolean;
-        issues: string[];
-        suggestions: string[];
+        issues: StyleConsistencyIssue[];
     } | null>(null);
     const [errorMessage, setErrorMessage] = useState<{ title: string; description: string } | null>(null);
     const abortControllerRef = React.useRef<AbortController | null>(null);
@@ -162,7 +167,7 @@ export const BatchRenamePage: React.FC = () => {
             }
 
             // 调用批量重命名API，传入 AbortSignal
-            const results = await batchRenameBookmarksWithConsistency(
+            const results = await batchRenameBookmarks(
                 config,
                 bookmarks,
                 i18n.language,
@@ -178,7 +183,6 @@ export const BatchRenamePage: React.FC = () => {
                         });
                     }
                 },
-                false, // _deprecated_useIndividualRequests: Ignored by new smart logic
                 { signal: abortControllerRef.current.signal }
             );
 
@@ -214,7 +218,11 @@ export const BatchRenamePage: React.FC = () => {
         } catch (error) {
             console.error('Batch rename failed:', error);
             const errorMessage = error instanceof Error ? error.message : t('unknownError');
-            const isCancelled = errorMessage.includes('cancelled');
+            const isCancelled = error instanceof AIRuntimeError && error.code === 'cancelled';
+            if (isCancelled) {
+                // 已完成的批次结果已经通过进度回调写入，进入审查步骤让用户决定是否应用
+                setCurrentStep(BatchRenameStep.Review);
+            }
 
             toast({
                 title: isCancelled ? t('operationCancelled') : t('batchRenameFailed'),
@@ -623,17 +631,17 @@ export const BatchRenamePage: React.FC = () => {
                                     <div className="space-y-2">
                                         <p className="font-semibold">{t('consistencyWarning')}</p>
                                         <ul className="list-disc list-inside text-sm space-y-1 opacity-90">
-                                            {(consistencyCheck?.issues || []).map((issue, index) => (
-                                                <li key={index}>{issue}</li>
+                                            {consistencyCheck.issues.map((issue) => (
+                                                <li key={issue}>{t(STYLE_ISSUE_KEYS[issue].issue)}</li>
                                             ))}
                                         </ul>
-                                        {consistencyCheck.suggestions.length > 0 && (
+                                        {consistencyCheck.issues.length > 0 && (
                                             <div className="pt-2">
                                                 <p className="text-sm font-medium mb-1">{t('suggestions')}:</p>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {consistencyCheck.suggestions.map((suggestion, index) => (
-                                                        <Badge key={index} variant="outline" className="bg-background/50">
-                                                            {suggestion}
+                                                    {consistencyCheck.issues.map((issue) => (
+                                                        <Badge key={issue} variant="outline" className="bg-background/50">
+                                                            {t(STYLE_ISSUE_KEYS[issue].suggestion)}
                                                         </Badge>
                                                     ))}
                                                 </div>

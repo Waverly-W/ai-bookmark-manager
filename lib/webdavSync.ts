@@ -1,8 +1,6 @@
 import { browser } from 'wxt/browser';
 import { storage } from 'wxt/storage';
 
-import type { AIRenameConfig } from '@/lib/aiRenameConfig';
-import type { FolderRecommendationConfig } from '@/lib/folderRecommendationConfig';
 import { STORAGE_KEYS as AI_PROMPT_STORAGE_KEYS } from '@/lib/aiPromptUtils';
 
 export interface WebDAVBackupConfig {
@@ -20,7 +18,7 @@ export interface BackupPromptEntry {
 export interface BackupPromptsFile {
     basicRename: BackupPromptEntry;
     contextualRename: BackupPromptEntry;
-    folderRecommendation: BackupPromptEntry;
+    folderRecommendationRules: BackupPromptEntry;
     autoTagging: BackupPromptEntry;
     conflictResolution: BackupPromptEntry;
     markdownFormat: BackupPromptEntry;
@@ -28,8 +26,6 @@ export interface BackupPromptsFile {
 
 export interface BackupSettingsFile {
     aiConfig: Record<string, unknown> | null;
-    aiRenameConfig: AIRenameConfig | null;
-    folderRecommendationConfig: FolderRecommendationConfig | null;
 }
 
 export interface BackupBookmarkNodeBase {
@@ -136,9 +132,7 @@ const BACKUP_SETTINGS_FILE = 'settings.json';
 const BACKUP_PROMPTS_FILE = 'prompts.json';
 
 const AI_SETTINGS_STORAGE_KEYS = [
-    'aiConfig',
-    'ai_rename_config',
-    'folderRecommendationConfig'
+    'aiConfig'
 ] as const;
 
 const PROMPT_STORAGE_MAP = {
@@ -150,7 +144,7 @@ const PROMPT_STORAGE_MAP = {
         customKey: AI_PROMPT_STORAGE_KEYS.CUSTOM_CONTEXTUAL_RENAME_PROMPT,
         useCustomKey: AI_PROMPT_STORAGE_KEYS.USE_CUSTOM_CONTEXTUAL_RENAME_PROMPT
     },
-    folderRecommendation: {
+    folderRecommendationRules: {
         customKey: AI_PROMPT_STORAGE_KEYS.CUSTOM_FOLDER_RECOMMENDATION_PROMPT,
         useCustomKey: AI_PROMPT_STORAGE_KEYS.USE_CUSTOM_FOLDER_RECOMMENDATION_PROMPT
     },
@@ -209,7 +203,7 @@ const DEFAULT_PROMPTS_FILE: BackupPromptsFile = {
         useCustom: false,
         customPrompt: null
     },
-    folderRecommendation: {
+    folderRecommendationRules: {
         useCustom: false,
         customPrompt: null
     },
@@ -941,14 +935,12 @@ export const collectLocalBackupSnapshot = async (): Promise<BackupSnapshot> => {
             roots
         },
         settings: {
-            aiConfig: (localSettings.aiConfig as Record<string, unknown> | undefined) || null,
-            aiRenameConfig: (localSettings.ai_rename_config as AIRenameConfig | undefined) || null,
-            folderRecommendationConfig: (localSettings.folderRecommendationConfig as FolderRecommendationConfig | undefined) || null
+            aiConfig: (localSettings.aiConfig as Record<string, unknown> | undefined) || null
         },
         prompts: {
             basicRename: getPromptEntry(promptSettings, 'basicRename'),
             contextualRename: getPromptEntry(promptSettings, 'contextualRename'),
-            folderRecommendation: getPromptEntry(promptSettings, 'folderRecommendation'),
+            folderRecommendationRules: getPromptEntry(promptSettings, 'folderRecommendationRules'),
             autoTagging: getPromptEntry(promptSettings, 'autoTagging'),
             conflictResolution: getPromptEntry(promptSettings, 'conflictResolution'),
             markdownFormat: getPromptEntry(promptSettings, 'markdownFormat')
@@ -1254,12 +1246,6 @@ export const restoreBackupSnapshot = async (
 
     if (snapshot.settings.aiConfig) {
         nextStorageValues.aiConfig = snapshot.settings.aiConfig;
-    }
-    if (snapshot.settings.aiRenameConfig) {
-        nextStorageValues.ai_rename_config = snapshot.settings.aiRenameConfig;
-    }
-    if (snapshot.settings.folderRecommendationConfig) {
-        nextStorageValues.folderRecommendationConfig = snapshot.settings.folderRecommendationConfig;
     }
 
     Object.assign(nextStorageValues, buildPromptStorageValues(snapshot.prompts));

@@ -1,4 +1,6 @@
 import { AIScenario, JSONSchema } from "../types";
+import { fillTemplate } from "../template";
+import { DEFAULT_FOLDER_RECOMMENDATION_PROMPT_ZH } from "../../aiPromptUtils";
 
 export interface FolderRecommendationInput {
     url: string;
@@ -48,20 +50,6 @@ JSON Format Example:
   ]
 }`;
 
-const DEFAULT_USER_PROMPT_ZH = `要求：
-1. 分析网页内容和主题
-2. 从现有文件夹列表中选择最匹配的3个文件夹
-3. 如果没有完全匹配的，选择最相关的上级分类
-4. 按相关性从高到低排序
-5. 只返回 json 对象，不要返回其他文字`;
-
-const DEFAULT_USER_PROMPT_EN = `Requirements:
-1. Analyze the page content and topic
-2. Select the top 3 matching folders from the existing list
-3. If no exact match, select the most relevant parent category
-4. Sort by relevance (highest first)
-5. Return json only, without any extra text`;
-
 const RESPONSE_SCHEMA: JSONSchema = {
     type: "object",
     properties: {
@@ -92,15 +80,13 @@ export const folderRecommendationScenario: AIScenario<FolderRecommendationInput,
     getSystemPrompt: (locale: string) => {
         return locale.startsWith('zh') ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
     },
-    defaultUserPrompt: DEFAULT_USER_PROMPT_ZH,
+    defaultUserPrompt: DEFAULT_FOLDER_RECOMMENDATION_PROMPT_ZH,
     responseSchema: {
         name: "folder_recommendation_response",
         strict: true,
         schema: RESPONSE_SCHEMA
     },
-    formatUserPrompt: (template: string, input: FolderRecommendationInput) => {
-        return template;
-    },
+    formatUserPrompt: (template: string) => template,
     parseResponse: (response: any) => {
         if (!Array.isArray(response.recommendations)) {
             throw new Error('recommendations must be an array');
@@ -125,8 +111,5 @@ export const formatFolderRecommendationSystemPrompt = (url: string, title: strin
     const template = locale.startsWith('zh') ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
     const folderListStr = allFolders.join('\n');
 
-    return template
-        .replace("{url}", url)
-        .replace("{title}", title)
-        .replace("{allFolders}", folderListStr);
+    return fillTemplate(template, { url, title, allFolders: folderListStr });
 };
