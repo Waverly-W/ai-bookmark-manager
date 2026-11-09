@@ -9,11 +9,92 @@ export interface SelectedPageRegion {
   html: string;
 }
 
+/** 页面上某个图表 <svg> 对应的源码。svgIndex 是它在 document.documentElement.querySelectorAll('svg') 中的位置 */
+export interface DiagramSource {
+  svgIndex: number;
+  svgId: string | null;
+  source: string;
+}
+
+/**
+ * 在页面主环境（world: 'MAIN'）运行，读取编辑器里保存的 Mermaid 源码。
+ * 页面上只有渲染后的 SVG，源码存放在编辑器实例中，扩展默认的隔离环境读不到。
+ * 目前支持 Tiptap / ProseMirror（根元素上挂有 editor 实例）。
+ *
+ * This function is passed directly to scripting.executeScript. Keep every
+ * runtime dependency inside the function body so Chrome can serialize it.
+ */
+export function collectDiagramSources(): DiagramSource[] {
+  const maximumSources = 200;
+  const maximumSourceLength = 100_000;
+  const mermaidStart = /^\s*(?:%%\{[\s\S]*?\}%%\s*)?(?:---[\s\S]*?---\s*)?(?:graph|flowchart|sequenceDiagram|classDiagram(?:-v2)?|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie|gitGraph|mindmap|timeline|quadrantChart|requirementDiagram|C4\w*|sankey(?:-beta)?|xychart(?:-beta)?|block(?:-beta)?|packet(?:-beta)?|architecture(?:-beta)?|kanban|radar(?:-beta)?|treemap(?:-beta)?)\b/;
+  const allSvgs = Array.from(document.documentElement.querySelectorAll('svg'));
+  const results: DiagramSource[] = [];
+  const used = new Set<number>();
+
+  // 节点视图里还有工具栏图标，取元素最多的那个 <svg> 作为图表本身
+  const diagramSvgIn = (container: Element): SVGSVGElement | null => {
+    let best: SVGSVGElement | null = null;
+    let bestCount = 0;
+    for (const svg of Array.from(container.querySelectorAll('svg'))) {
+      const count = svg.querySelectorAll('*').length;
+      if (count > bestCount) {
+        best = svg;
+        bestCount = count;
+      }
+    }
+    return bestCount >= 10 ? best : null;
+  };
+
+  type ProseMirrorNode = {
+    type?: { name?: string };
+    attrs?: Record<string, unknown>;
+    textContent?: string;
+  };
+  type EditorLike = {
+    view?: {
+      state?: { doc?: { descendants?: (callback: (node: ProseMirrorNode, position: number) => boolean | void) => void } };
+      nodeDOM?: (position: number) => unknown;
+    };
+  };
+
+  for (const root of Array.from(document.querySelectorAll('.ProseMirror'))) {
+    const view = (root as Element & { editor?: EditorLike }).editor?.view;
+    const descendants = view?.state?.doc?.descendants;
+    if (!view || typeof descendants !== 'function' || typeof view.nodeDOM !== 'function') continue;
+
+    try {
+      descendants.call(view.state!.doc, (node, position) => {
+        if (results.length >= maximumSources) return false;
+        if (!/mermaid/i.test(node.type?.name ?? '')) return true;
+
+        const attributes = node.attrs ?? {};
+        const source = [attributes.code, attributes.source, attributes.content, attributes.lastValidCode, node.textContent]
+          .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+        const dom = view.nodeDOM!(position);
+        if (source && source.length <= maximumSourceLength && mermaidStart.test(source) && dom instanceof Element) {
+          const svg = diagramSvgIn(dom);
+          const svgIndex = svg ? allSvgs.indexOf(svg) : -1;
+          if (svg && svgIndex >= 0 && !used.has(svgIndex)) {
+            used.add(svgIndex);
+            results.push({ svgIndex, svgId: svg.id || null, source: source.replace(/\r\n?/g, '\n').trim() });
+          }
+        }
+        return false;
+      });
+    } catch {
+      // 编辑器结构不符合预期时忽略，快照阶段会把图表转成图片
+    }
+  }
+
+  return results;
+}
+
 /**
  * This function is passed directly to scripting.executeScript. Keep every
  * runtime dependency inside the function body so Chrome can serialize it.
  */
-export async function snapshotPage(): Promise<PageSnapshot> {
+export async function snapshotPage(diagramSources: DiagramSource[] = []): Promise<PageSnapshot> {
   const maximumBytes = 8 * 1024 * 1024;
   const maximumDimension = 8192;
   const maximumPixels = 16_777_216;
@@ -22,6 +103,15 @@ export async function snapshotPage(): Promise<PageSnapshot> {
   const liveSvgs = Array.from(document.documentElement.querySelectorAll('svg'));
   const clonedSvgs = Array.from(clonedRoot.querySelectorAll('svg'));
   const generatedImages: Array<{ element: HTMLImageElement; dataUrlLength: number }> = [];
+  const mermaidRole = /^(?:flowchart|graph|sequence|class|state|er|gantt|pie|journey|gitGraph|mindmap|timeline|quadrant|requirement|c4|sankey|xychart|block|packet|architecture|kanban|radar|treemap)/i;
+  // 源码由页面主环境收集，用 id 再核对一次，防止页面在两次注入之间变化导致错位
+  const sourceBySvgIndex = new Map<number, string>();
+  for (const entry of Array.isArray(diagramSources) ? diagramSources : []) {
+    const liveSvg = liveSvgs[entry?.svgIndex];
+    if (!liveSvg || typeof entry.source !== 'string') continue;
+    if (entry.svgId !== null && liveSvg.id !== entry.svgId) continue;
+    sourceBySvgIndex.set(entry.svgIndex, entry.source);
+  }
   const explicitAncestorSelector = '[data-macro-name="drawio" i], [data-macro-name="draw.io" i], .drawio-embedded-diagram';
   const explicitMarker = /draw\.?io|mxgraph|mxfile/i;
   const confluenceMarker = /confluence/i;
@@ -41,6 +131,7 @@ export async function snapshotPage(): Promise<PageSnapshot> {
     alt: string;
     clonedSvg: SVGElement;
     detected: boolean;
+    mermaid: boolean;
     height: number;
     serializedSvg: string;
     valid: boolean;
@@ -52,6 +143,19 @@ export async function snapshotPage(): Promise<PageSnapshot> {
     const clonedSvg = clonedSvgs[index];
     const liveSvg = liveSvgs[index];
     if (!clonedSvg || !liveSvg) continue;
+
+    const diagramSource = sourceBySvgIndex.get(index);
+    if (diagramSource !== undefined) {
+      // 有源码时输出 ```mermaid 代码块，Obsidian 可以直接渲染
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.className = 'language-mermaid';
+      code.textContent = diagramSource;
+      pre.append(code);
+      pre.setAttribute('data-clipper-diagram', 'mermaid');
+      clonedSvg.replaceWith(pre);
+      continue;
+    }
 
     const attributeMarker = Array.from(clonedSvg.attributes).some((attribute) => {
       const name = attribute.name.toLowerCase();
@@ -94,13 +198,20 @@ export async function snapshotPage(): Promise<PageSnapshot> {
       && hasAllPointerEvents
       && hasUnsafeCenter
       && hasTransformOrigin;
+    // 读不到源码的 Mermaid 图与 draw.io 一样栅格化为 PNG；节点数门槛排除工具栏图标
+    const isMermaid = !hasExplicitMarker
+      && descendants.length >= 10
+      && (/^mermaid/i.test(clonedSvg.id)
+        || (mermaidRole.test(clonedSvg.getAttribute('aria-roledescription') ?? '')
+          && Boolean(liveSvg.closest('[class*="mermaid" i]'))));
 
-    const detected = hasExplicitMarker || matchesConfluenceFallback;
+    const detected = hasExplicitMarker || matchesConfluenceFallback || isMermaid;
     if (!detected) {
       conversions.push(Object.freeze({
         alt: '',
         clonedSvg,
         detected: false,
+        mermaid: false,
         height: 0,
         serializedSvg: '',
         valid: false,
@@ -128,9 +239,10 @@ export async function snapshotPage(): Promise<PageSnapshot> {
       conversions.push(Object.freeze({
         alt: clonedSvg.getAttribute('aria-label')
           || clonedSvg.querySelector('title')?.textContent?.trim()
-          || 'draw.io diagram',
+          || (isMermaid ? 'mermaid diagram' : 'draw.io diagram'),
         clonedSvg,
         detected: true,
+        mermaid: isMermaid,
         height,
         serializedSvg: new XMLSerializer().serializeToString(clonedSvg),
         valid: true,
@@ -141,6 +253,7 @@ export async function snapshotPage(): Promise<PageSnapshot> {
         alt: '',
         clonedSvg,
         detected: true,
+        mermaid: isMermaid,
         height: 0,
         serializedSvg: '',
         valid: false,
@@ -176,6 +289,7 @@ export async function snapshotPage(): Promise<PageSnapshot> {
       replacement.alt = conversion.alt;
       replacement.width = conversion.width;
       replacement.height = conversion.height;
+      if (conversion.mermaid) replacement.setAttribute('data-clipper-diagram', 'mermaid');
       conversion.clonedSvg.replaceWith(replacement);
       generatedImages.push({ element: replacement, dataUrlLength: png.length });
     } catch {
@@ -230,7 +344,10 @@ export async function snapshotPage(): Promise<PageSnapshot> {
  * This function is passed directly to scripting.executeScript. Keep every
  * runtime dependency inside the function body so Chrome can serialize it.
  */
-export function selectPageRegion(selectionId: string): Promise<SelectedPageRegion> {
+export function selectPageRegion(
+  selectionId: string,
+  diagramSources: DiagramSource[] = [],
+): Promise<SelectedPageRegion> {
   // The literal is intentionally duplicated in cancelPageRegionSelection so
   // both injected functions remain completely self-contained.
   const cancelEventName = 'web-to-obsidian:cancel-region-selection';
@@ -405,6 +522,25 @@ export function selectPageRegion(selectionId: string): Promise<SelectedPageRegio
           : Array.from(clone.querySelectorAll('svg'));
         const generatedImages: Array<{ element: HTMLImageElement; dataUrlLength: number }> = [];
         let cloneRemoved = false;
+        const mermaidRole = /^(?:flowchart|graph|sequence|class|state|er|gantt|pie|journey|gitGraph|mindmap|timeline|quadrant|requirement|c4|sankey|xychart|block|packet|architecture|kanban|radar|treemap)/i;
+        // 源码按整页 <svg> 的位置收集，这里换算回选区内的 <svg>，并用 id 再核对一次
+        const allLiveSvgs = Array.from(document.documentElement.querySelectorAll('svg'));
+        const sourceByLiveSvg = new Map<Element, string>();
+        for (const entry of Array.isArray(diagramSources) ? diagramSources : []) {
+          const liveSvg = allLiveSvgs[entry?.svgIndex];
+          if (!liveSvg || typeof entry.source !== 'string') continue;
+          if (entry.svgId !== null && liveSvg.id !== entry.svgId) continue;
+          sourceByLiveSvg.set(liveSvg, entry.source);
+        }
+        const mermaidBlock = (source: string): HTMLPreElement => {
+          const pre = document.createElement('pre');
+          const code = document.createElement('code');
+          code.className = 'language-mermaid';
+          code.textContent = source;
+          pre.append(code);
+          pre.setAttribute('data-clipper-diagram', 'mermaid');
+          return pre;
+        };
         const confluenceMeta = Array.from(document.querySelectorAll('meta')).some((meta) => {
           const name = meta.getAttribute('name') ?? '';
           const content = meta.getAttribute('content') ?? '';
@@ -420,6 +556,14 @@ export function selectPageRegion(selectionId: string): Promise<SelectedPageRegio
         const conversionRecords = clonedSvgs.map((clonedSvg, index) => {
           const liveSvg = liveSvgs[index];
           if (!clonedSvg || !liveSvg) return null;
+
+          const diagramSource = sourceByLiveSvg.get(liveSvg);
+          if (diagramSource !== undefined) {
+            const block = mermaidBlock(diagramSource);
+            if (clonedSvg === clone) clone = block;
+            else clonedSvg.replaceWith(block);
+            return null;
+          }
 
           const attributeMarker = Array.from(clonedSvg.attributes).some((attribute) => {
             const name = attribute.name.toLowerCase();
@@ -463,12 +607,18 @@ export function selectPageRegion(selectionId: string): Promise<SelectedPageRegio
             && hasAllPointerEvents
             && hasUnsafeCenter
             && hasTransformOrigin;
+          const isMermaid = !hasExplicitMarker
+            && descendants.length >= 10
+            && (/^mermaid/i.test(clonedSvg.id)
+              || (mermaidRole.test(clonedSvg.getAttribute('aria-roledescription') ?? '')
+                && Boolean(liveSvg.closest('[class*="mermaid" i]'))));
 
-          const detected = hasExplicitMarker || matchesConfluenceFallback;
+          const detected = hasExplicitMarker || matchesConfluenceFallback || isMermaid;
           if (!detected) {
             return {
               clonedSvg,
               detected: false,
+              mermaid: false,
               valid: false,
               width: 0,
               height: 0,
@@ -495,10 +645,11 @@ export function selectPageRegion(selectionId: string): Promise<SelectedPageRegio
             const serializedSvg = new XMLSerializer().serializeToString(clonedSvg);
             const alt = clonedSvg.getAttribute('aria-label')
               || clonedSvg.querySelector('title')?.textContent?.trim()
-              || 'draw.io diagram';
+              || (isMermaid ? 'mermaid diagram' : 'draw.io diagram');
             return {
               clonedSvg,
               detected: true,
+              mermaid: isMermaid,
               valid: true,
               width,
               height,
@@ -509,6 +660,7 @@ export function selectPageRegion(selectionId: string): Promise<SelectedPageRegio
             return {
               clonedSvg,
               detected: true,
+              mermaid: isMermaid,
               valid: false,
               width: 0,
               height: 0,
@@ -567,6 +719,7 @@ export function selectPageRegion(selectionId: string): Promise<SelectedPageRegio
             replacement.alt = record.alt;
             replacement.width = record.width;
             replacement.height = record.height;
+            if (record.mermaid) replacement.setAttribute('data-clipper-diagram', 'mermaid');
             if (clonedSvg === clone) clone = replacement;
             else clonedSvg.replaceWith(replacement);
             generatedImages.push({ element: replacement, dataUrlLength: png.length });

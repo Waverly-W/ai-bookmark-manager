@@ -1,3 +1,6 @@
+import { normalizeCodeBlockWidgets } from './code-blocks';
+import { collapseDiagramWidgets } from './diagrams';
+
 const REMOVABLE_SELECTOR = [
   'script',
   'style',
@@ -371,6 +374,10 @@ export function normalizeDocument(document: Document, pageUrl: string): Document
         normalizeSvgReference(element, baseUrl);
       }
     });
+  // 快照阶段已把 Mermaid 图换成代码块或图片，这里去掉图表组件的工具栏外壳
+  collapseDiagramWidgets(clone);
+  // 代码块组件的外壳（工具栏、行号、滚动容器）会让 Readability 连代码一起删掉
+  normalizeCodeBlockWidgets(clone);
   clone.querySelectorAll('img').forEach((image) => normalizeImage(image, baseUrl));
   clone
     .querySelectorAll('source')

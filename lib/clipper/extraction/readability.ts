@@ -35,13 +35,27 @@ function readableValue(
   return cleanedPrimary || fallback;
 }
 
+function codeLanguageClasses(document: Document): string[] {
+  const classes = new Set<string>();
+  for (const element of Array.from(document.querySelectorAll('pre, code'))) {
+    for (const name of Array.from(element.classList)) {
+      if (/^(?:language|lang)-[\w#+.-]+$/i.test(name)) classes.add(name);
+    }
+  }
+  return [...classes];
+}
+
 export function extractArticle(
   document: Document,
   pageUrl: string,
 ): ExtractedArticle {
   const metadata = collectMetadata(document, pageUrl);
   const clone = normalizeDocument(document, pageUrl);
-  const parsed = new Readability(clone, { keepClasses: false }).parse();
+  // keepClasses: false 会删掉所有 class，代码块的 language-* 也会丢；单独保留这些类名，转换时才能写出语言标记
+  const parsed = new Readability(clone, {
+    keepClasses: false,
+    classesToPreserve: codeLanguageClasses(clone),
+  }).parse();
 
   if (!parsed?.content) {
     throw new ExtractionError(
